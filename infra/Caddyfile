@@ -1,0 +1,20 @@
+api.example.iq {
+	encode zstd gzip
+	reverse_proxy api:8080
+	# Never log query strings: they contain coordinates and search text.
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>uri delete
+				request>headers delete
+			}
+		}
+	}
+}
+
+tiles.example.iq {
+	encode zstd gzip
+	header Cache-Control "public, max-age=86400"
+	reverse_proxy tiles:8090
+}

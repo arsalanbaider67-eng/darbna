@@ -1,0 +1,23 @@
+{
+  "name": "@darbna/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Darbna API: routing/search proxy, community reports, moderation. Runs on Bun with zero runtime npm dependencies.",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/main.ts",
+    "dev": "bun --watch src/main.ts",
+    "migrate": "bun src/migrate.ts",
+    "seed:gazetteer": "bun src/seed.ts gazetteer",
+    "seed:demo": "bun src/seed.ts demo",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@darbna/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "^5.6.0"
+  }
+}

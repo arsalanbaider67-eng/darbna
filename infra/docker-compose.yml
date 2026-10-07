@@ -1,0 +1,70 @@
+# Darbna self-hosted stack, built entirely from the OpenStreetMap Iraq extract.
+#   docker compose --env-file ../.env up -d
+# First start downloads the extract and builds routing tiles and the geocoder index;
+# see docs/DEPLOYMENT.md for timings and sizing.
+name: darbna
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: darbna
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: darbna
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "darbna"], interval: 5s, retries: 20 }
+    restart: unless-stopped
+
+  api:
+    build: { context: .., dockerfile: infra/api.Dockerfile }
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgres://darbna:${POSTGRES_PASSWORD}@db:5432/darbna
+      ROUTING_URL: http://valhalla:8002
+      GEOCODER_URL: http://nominatim:8080
+    depends_on: { db: { condition: service_healthy } }
+    ports: ["127.0.0.1:8080:8080"]   # expose through the TLS proxy only
+    restart: unless-stopped
+
+  # Routing graph from Geofabrik's Iraq extract. Rebuild weekly to pick up OSM edits.
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    environment:
+      tile_urls: https://download.geofabrik.de/asia/iraq-latest.osm.pbf
+      serve_tiles: "True"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "True"
+      use_tiles_ignore_pbf: "True"
+      force_rebuild: "False"
+    volumes: [valhalla:/custom_files]
+    restart: unless-stopped
+
+  nominatim:
+    image: mediagis/nominatim:4.5
+    environment:
+      PBF_URL: https://download.geofabrik.de/asia/iraq-latest.osm.pbf
+      REPLICATION_URL: https://download.geofabrik.de/asia/iraq-updates/
+      IMPORT_STYLE: full
+      NOMINATIM_PASSWORD: ${NOMINATIM_DB_PASSWORD:?set NOMINATIM_DB_PASSWORD}
+    shm_size: 1gb
+    volumes: [nominatim:/var/lib/postgresql/16/main]
+    restart: unless-stopped
+
+  # Vector tiles: an Iraq-only .pmtiles extract + Darbna styles (see infra/tiles/README.md).
+  tiles:
+    image: protomaps/go-pmtiles:latest
+    command: ["serve", "/data", "--port=8090", "--public-url=${TILES_PUBLIC_URL:-http://localhost:8090}", "--cors=*"]
+    volumes: ["./tiles/data:/data:ro"]
+    ports: ["127.0.0.1:8090:8090"]
+    restart: unless-stopped
+
+  # TLS termination (automatic certificates). Edit Caddyfile with your domains.
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy:/data"]
+    depends_on: [api, tiles]
+    restart: unless-stopped
+
+volumes: { dbdata: {}, valhalla: {}, nominatim: {}, caddy: {} }

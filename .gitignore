@@ -1,0 +1,13 @@
+node_modules/
+.env
+.expo/
+ios/
+android/
+infra/tiles/data/*.pmtiles
+infra/tiles/data/fonts/
+infra/tiles/data/sprites/
+server/.env.local
+*.log
+build-status.txt
+server-status.txt
+Darbna.apk

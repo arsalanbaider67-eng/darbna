@@ -1,0 +1,13 @@
+{
+  "name": "darbna",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "server",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "cd packages/core && bun test && cd ../../apps/mobile && bun test && cd ../../server && bun test",
+    "test:server": "cd server && bun test"
+  }
+}
