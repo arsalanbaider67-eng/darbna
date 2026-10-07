@@ -1,9 +1,13 @@
 # Builds an UNSIGNED iPhone app (.ipa) on GitHub's free macOS runners.
 # Install it on your iPhone from Windows with Sideloadly (signs it with your Apple ID).
-# Run: GitHub → Actions → "iOS test build" → Run workflow. Download the "Darbna-ios" artifact.
+# Runs on every push that touches the app, or manually: Actions → "iOS test build" → Run workflow.
+# Download the "Darbna-ios" artifact from the finished run.
 name: iOS test build
 
 on:
+  push:
+    branches: [main]
+    paths: ["apps/mobile/**", "packages/core/**", ".github/workflows/ios-unsigned.yml"]
   workflow_dispatch:
     inputs:
       api_url:
@@ -16,7 +20,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     env:
-      EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
+      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'http://192.168.100.100:8080' }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       CI: "1"
       NODE_ENV: production
