@@ -17,7 +17,10 @@ const REFRESH_AFTER_MS = 30 * 24 * 3600 * 1000;
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
-  e.waitUntil(caches.open(SHELL).then((c) => c.addAll(["./", "./manifest.json", "./apple-touch-icon.png", RTL_PLUGIN])).catch(() => {}));
+  e.waitUntil(caches.open(SHELL).then(async (c) => {
+    await c.addAll(["./", "./manifest.json", "./apple-touch-icon.png"]).catch(() => {});
+    await c.add(RTL_PLUGIN).catch(() => {}); // separate: a CDN hiccup mustn't block the rest
+  }));
 });
 
 self.addEventListener("activate", (e) => {
