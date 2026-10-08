@@ -38,9 +38,12 @@ jobs:
       - name: Check shared reports database (informational)
         continue-on-error: true
         run: |
-          curl -sS -m 15 -X POST "$EXPO_PUBLIC_SUPABASE_URL/rest/v1/rpc/darbna_reports" \
-            -H "apikey: $EXPO_PUBLIC_SUPABASE_KEY" -H "content-type: application/json" \
-            -d '{"min_lng":44,"min_lat":33,"max_lng":45,"max_lat":34}' -w "\nHTTP %{http_code}\n"
+          call() { curl -sS -m 15 -X POST "$EXPO_PUBLIC_SUPABASE_URL/rest/v1/rpc/$1" -H "apikey: $EXPO_PUBLIC_SUPABASE_KEY" \
+                     -H "content-type: application/json" -d "$2" -w " [HTTP %{http_code}]"; }
+          ID="ci-check-$GITHUB_RUN_ID-0000000000"
+          echo "::notice title=reports::$(call darbna_reports '{"min_lng":44,"min_lat":33,"max_lng":45,"max_lat":34}' | head -c 300)"
+          echo "::notice title=create::$(call darbna_create_report "{\"install\":\"$ID\",\"category\":\"pothole\",\"lng\":44.0001,\"lat\":33.0001}" | head -c 300)"
+          echo "::notice title=delete::$(call darbna_delete_me "{\"install\":\"$ID\"}" | head -c 300)"
 
       - uses: actions/setup-node@v4
         with:
