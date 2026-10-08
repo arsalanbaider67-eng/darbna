@@ -14,7 +14,6 @@ import { Btn, Icon, Panel, Row, Txt } from "./ui";
 export function SettingsSheet({ onClose }: { onClose(): void }) {
   const { theme, t } = useUi();
   const settings = useStore((s) => s.settings);
-  const config = useStore((s) => s.config);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,7 +106,7 @@ export function SettingsSheet({ onClose }: { onClose(): void }) {
           <Btn kind="danger" icon="delete-outline" label={t.settings.deleteData} onPress={deleteData} style={{ marginTop: 8 }} />
         </View>
         <Txt size={13} muted>
-          {t.settings.attribution}: {config?.map.attribution ?? "© OpenStreetMap contributors"} · {t.settings.version} 0.1.0
+          {t.settings.version} 0.1.0
         </Txt>
       </ScrollView>
     </Panel>

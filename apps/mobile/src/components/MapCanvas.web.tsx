@@ -29,6 +29,21 @@ interface Props {
   simFix?: LocationFix | null;
 }
 
+let attribCss = false;
+function ensureAttributionCss() {
+  if (attribCss || typeof document === "undefined") return;
+  attribCss = true;
+  const st = document.createElement("style");
+  st.textContent = `
+    .maplibregl-ctrl-attrib.maplibregl-compact { min-height: 20px; opacity: .35; transition: opacity .2s; }
+    .maplibregl-ctrl-attrib.maplibregl-compact-show { opacity: .9; }
+    .maplibregl-ctrl-attrib-button { width: 20px !important; height: 20px !important; background-size: 16px !important; }
+    .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) { background: transparent !important; box-shadow: none !important; }
+    .maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0 4px 4px 0; }
+  `;
+  document.head.appendChild(st);
+}
+
 const BAGHDAD: LngLat = [44.3661, 33.3152];
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
@@ -160,6 +175,13 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     styleLoaded.current = latest.current.styleUrl;
     m.touchZoomRotate.disableRotation();
     map.current = m;
+    // Map credit: required by the OpenStreetMap licence, so it stays reachable behind the small
+    // faded (i), but it's folded away a few seconds after the map opens.
+    ensureAttributionCss();
+    const fold = setTimeout(() => {
+      el.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
+    }, 4000);
+    m.once("remove", () => clearTimeout(fold));
     m.on("style.load", addOverlays);
 
     m.on("moveend", (e: any) => {
