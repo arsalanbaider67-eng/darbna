@@ -3,8 +3,8 @@
 --
 -- Design
 --  * Tables live in the private schema "darbna_private", which the public API can't see.
---    Apps can only call the four functions at the bottom (darbna_reports, darbna_create_report,
---    darbna_vote, darbna_delete_me), so every rule below is enforced by the database itself.
+--    Apps can only call the API functions (darbna_reports, darbna_create_report, darbna_vote,
+--    darbna_delete_me, darbna_traffic_submit, darbna_traffic), so every rule is enforced by the database.
 --  * Privacy: the app sends a random per-install id; only a salted hash of it is stored.
 --    The caller's IP is also stored only as a salted hash, used for rate limits and erased after a day.
 --  * Rules mirror the Darbna server (packages/core/src/reports.ts):
@@ -252,7 +252,89 @@ begin
   return json_build_object('deleted', json_build_object('reports', nr, 'votes', nv));
 end $$;
 
--- Only the four API functions are callable from the app.
+-- ------------------------------------------------------------------ live traffic (crowdsourced)
+-- Speed samples from navigating drivers: no account or device id, only a hashed random
+-- per-trip id; first/last 300 m of each trip are never sent (app side); deleted after 2 hours.
+create table if not exists darbna_private.speed_samples (
+  cell bigint not null,
+  dir smallint not null check (dir between 0 and 7),
+  lat real not null,
+  lng real not null,
+  ratio real not null,
+  trip_hash text not null,
+  ip_hash text,
+  created_at timestamptz not null default now()
+);
+create index if not exists speed_samples_area on darbna_private.speed_samples (created_at, lat, lng);
+create index if not exists speed_samples_ip on darbna_private.speed_samples (ip_hash, created_at);
+alter table darbna_private.speed_samples enable row level security;
+
+-- Must match trafficCell() in packages/core/src/traffic.ts.
+create or replace function darbna_private.traffic_cell(lat float8, lng float8) returns bigint
+language sql immutable as $$ select floor(lat / 0.001)::bigint * 100000 + floor(lng / 0.0012)::bigint $$;
+
+create or replace function public.darbna_traffic_submit(trip text, samples json)
+returns json language plpgsql volatile security definer set search_path = darbna_private, extensions, public as $$
+declare
+  th text; ip text := darbna_private.client_ip_hash(); n int; s json; added int := 0;
+  la float8; lo float8; hd float8; sp float8; ex float8;
+begin
+  if trip is null or length(trip) < 16 or length(trip) > 100 then raise exception 'bad_trip' using errcode = 'P0001'; end if;
+  if samples is null or json_typeof(samples) <> 'array' or json_array_length(samples) > 40 then
+    raise exception 'bad_samples' using errcode = 'P0001';
+  end if;
+  th := darbna_private.hash('trip:' || trip);
+  if ip is not null then
+    select count(*) into n from darbna_private.speed_samples where ip_hash = ip and created_at > now() - interval '10 minutes';
+    if n >= 3000 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  end if;
+  select count(*) into n from darbna_private.speed_samples where trip_hash = th and created_at > now() - interval '10 minutes';
+  if n >= 200 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  for s in select * from json_array_elements(samples) loop
+    begin
+      la := (s->>'lat')::float8; lo := (s->>'lng')::float8; hd := (s->>'heading')::float8;
+      sp := (s->>'speed')::float8; ex := (s->>'expected')::float8;
+    exception when others then continue;
+    end;
+    -- Plausible values only: inside Iraq, 0–60 m/s driven, 2–40 m/s expected.
+    if la is null or lo is null or hd is null or sp is null or ex is null
+       or la not between 28.9 and 37.5 or lo not between 38.7 and 48.9
+       or sp < 0 or sp > 60 or ex < 2 or ex > 40 or hd < 0 or hd >= 360 then continue; end if;
+    insert into darbna_private.speed_samples (cell, dir, lat, lng, ratio, trip_hash, ip_hash)
+      values (darbna_private.traffic_cell(la, lo), ((round(hd / 45)::int % 8) + 8) % 8, la, lo, least(sp / ex, 2), th, ip);
+    added := added + 1;
+  end loop;
+  delete from darbna_private.speed_samples where created_at < now() - interval '2 hours';
+  return json_build_object('accepted', added);
+end $$;
+
+-- Slow cells in an area over the last 15 minutes: median of per-trip average ratios.
+-- Only cells where traffic is below 70 % of normal speed are returned.
+create or replace function public.darbna_traffic(min_lng float8, min_lat float8, max_lng float8, max_lat float8)
+returns json language plpgsql stable security definer set search_path = darbna_private, extensions, public as $$
+begin
+  if max_lng - min_lng > 2.05 or max_lat - min_lat > 2.05 or max_lng < min_lng or max_lat < min_lat then
+    raise exception 'area_too_large' using errcode = 'P0001';
+  end if;
+  return json_build_object('cells', coalesce((
+    select json_agg(json_build_array(cell, dir, round(ratio::numeric, 2), trips, samples, round(lng::numeric, 5), round(lat::numeric, 5)))
+    from (
+      select cell, dir, percentile_cont(0.5) within group (order by trip_ratio) as ratio,
+             count(*)::int as trips, sum(n)::int as samples, avg(lat) as lat, avg(lng) as lng
+      from (
+        select cell, dir, trip_hash, avg(ratio) as trip_ratio, count(*) as n, avg(lat) as lat, avg(lng) as lng
+        from darbna_private.speed_samples
+        where created_at > now() - interval '15 minutes'
+          and lat between min_lat and max_lat and lng between min_lng and max_lng
+        group by cell, dir, trip_hash
+      ) per_trip
+      group by cell, dir
+      limit 5000
+    ) c where ratio < 0.7), '[]'::json),
+    'serverTime', to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
+end $$;
+
+-- Only the six API functions are callable from the app.
 revoke all on all functions in schema darbna_private from public, anon, authenticated;
 revoke all on function public.darbna_reports(float8, float8, float8, float8) from public;
 revoke all on function public.darbna_vote(text, uuid, text) from public;
@@ -262,3 +344,7 @@ grant execute on function public.darbna_reports(float8, float8, float8, float8) 
 grant execute on function public.darbna_vote(text, uuid, text) to anon, authenticated;
 grant execute on function public.darbna_create_report(text, text, float8, float8, float8) to anon, authenticated;
 grant execute on function public.darbna_delete_me(text) to anon, authenticated;
+revoke all on function public.darbna_traffic_submit(text, json) from public;
+revoke all on function public.darbna_traffic(float8, float8, float8, float8) from public;
+grant execute on function public.darbna_traffic_submit(text, json) to anon, authenticated;
+grant execute on function public.darbna_traffic(float8, float8, float8, float8) to anon, authenticated;

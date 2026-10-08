@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { darkenStyle, lightenStyle, type LngLat, type LocationFix } from "@darbna/core";
+import { darkenStyle, lightenStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -27,6 +27,8 @@ interface Props {
   onRoutePress?(idx: number): void;
   /** Demo drive: a simulated position that replaces the browser's GPS for the blue dot and camera. */
   simFix?: LocationFix | null;
+  /** Live traffic slow spots (browse mode). */
+  jams?: TrafficCell[];
 }
 
 let attribCss = false;
@@ -77,6 +79,25 @@ function routesFC(routes: ApiRoute[], sel: number): GeoJSON.FeatureCollection {
     features: routes.map((r, i) => ({ type: "Feature", properties: { idx: i, selected: i === sel ? 1 : 0 }, geometry: { type: "LineString", coordinates: r.geometry } })),
   };
 }
+/** Slow/heavy stretches of the selected route, drawn over it in orange/red. */
+function trafficFC(routes: ApiRoute[], sel: number): GeoJSON.FeatureCollection {
+  const r = routes[sel];
+  return {
+    type: "FeatureCollection",
+    features: (r?.trafficSpans ?? []).map((sp) => ({
+      type: "Feature", properties: { level: sp.level },
+      geometry: { type: "LineString", coordinates: r.geometry.slice(sp.from, sp.to + 1) },
+    })),
+  };
+}
+function jamsFC(jams: TrafficCell[]): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: jams.map((j) => ({ type: "Feature", properties: { level: trafficLevel(j.ratio) }, geometry: { type: "Point", coordinates: j.coord } })),
+  };
+}
+export const TRAFFIC_COLOR = ["match", ["get", "level"], "heavy", "#E5383B", "#F2994A"] as const;
+
 function reportsFC(reports: PublicReport[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
@@ -136,6 +157,12 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     m.addLayer({ id: "route-alt", type: "line", source: "routes", filter: ["==", ["get", "selected"], 0], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeAlt, "line-width": 7 } });
     m.addLayer({ id: "route-casing", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeCasing, "line-width": 11 } });
     m.addLayer({ id: "route-main", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.route, "line-width": 7 } });
+    m.addSource("traffic", { type: "geojson", data: trafficFC(latest.current.routes, latest.current.selectedRouteIdx) });
+    m.addLayer({ id: "route-traffic", type: "line", source: "traffic", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": TRAFFIC_COLOR as any, "line-width": 7 } });
+    m.addSource("jams", { type: "geojson", data: jamsFC(latest.current.jams ?? []) });
+    m.addLayer({ id: "jam-dot", type: "circle", source: "jams", minzoom: 11, paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 9], "circle-color": TRAFFIC_COLOR as any, "circle-opacity": 0.75, "circle-blur": 0.4,
+    } });
     m.addSource("reports", { type: "geojson", data: reportsFC(latest.current.reports) });
     m.addLayer({
       id: "report-dot", type: "circle", source: "reports", minzoom: 10,
@@ -250,7 +277,12 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
   useEffect(() => {
     (map.current?.getSource("routes") as GeoJSONSource | undefined)?.setData(routesFC(p.routes, p.selectedRouteIdx));
+    (map.current?.getSource("traffic") as GeoJSONSource | undefined)?.setData(trafficFC(p.routes, p.selectedRouteIdx));
   }, [p.routes, p.selectedRouteIdx]);
+
+  useEffect(() => {
+    (map.current?.getSource("jams") as GeoJSONSource | undefined)?.setData(jamsFC(p.jams ?? []));
+  }, [p.jams]);
 
   useEffect(() => {
     (map.current?.getSource("reports") as GeoJSONSource | undefined)?.setData(reportsFC(p.reports));
@@ -277,6 +309,6 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
   a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
-  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix;
+  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

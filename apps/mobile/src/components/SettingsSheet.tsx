@@ -14,6 +14,7 @@ import { Btn, Icon, Panel, Row, Txt } from "./ui";
 export function SettingsSheet({ onClose }: { onClose(): void }) {
   const { theme, t } = useUi();
   const settings = useStore((s) => s.settings);
+  const config = useStore((s) => s.config);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +87,15 @@ export function SettingsSheet({ onClose }: { onClose(): void }) {
           </View>
           <Switch value={settings.voice} onValueChange={(v) => update({ voice: v })} accessibilityLabel={t.settings.voice} />
         </Row>
+        {config?.sharedTraffic && (
+          <Row>
+            <View style={{ flex: 1 }}>
+              <Txt weight="semibold">{t.settings.shareTraffic}</Txt>
+              <Txt size={13} muted>{t.settings.shareTrafficHint}</Txt>
+            </View>
+            <Switch value={settings.shareTraffic !== false} onValueChange={(v) => update({ shareTraffic: v })} accessibilityLabel={t.settings.shareTraffic} />
+          </Row>
+        )}
         {settings.lang !== "en" && (
           <View style={{ gap: 6 }}>
             <Txt weight="semibold">{t.settings.digits}</Txt>
@@ -98,7 +108,9 @@ export function SettingsSheet({ onClose }: { onClose(): void }) {
           <Txt size={14}>{t.settings.capOfflineSaved}</Txt>
           <Txt size={14} muted>{t.settings.capOfflineMaps}</Txt>
           <Txt size={14} muted>{t.settings.capOfflineRouting}</Txt>
-          <Txt size={14} muted>{t.settings.capTraffic}</Txt>
+          {config?.sharedTraffic
+            ? <Txt size={14}>{t.settings.capTrafficLive}</Txt>
+            : <Txt size={14} muted>{t.settings.capTraffic}</Txt>}
         </View>
         <View style={{ gap: 4 }}>
           <Txt weight="semibold">{t.settings.privacy}</Txt>

@@ -30,6 +30,8 @@ export default function App() {
       if (!settings) {
         settings = { ...DEFAULT_SETTINGS, lang: initialLang() };
         await saveSettings(settings);
+      } else {
+        settings = { ...DEFAULT_SETTINGS, ...settings }; // fill in settings added since last launch
       }
       // Layout direction is fixed per JS session; reload once if it doesn't match the language.
       await ensureDirection(isRTL(settings.lang));

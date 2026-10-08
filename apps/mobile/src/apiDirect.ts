@@ -16,8 +16,9 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import {
-  arabicKey, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
+  applyTraffic, arabicKey, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
+  type SpeedSample, type TrafficCell,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
 import { ApiError } from "./apiError";
@@ -156,6 +157,7 @@ export const directApi = {
     sampleData: false,
     mode: "direct",
     sharedReports: SHARED_REPORTS,
+    sharedTraffic: SHARED_REPORTS,
   }),
 
   search: async (q: string, lang: string, near?: LngLat, opts: { remote?: boolean } = {}) => {
@@ -182,7 +184,7 @@ export const directApi = {
   route: async (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[] } = {}): Promise<RouteResult> => {
     if (haversine(origin, destination) < 25) throw new ApiError("too_close", 422);
     // Same policy as the server: verified closures are always avoided; others only when the driver asks.
-    const nearby = await reportsNear(origin, destination);
+    const [nearby, cells] = await Promise.all([reportsNear(origin, destination), trafficNear(origin, destination)]);
     const chosen = new Set(opts.avoidReportIds ?? []);
     const toAvoid = nearby.filter((r) => r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display"));
     const excludePolygons = toAvoid.map((r) => boxAround(r.coord, r.category === "closure" || r.category === "flooding" ? 60 : 35));
@@ -199,12 +201,17 @@ export const directApi = {
     }
     const avoided = avoidFailed ? [] : toAvoid.map((r) => r.id);
     const advisories = new Map<string, PublicReport>();
-    const routes = trips.map((r) => {
+    const routes = trips.map((free) => {
+      // Live traffic from Darbna drivers: slows the estimate where they're going slower now.
+      const tr = applyTraffic(free, cells);
+      const r = tr.route;
       const step = r.geometry.length > 4000 ? 3 : 1;
       const onRoute = nearby.filter((rep) => !avoided.includes(rep.id) && distanceToLine(rep.coord, r.geometry, step) < 60);
       onRoute.forEach((rep) => advisories.set(rep.id, rep));
-      return { ...r, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id) };
+      return { ...r, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id), trafficSpans: tr.spans, trafficExtraS: tr.extraS };
     });
+    // With traffic, an alternative may now be the fastest: list it first.
+    routes.sort((a, b) => a.durationS - b.durationS);
     return {
       routes, reports: [...advisories.values()],
       avoidance: { requested: avoided.length > 0 || avoidFailed, honoured: !avoidFailed, providerSupportsIt: true },
@@ -234,6 +241,21 @@ export const directApi = {
     return { report: rescore(r.report) };
   },
 
+  /** Slow spots reported by Darbna drivers in the last 15 minutes (empty without shared data). */
+  traffic: async (bbox: [number, number, number, number]): Promise<TrafficCell[]> => {
+    if (!SHARED_REPORTS) return [];
+    const r = await rpc<{ cells: [number, number, number, number, number, number, number][] }>("darbna_traffic", {
+      min_lng: bbox[0], min_lat: bbox[1], max_lng: bbox[2], max_lat: bbox[3],
+    });
+    return r.cells.map(([cell, dir, ratio, trips, samples, lng, lat]) => ({ cell, dir, ratio, trips, samples, coord: [lng, lat] as LngLat }));
+  },
+
+  /** Anonymous speed samples from a trip (see core/traffic.ts for what is and isn't sent). */
+  trafficSubmit: async (trip: string, samples: SpeedSample[]): Promise<void> => {
+    if (!SHARED_REPORTS || !samples.length) return;
+    await rpc("darbna_traffic_submit", { trip, samples });
+  },
+
   deleteMe: async () => {
     await AsyncStorage.removeItem(REPORTS_KEY);
     if (SHARED_REPORTS) await rpc("darbna_delete_me", { install: await getInstallId() });
@@ -256,6 +278,21 @@ function distanceToLine(p: LngLat, line: LngLat[], step = 1): number {
   let best = Infinity;
   for (let i = 0; i < line.length - 1; i += step) best = Math.min(best, projectOnSegment(p, line[i], line[Math.min(i + step, line.length - 1)]).distance);
   return best;
+}
+
+function tripBBox(a: LngLat, b: LngLat): [number, number, number, number] | null {
+  const pad = 0.15;
+  const bbox: [number, number, number, number] = [
+    Math.min(a[0], b[0]) - pad, Math.min(a[1], b[1]) - pad, Math.max(a[0], b[0]) + pad, Math.max(a[1], b[1]) + pad,
+  ];
+  return bbox[2] - bbox[0] > 2 || bbox[3] - bbox[1] > 2 ? null : bbox;
+}
+
+/** Live traffic around a trip (none, or a failure, just means free-flow times). */
+async function trafficNear(a: LngLat, b: LngLat): Promise<TrafficCell[]> {
+  const bbox = tripBBox(a, b);
+  if (!bbox || !SHARED_REPORTS) return [];
+  try { return await directApi.traffic(bbox); } catch { return []; }
 }
 
 /** Active reports around a trip (missing reports never block routing). */

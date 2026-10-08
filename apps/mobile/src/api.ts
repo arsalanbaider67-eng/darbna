@@ -1,4 +1,4 @@
-import type { LngLat, ReportCategory } from "@darbna/core";
+import type { LngLat, ReportCategory, SpeedSample, TrafficCell } from "@darbna/core";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteResult, ServerConfig } from "./types";
 import { ApiError } from "./apiError";
@@ -63,6 +63,10 @@ const serverApi = {
     request<{ report: PublicReport }>(`/v1/reports/${id}/votes`, { method: "POST", body: { vote }, install: true }),
 
   deleteMe: () => request<{ deleted: unknown }>("/v1/me", { method: "DELETE", install: true }),
+
+  // Live traffic is only implemented for direct mode (Supabase) so far.
+  traffic: async (_bbox: [number, number, number, number]): Promise<TrafficCell[]> => [],
+  trafficSubmit: async (_trip: string, _samples: SpeedSample[]): Promise<void> => {},
 };
 
 export const api: typeof serverApi = DIRECT_MODE ? (directApi as unknown as typeof serverApi) : serverApi;

@@ -1,4 +1,4 @@
-import type { LngLat, ReportCategory, ReportSource, Route, RoutingTreatment } from "@darbna/core";
+import type { LngLat, ReportCategory, ReportSource, Route, RoutingTreatment, TrafficSpan } from "@darbna/core";
 
 export interface Place {
   id: string;
@@ -30,6 +30,9 @@ export interface PublicReport {
 
 export interface ApiRoute extends Route {
   reportIdsOnRoute: string[];
+  /** Live traffic from Darbna drivers applied to this route (direct mode with shared data). */
+  trafficSpans?: TrafficSpan[];
+  trafficExtraS?: number;
 }
 
 export interface RouteResult {
@@ -48,4 +51,6 @@ export interface ServerConfig {
   mode?: "server" | "direct";
   /** Direct mode: community reports are shared through Supabase (false = kept on this device). */
   sharedReports?: boolean;
+  /** Live traffic from Darbna drivers is available. */
+  sharedTraffic?: boolean;
 }

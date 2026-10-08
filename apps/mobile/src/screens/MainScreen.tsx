@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { parseSharedLocation, type LngLat } from "@darbna/core";
+import { parseSharedLocation, type LngLat, type TrafficCell } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -22,6 +22,7 @@ import { useLocation } from "../hooks/useLocation";
 import { fmt } from "../i18n";
 import { primeVoice, stopSpeaking } from "../nav/voice";
 import { useDemoDrive } from "../hooks/useDemoDrive";
+import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadTrip, saveCachedConfig, saveRecents, saveTrip } from "../storage";
 import { getState, mergeReports, setState, useStore } from "../store";
@@ -29,6 +30,7 @@ import type { Place } from "../types";
 
 const REPORT_MIN_ZOOM = 11;
 const NO_ROUTES: never[] = [];
+const NO_JAMS: TrafficCell[] = [];
 
 /** A function whose identity never changes but always runs the latest closure (keeps the map memoised). */
 function useStableCallback<A extends unknown[], R>(fn: (...a: A) => R): (...a: A) => R {
@@ -49,6 +51,8 @@ export function MainScreen() {
   const sheet = useStore((s) => s.sheet);
   const openReportId = useStore((s) => s.openReportId);
   const lang = useStore((s) => s.settings.lang);
+  const shareTraffic = useStore((s) => s.settings.shareTraffic);
+  const [jams, setJams] = useState<TrafficCell[]>([]);
 
   const online = useConnectivity();
   const loc = useLocation(mode === "navigating" ? "navigation" : "idle");
@@ -60,6 +64,7 @@ export function MainScreen() {
   const centeredOnce = useRef(false);
   const keepAwakeOn = useRef(false);
   const lastBBox = useRef<string>("");
+  const lastArea = useRef<[number, number, number, number] | null>(null);
 
   const onMapLongPress = useStableCallback((c: LngLat) => { void dropPin(c); });
   const onMapReportPress = useStableCallback((id: string) => setState({ openReportId: id, sheet: null }));
@@ -83,6 +88,8 @@ export function MainScreen() {
   const navFix = demo ? demoFix : fix;
 
   const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
+  // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
+  useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && shareTraffic !== false && !!config?.sharedTraffic);
 
   // ---------------------------------------------------------------- server config (style URLs, capability flags)
   const loadConfig = useCallback(async () => {
@@ -248,8 +255,22 @@ export function MainScreen() {
     const key = snapped.join(",");
     if (key === lastBBox.current) return;
     lastBBox.current = key;
-    api.reports(snapped).then((r) => mergeReports(r.reports)).catch(() => {});
+    lastArea.current = snapped;
+    refreshArea(snapped);
   }
+
+  function refreshArea(area: [number, number, number, number]) {
+    api.reports(area).then((r) => mergeReports(r.reports)).catch(() => {});
+    if (getState().config?.sharedTraffic) api.traffic(area).then(setJams).catch(() => {});
+  }
+
+  // Reports and traffic change while the map sits still: refresh the visible area every 2 minutes.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (lastArea.current && online !== false && getState().mode !== "navigating") refreshArea(lastArea.current);
+    }, 120_000);
+    return () => clearInterval(id);
+  }, [online]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- render
   if (!config) {
@@ -291,6 +312,7 @@ export function MainScreen() {
         onRegionChange={onMapRegionChange}
         onRoutePress={onMapRoutePress}
         simFix={mode === "navigating" && demo ? demoFix : null}
+        jams={mode === "browse" || mode === "place" ? jams : NO_JAMS}
       />
 
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}

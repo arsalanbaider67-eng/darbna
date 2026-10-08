@@ -12,6 +12,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
   const { theme, t, fmtCtx } = useUi();
   const preview = useStore((s) => s.preview);
   const dest = useStore((s) => s.selected);
+  const config = useStore((s) => s.config);
   const { result, selectedIdx, loading, error, avoidReportIds } = preview;
 
   const header = (
@@ -71,10 +72,14 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
         ))}
       </ScrollView>
 
-      {/* Honest ETA labeling: no traffic data behind these numbers. */}
+      {/* Honest ETA labeling: say exactly what the time is based on. */}
       <Row gap={6} style={{ marginTop: 8 }}>
-        <Icon name="information-outline" size={16} color={theme.textMuted} />
-        <Txt size={13} muted>{t.preview.noTraffic}</Txt>
+        <Icon name={route.trafficExtraS ? "car-clock" : "information-outline"} size={16} color={route.trafficExtraS ? theme.warn : theme.textMuted} />
+        <Txt size={13} muted style={{ flex: 1 }}>
+          {route.trafficExtraS
+            ? fmt(t.preview.withTraffic, { t: fmtDuration(route.trafficExtraS, fmtCtx) })
+            : config?.sharedTraffic ? t.preview.noTrafficData : t.preview.noTraffic}
+        </Txt>
       </Row>
       {route.avoidedClosureIds && route.avoidedClosureIds.length > 0 && (
         <Chip icon="shield-check" text={t.preview.officialAvoided} color={theme.ok} textColor="#fff" />

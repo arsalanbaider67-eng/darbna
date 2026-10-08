@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import {
   Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import type { LngLat, LocationFix } from "@darbna/core";
+import { trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -28,8 +28,11 @@ interface Props {
   onRoutePress?(idx: number): void;
   /** Demo drive: a simulated position that replaces the phone GPS for the dot and camera. */
   simFix?: LocationFix | null;
+  /** Live traffic slow spots (browse mode). */
+  jams?: TrafficCell[];
 }
 
+const TRAFFIC_COLOR = ["match", ["get", "level"], "heavy", "#E5383B", "#F2994A"];
 const BAGHDAD: LngLat = [44.3661, 33.3152];
 
 // Category → colour as a GPU-side expression, so markers cost nothing per frame.
@@ -128,6 +131,23 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   } : null), [p.destination]);
 
   const navigating = p.follow === "navigation";
+  const trafficShape = useMemo(() => {
+    const r = p.routes[p.selectedRouteIdx];
+    return {
+      type: "FeatureCollection" as const,
+      features: (r?.trafficSpans ?? []).map((sp, i) => ({
+        type: "Feature" as const, id: `t${i}`, properties: { level: sp.level },
+        geometry: { type: "LineString" as const, coordinates: r.geometry.slice(sp.from, sp.to + 1) },
+      })),
+    };
+  }, [p.routes, p.selectedRouteIdx]);
+  const jamShape = useMemo(() => ({
+    type: "FeatureCollection" as const,
+    features: (p.jams ?? []).map((j) => ({
+      type: "Feature" as const, id: `${j.cell}:${j.dir}`, properties: { level: trafficLevel(j.ratio) },
+      geometry: { type: "Point" as const, coordinates: j.coord },
+    })),
+  }), [p.jams]);
   const sim = p.simFix ?? null;
   useEffect(() => {
     if (!sim || p.follow === "none") return;
@@ -174,6 +194,18 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
               style={{ lineColor: theme.route, lineWidth: 7, lineCap: "round", lineJoin: "round" }} />
           </ShapeSource>
         )}
+
+        {trafficShape.features.length > 0 && (
+          <ShapeSource id="traffic" shape={trafficShape}>
+            <LineLayer id="route-traffic" style={{ lineColor: TRAFFIC_COLOR as any, lineWidth: 7, lineCap: "round", lineJoin: "round" }} />
+          </ShapeSource>
+        )}
+
+        <ShapeSource id="jams" shape={jamShape}>
+          <CircleLayer id="jam-dot" minZoomLevel={11} style={{
+            circleRadius: ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 9], circleColor: TRAFFIC_COLOR as any, circleOpacity: 0.75, circleBlur: 0.4,
+          }} />
+        </ShapeSource>
 
         <ShapeSource id="reports" shape={reportShape} onPress={onReportPress} hitbox={{ width: 36, height: 36 }}>
           <CircleLayer
@@ -227,6 +259,7 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.selectedRouteIdx === b.selectedRouteIdx &&
   a.destination === b.destination &&
   a.reports === b.reports &&
-  a.simFix === b.simFix;
+  a.simFix === b.simFix &&
+  a.jams === b.jams;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasInner), sameExceptCallbacks);

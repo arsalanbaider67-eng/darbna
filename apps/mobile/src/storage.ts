@@ -41,8 +41,10 @@ export interface Settings {
   theme: "auto" | "day" | "night";
   voice: boolean;
   digits: "arabic" | "western";
+  /** Send anonymous speed samples while navigating (live traffic). */
+  shareTraffic: boolean;
 }
-export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western" };
+export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: true };
 export const loadSettings = () => getJSON<Settings | null>(K.settings, null);
 export const saveSettings = (s: Settings) => setJSON(K.settings, s);
 

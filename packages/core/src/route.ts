@@ -25,7 +25,9 @@ export interface RouteStep {
 
 export type DurationSource =
   /** Free-flow road-graph estimate. No live or historic traffic was used. */
-  | "engine_no_traffic";
+  | "engine_no_traffic"
+  /** Free-flow estimate slowed down where Darbna drivers are currently going slower (traffic.ts). */
+  | "darbna_live_traffic";
 
 export interface Route {
   id: string;
