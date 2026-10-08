@@ -75,6 +75,7 @@ export async function downloadArea(m: MLMap, onProgress: (pct: number) => void):
   }
   if (typeof style.sprite === "string") for (const sfx of [".json", ".png", "@2x.json", "@2x.png"]) urls.add(style.sprite + sfx);
 
+  if (!urls.size) return "failed"; // map not loaded yet: nothing to save
   const list = [...urls];
   let done = 0, failed = 0, bytes = 0;
   const worker = async () => {

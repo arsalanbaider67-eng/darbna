@@ -53,10 +53,16 @@ on a real phone or against real Iraqi road data. Read this before you demo it to
 | Guidance continues on the loaded route with no connection | ✅ engine (pure, on-device) · 🟡 app |
 | Active trip survives app restart (resume prompt, 6 h) | 🟡 |
 | Connection banner, offline search over saved/recent places | 🟡 |
-| Map tiles already viewed stay visible offline (MapLibre ambient cache) | 🟡 — **not advertised** until verified |
-| Offline map downloads | ⛔ (flag `offlineMapDisplay: false`) |
-| Offline route calculation | ⛔ (flag `offlineRouting: false`) |
-| Live traffic | ⛔ (flag `liveTraffic: false`) |
+| Web app opens with no internet (service worker caches the app) | ✅ verified in browser e2e (app reopened offline) |
+| Map areas viewed stay available offline (web: service worker; phone: MapLibre ambient cache) | ✅ web e2e · 🟡 phone |
+| "Download area on screen" (web: tiles z6–14 + Arabic/Latin glyphs + sprites into Cache Storage; phone: MapLibre offline pack) | ✅ web e2e · 🟡 phone (not yet tested on a device) |
+| Offline route calculation | ⛔ needs an on-device routing engine + road graph |
+| Live traffic — crowdsourced from Darbna drivers (direct mode + Supabase): anonymous speed samples every ~200 m while navigating, never first/last 300 m, median of per-trip ratios over 15 min, routes re-timed and re-sorted, slow stretches coloured, jam dots on the map | ✅ two-browser e2e · coverage only where Darbna users drive |
+| Commercial live traffic | ⛔ TomTom does not cover Iraq; Google traffic can't be used in another navigation app |
+
+Shared reports and traffic in the web/sideload builds live in Supabase (`supabase/schema.sql`):
+private schema, only API functions exposed, hashed install/trip ids, hashed IPs erased after a day,
+rate limits per install, per IP and overall. Moderation: Table Editor → `darbna_private.reports`.
 
 ### Not implemented (deliberately listed)
 - **Background navigation** (guidance with the screen locked / another app in front). Today the
