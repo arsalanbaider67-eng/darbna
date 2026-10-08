@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#127386"/><stop offset="1" stop-color="#0A4552"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(-133,30)">
+  <!-- road sweeping from bottom toward the horizon -->
+  <path d="M300 1024 C 380 760, 560 640, 600 470 L 690 470 C 690 650, 600 820, 700 1024 Z" fill="#F4EFE6" opacity="0.95"/>
+  <path d="M500 1024 C 530 840, 600 700, 645 520" stroke="#E0A526" stroke-width="22" stroke-dasharray="70 55" fill="none" stroke-linecap="round"/>
+  <!-- destination pin -->
+  <path d="M645 170 c-105 0 -185 80 -185 182 c0 132 185 300 185 300 s185 -168 185 -300 c0 -102 -80 -182 -185 -182 z" fill="#E0A526"/>
+  <circle cx="645" cy="352" r="70" fill="#0A4552"/>
+</g>
+</svg>

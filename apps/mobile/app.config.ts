@@ -18,6 +18,19 @@ const config: ExpoConfig = {
   version: "0.1.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
+  icon: "./assets/icon.png",
+  web: {
+    bundler: "metro",
+    output: "single",
+    name: "دربنا",
+    shortName: "دربنا",
+    lang: "ar",
+    themeColor: "#0E5E6F",
+    backgroundColor: "#F4EFE6",
+    favicon: "./public/favicon.png",
+  },
+  // GitHub Pages serves the web build from /<repo>/ — set by the web workflow.
+  experiments: process.env.EXPO_BASE_URL ? { baseUrl: process.env.EXPO_BASE_URL } : undefined,
   // Old architecture for now: fewer native-module surprises with MapLibre on Expo SDK 54.
   newArchEnabled: false,
   ios: {

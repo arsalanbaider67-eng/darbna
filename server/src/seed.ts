@@ -16,7 +16,7 @@ interface SeedPlace {
 
 /** Load the curated gazetteer. Idempotent: matches existing rows by external_ref. */
 export async function seedGazetteer(db: Db): Promise<number> {
-  const file = JSON.parse(readFileSync(join(import.meta.dir, "..", "seed", "gazetteer.seed.json"), "utf8")) as { places: SeedPlace[] };
+  const file = JSON.parse(readFileSync(join(import.meta.dir, "..", "..", "packages", "core", "data", "gazetteer.seed.json"), "utf8")) as { places: SeedPlace[] };
   const ids = new Map<string, number>();
   for (const p of file.places) {
     const ref = `seed:${p.key}`;

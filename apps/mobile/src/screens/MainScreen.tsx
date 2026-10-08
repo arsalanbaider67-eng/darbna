@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, BackHandler, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { parseSharedLocation, type LngLat } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
+import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
 import { MapCanvas, type MapCanvasHandle } from "../components/MapCanvas";
 import { NavHud } from "../components/NavHud";
@@ -99,13 +100,10 @@ export function MainScreen() {
   useEffect(() => {
     loadTrip().then((saved) => {
       if (!saved || Date.now() - saved.startedAt > 6 * 3600_000) return void saveTrip(null);
-      Alert.alert(t.appName, fmt(t.nav.resumeTrip, { name: saved.destination.name }), [
-        { text: t.nav.resumeNo, style: "cancel", onPress: () => void saveTrip(null) },
-        {
-          text: t.nav.resumeYes,
-          onPress: () => setState({ selected: saved.destination, trip: { ...saved, paused: false, muted: false }, mode: "navigating" }),
-        },
-      ]);
+      void confirmDialog(t.appName, fmt(t.nav.resumeTrip, { name: saved.destination.name }), t.nav.resumeYes, t.nav.resumeNo).then((yes) => {
+        if (yes) setState({ selected: saved.destination, trip: { ...saved, paused: false, muted: false }, mode: "navigating" });
+        else void saveTrip(null);
+      });
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -333,6 +331,11 @@ export function MainScreen() {
       {sheet === "settings" && <SettingsSheet onClose={() => setState({ sheet: null })} />}
       {openReportId && <ReportDetails id={openReportId} onClose={() => setState({ openReportId: null })} />}
 
+      {config.mode === "direct" && mode !== "navigating" && (
+        <View pointerEvents="none" style={[s.sample, { top: insets.top + 72, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
+          <Txt size={11} weight="semibold" muted>{t.status.webPreview}</Txt>
+        </View>
+      )}
       {config.sampleData && (
         <View pointerEvents="none" style={[s.sample, { top: insets.top + (mode === "navigating" ? 4 : 72), backgroundColor: theme.accent }]}>
           <Txt size={11} weight="bold" style={{ color: theme.onAccent }}>{t.reports.sample}</Txt>

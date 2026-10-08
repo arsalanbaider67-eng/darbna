@@ -78,6 +78,7 @@ export const en: Strings = {
     alreadyVoted: "You already voted", own: "This is your report",
   },
   status: {
+    webPreview: "Web preview · reports stay on this device",
     serverUnreachable: "Can't reach the Darbna server. Check that it's running and that this device is on the same network.",
     offline: "No internet", offlineNav: "No internet — guidance continues on the saved route",
     online: "Back online", gpsWeak: "Weak GPS signal", gpsLost: "GPS signal lost", locating: "Finding your location…",

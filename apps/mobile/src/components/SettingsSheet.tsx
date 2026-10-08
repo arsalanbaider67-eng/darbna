@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Alert, I18nManager, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { I18nManager, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { api } from "../api";
+import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
@@ -39,18 +40,13 @@ export function SettingsSheet({ onClose }: { onClose(): void }) {
   }
 
   function deleteData() {
-    Alert.alert(t.settings.deleteData, t.settings.deleteConfirm, [
-      { text: t.common.cancel, style: "cancel" },
-      {
-        text: t.settings.deleteData, style: "destructive",
-        onPress: async () => {
-          await api.deleteMe().catch(() => {}); // best-effort; local wipe happens regardless
-          await wipeLocalData();
-          setState({ saved: { favorites: [] }, recents: [], trip: null });
-          toast(t.settings.deleted, "ok");
-        },
-      },
-    ]);
+    void confirmDialog(t.settings.deleteData, t.settings.deleteConfirm, t.settings.deleteData, t.common.cancel, true).then(async (yes) => {
+      if (!yes) return;
+      await api.deleteMe().catch(() => {}); // best-effort; local wipe happens regardless
+      await wipeLocalData();
+      setState({ saved: { favorites: [] }, recents: [], trip: null });
+      toast(t.settings.deleted, "ok");
+    });
   }
 
   const Seg = <T extends string>({ value, options, onChange }: { value: T; options: { v: T; label: string }[]; onChange(v: T): void }) => (

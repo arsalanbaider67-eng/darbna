@@ -6,3 +6,5 @@ export * from "./reports";
 export * from "./format";
 export * from "./share";
 export * from "./simulate";
+export * from "./valhalla";
+export * from "./style";

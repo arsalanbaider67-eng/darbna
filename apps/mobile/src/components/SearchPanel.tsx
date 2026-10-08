@@ -60,6 +60,8 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
   const [results, setResults] = useState<Place[] | null>(null);
   const [state, setStatus] = useState<"idle" | "loading" | "error" | "offline" | "partial">("idle");
   const [pasteError, setPasteError] = useState(false);
+  // Bumped when the user presses Search: in direct mode that's the only time Nominatim is queried.
+  const [submitted, setSubmitted] = useState(0);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
       }
       setStatus("loading");
       try {
-        const r = await api.search(query, lang, userCoord ?? undefined);
+        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 });
         if (id !== seq.current) return;
         setResults(r.results);
         setStatus(r.partial ? "partial" : "idle");
@@ -87,9 +89,9 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
         setStatus(e instanceof ApiError && e.isNetwork ? "offline" : "error");
         setResults(localMatch(query, [...saved.favorites, ...recents]));
       }
-    }, 300);
+    }, submitted > 0 ? 0 : 300);
     return () => clearTimeout(timer);
-  }, [q, online, lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [q, online, lang, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function paste() {
     setPasteError(false);
@@ -124,7 +126,8 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
         <TextInput
           autoFocus
           value={q}
-          onChangeText={setQ}
+          onChangeText={(v) => { setQ(v); setSubmitted(0); }}
+          onSubmitEditing={() => setSubmitted((n) => n + 1)}
           placeholder={t.search.placeholder}
           placeholderTextColor={theme.textMuted}
           returnKeyType="search"

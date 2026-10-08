@@ -44,4 +44,6 @@ export interface ServerConfig {
   routing: { provider: string; traffic: boolean; avoidsVerifiedClosures: boolean };
   features: { offlineMapDisplay: boolean; offlineRouting: boolean; liveTraffic: boolean };
   sampleData: boolean;
+  /** "direct" = web preview talking to public services with no Darbna server. */
+  mode?: "server" | "direct";
 }

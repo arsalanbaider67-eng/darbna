@@ -1,19 +1,14 @@
 import type { LngLat, ReportCategory } from "@darbna/core";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteResult, ServerConfig } from "./types";
+import { ApiError } from "./apiError";
+import { directApi } from "./apiDirect";
+
+export { ApiError, type ApiErrorCode } from "./apiError";
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://10.0.2.2:8080").replace(/\/$/, "");
-
-export type ApiErrorCode = "offline" | "timeout" | "rate_limited" | "server" | string;
-
-export class ApiError extends Error {
-  constructor(public code: ApiErrorCode, public status = 0, public retryAfterS?: number) {
-    super(code);
-  }
-  get isNetwork() {
-    return this.code === "offline" || this.code === "timeout";
-  }
-}
+/** "direct": no Darbna server — call public OSM services from the device (web preview). */
+export const DIRECT_MODE = API_URL === "direct";
 
 async function request<T>(path: string, opts: { method?: string; body?: unknown; timeoutMs?: number; install?: boolean } = {}): Promise<T> {
   const ctrl = new AbortController();
@@ -39,10 +34,10 @@ async function request<T>(path: string, opts: { method?: string; body?: unknown;
   return data as T;
 }
 
-export const api = {
+const serverApi = {
   config: () => request<ServerConfig>("/v1/config", { timeoutMs: 6000 }),
 
-  search: (q: string, lang: string, near?: LngLat) =>
+  search: (q: string, lang: string, near?: LngLat, _opts: { remote?: boolean } = {}) =>
     request<{ results: (Place & { score: number })[]; partial: boolean }>(
       `/v1/search?q=${encodeURIComponent(q)}&lang=${lang}${near ? `&near=${near[0].toFixed(3)},${near[1].toFixed(3)}` : ""}`,
       { timeoutMs: 8000 },
@@ -69,3 +64,5 @@ export const api = {
 
   deleteMe: () => request<{ deleted: unknown }>("/v1/me", { method: "DELETE", install: true }),
 };
+
+export const api: typeof serverApi = DIRECT_MODE ? (directApi as unknown as typeof serverApi) : serverApi;
