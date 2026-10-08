@@ -57,6 +57,7 @@ export function MainScreen() {
   const [lookingUp, setLookingUp] = useState(false);
   const [configError, setConfigError] = useState(false);
   const centeredOnce = useRef(false);
+  const keepAwakeOn = useRef(false);
   const lastBBox = useRef<string>("");
 
   const onMapLongPress = useStableCallback((c: LngLat) => { void dropPin(c); });
@@ -129,8 +130,14 @@ export function MainScreen() {
 
   // ---------------------------------------------------------------- keep screen awake only while guiding
   useEffect(() => {
-    if (mode === "navigating") void activateKeepAwakeAsync("nav");
-    else deactivateKeepAwake("nav");
+    // Only release a wake lock we actually took (browsers throw otherwise), and never let a
+    // refused wake lock (e.g. Safari in Low Power Mode) break navigation.
+    if (mode === "navigating") {
+      activateKeepAwakeAsync("nav").then(() => (keepAwakeOn.current = true)).catch(() => {});
+    } else if (keepAwakeOn.current) {
+      keepAwakeOn.current = false;
+      try { void Promise.resolve(deactivateKeepAwake("nav")).catch(() => {}); } catch {}
+    }
     if (mode !== "navigating") stopSpeaking();
   }, [mode]);
 

@@ -217,7 +217,8 @@ const s = StyleSheet.create({
   },
   barIcon: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   inputRow: { marginHorizontal: 12, minHeight: TOUCH, borderRadius: 16, borderWidth: 2, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12 },
-  input: { flex: 1, fontSize: 18, paddingVertical: 10 },
+  // minWidth 0: a browser <input> otherwise refuses to shrink below ~20 characters and pushes the page sideways.
+  input: { flex: 1, minWidth: 0, fontSize: 18, paddingVertical: 10 },
   quickRow: { flexDirection: "row", gap: 10, paddingHorizontal: 12, marginTop: 12 },
   quick: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, minHeight: TOUCH },
   paste: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 14, borderWidth: 1, borderStyle: "dashed" },
