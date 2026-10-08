@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { parseSharedLocation, type LngLat, type TrafficCell } from "@darbna/core";
+import { haversine, parseSharedLocation, type LngLat, type TrafficCell } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -16,7 +16,8 @@ import { SearchBar, SearchPanel } from "../components/SearchPanel";
 import { SettingsSheet } from "../components/SettingsSheet";
 import { ConnectionPill, LocatingPill, PermissionPanel, Toast } from "../components/States";
 import { Btn, Icon, RoundBtn, Txt } from "../components/ui";
-import { useUi } from "../context";
+import { UiOverride, useUi } from "../context";
+import { enableCompass } from "../compass";
 import { useConnectivity } from "../hooks/useConnectivity";
 import { useLocation } from "../hooks/useLocation";
 import { fmt } from "../i18n";
@@ -86,6 +87,19 @@ export function MainScreen() {
   const [demo, setDemo] = useState(false);
   const demoFix = useDemoDrive(tripRoute?.geometry ?? null, tripRoute?.distanceM ?? 0, tripRoute?.durationS ?? 0, mode === "navigating" && demo, !!trip?.paused);
   const navFix = demo ? demoFix : fix;
+  // Speed for the dashboard bubble: GPS speed, or worked out from the last two positions when the
+  // browser doesn't report one.
+  const lastFixRef = useRef<typeof navFix>(null);
+  const speedRef = useRef<number | null>(null);
+  if (navFix && navFix !== lastFixRef.current) {
+    const prev = lastFixRef.current;
+    if (navFix.speedMps != null && navFix.speedMps >= 0) speedRef.current = navFix.speedMps;
+    else if (prev && navFix.timestamp > prev.timestamp) {
+      const v = haversine(prev.coord, navFix.coord) / ((navFix.timestamp - prev.timestamp) / 1000);
+      speedRef.current = v < 70 ? v : speedRef.current;
+    }
+    lastFixRef.current = navFix;
+  }
 
   const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
   // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
@@ -229,6 +243,7 @@ export function MainScreen() {
   function startNavigation(asDemo = false) {
     // Must run inside the tap, before anything async: lets iPhone Safari speak later prompts.
     primeVoice();
+    enableCompass(); // iPhone asks once, and only from a tap: lets the arrow turn with the phone
     const s = getState();
     const route = s.preview.result?.routes[s.preview.selectedIdx];
     if (!route || !s.selected) return;
@@ -290,12 +305,14 @@ export function MainScreen() {
     );
   }
 
-  const styleUrl = theme.dark ? config.map.styleNight : config.map.styleDay;
+  // Driving is always on the dark map (easier on the eyes, makes the route and arrow pop).
+  const styleUrl = theme.dark || mode === "navigating" ? config.map.styleNight : config.map.styleDay;
   const selectedIdx = mode === "preview" ? preview.selectedIdx : 0;
   const showSearchBar = mode === "browse" || mode === "place";
   const pillTop = insets.top + 80;
 
   return (
+    <UiOverride dark={mode === "navigating"}>
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <StatusBar style={theme.dark || mode === "navigating" ? "light" : "dark"} />
       <MapCanvas
@@ -322,7 +339,7 @@ export function MainScreen() {
       {(mode === "browse" || mode === "place") && loc.permission === "granted" && fix && (
         <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 240 : 28) }]}>
           <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
-          <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => map.current?.flyTo(fix.coord, 15)} />
+          <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15); }} />
         </View>
       )}
 
@@ -362,6 +379,7 @@ export function MainScreen() {
           paused={trip.paused}
           muted={trip.muted}
           following={following}
+          speedMps={speedRef.current}
           onExit={endTrip}
           onPauseToggle={() => setState({ trip: { ...trip, paused: !trip.paused } })}
           onMuteToggle={() => { stopSpeaking(); setState({ trip: { ...trip, muted: !trip.muted } }); }}
@@ -400,6 +418,7 @@ export function MainScreen() {
       )}
       <Toast />
     </View>
+    </UiOverride>
   );
 }
 

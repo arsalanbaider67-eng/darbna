@@ -34,3 +34,13 @@ export function useUi(): Ui {
   if (!v) throw new Error("useUi outside UiProvider");
   return v;
 }
+
+/**
+ * Forces the night palette for its children while `dark` is true (the driving screen is always
+ * dark, like the map under it). Always rendered, so toggling it never remounts the map.
+ */
+export function UiOverride({ dark, children }: { dark: boolean; children: React.ReactNode }) {
+  const ui = useUi();
+  const value = useMemo<Ui>(() => (dark && !ui.theme.dark ? { ...ui, theme: night } : ui), [dark, ui]);
+  return <UiContext.Provider value={value}>{children}</UiContext.Provider>;
+}

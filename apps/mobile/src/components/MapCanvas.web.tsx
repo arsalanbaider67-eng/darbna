@@ -5,12 +5,13 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { darkenStyle, lightenStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { bearing, darkenStyle, haversine, lightenStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
 import type { MapCanvasHandle } from "./MapCanvas";
 import { downloadArea } from "../offline";
+import { compassHeading } from "../compass";
 
 export type { MapCanvasHandle } from "./MapCanvas";
 
@@ -99,6 +100,37 @@ function jamsFC(jams: TrafficCell[]): GeoJSON.FeatureCollection {
 }
 export const TRAFFIC_COLOR = ["match", ["get", "level"], "heavy", "#E5383B", "#F2994A"] as const;
 
+/** Your position: an arrow when the direction is known, otherwise a dot. */
+function meFC(c: LngLat | null, heading: number | null): GeoJSON.FeatureCollection {
+  return pointFC(c, { heading: heading ?? 0, hasHeading: heading == null ? 0 : 1 });
+}
+
+/** Navigation arrow drawn once into an image (2× for sharp edges on phone screens). */
+function puckImage(): ImageData | null {
+  if (typeof document === "undefined") return null;
+  const S = 72, c = document.createElement("canvas");
+  c.width = c.height = S;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  g.translate(S / 2, S / 2);
+  g.shadowColor = "rgba(0,0,0,0.45)";
+  g.shadowBlur = 6;
+  g.beginPath();
+  g.moveTo(0, -27); // tip (points north; the map rotates it)
+  g.lineTo(21, 23);
+  g.lineTo(0, 13);
+  g.lineTo(-21, 23);
+  g.closePath();
+  g.fillStyle = "#2EC4DA";
+  g.fill();
+  g.shadowColor = "transparent";
+  g.lineWidth = 4;
+  g.strokeStyle = "#FFFFFF";
+  g.lineJoin = "round";
+  g.stroke();
+  return g.getImageData(0, 0, S, S);
+}
+
 function reportsFC(reports: PublicReport[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
@@ -121,7 +153,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   handlers.current = p;
   const latest = useRef(p);
   latest.current = p;
-  const me = useRef<{ coord: LngLat; heading: number | null } | null>(null);
+  const me = useRef<{ coord: LngLat; heading: number | null; at: number; moving: boolean } | null>(null);
   const styleLoaded = useRef<string | null>(null);
   const themeRef = useRef(theme);
   themeRef.current = theme;
@@ -141,14 +173,27 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     },
   }), []);
 
-  /** Moves the blue dot and, when following, the camera. */
-  const moveMe = (m: MLMap, coord: LngLat, heading: number | null, speed: number | null, duration = 800) => {
-    me.current = { coord, heading };
-    (m.getSource("me") as GeoJSONSource | undefined)?.setData(pointFC(coord));
+  /**
+   * Which way you're heading: the GPS course while moving, else the direction of your last few
+   * metres of movement, else the phone's compass, else the last known direction.
+   */
+  const pickHeading = (coord: LngLat, gps: number | null, speed: number | null): { h: number | null; moving: boolean } => {
+    const prev = me.current;
+    if (gps != null && !Number.isNaN(gps) && (speed ?? 0) > 1.5) return { h: gps, moving: true };
+    if (prev && haversine(prev.coord, coord) > 6 && (speed == null || speed > 0.8)) return { h: bearing(prev.coord, coord), moving: true };
+    return { h: compassHeading() ?? prev?.heading ?? null, moving: false };
+  };
+
+  /** Moves your arrow (or dot) and, when following, the camera. */
+  const moveMe = (m: MLMap, coord: LngLat, gpsHeading: number | null, speed: number | null, duration = 800) => {
+    const { h, moving } = pickHeading(coord, gpsHeading, speed);
+    me.current = { coord, heading: h, at: Date.now(), moving };
+    (m.getSource("me") as GeoJSONSource | undefined)?.setData(meFC(coord, h));
     const f = latest.current.follow;
     if (f !== "none") {
-      const brg = f === "navigation" && heading != null && !Number.isNaN(heading) && (speed ?? 0) > 2 ? heading : m.getBearing();
-      m.easeTo({ center: coord, zoom: f === "navigation" ? 16.5 : 15, bearing: brg, pitch: f === "navigation" ? 45 : 0, duration });
+      // Course-up while driving; keep the map still when stopped so it doesn't spin.
+      const brg = f === "navigation" && moving && h != null ? h : m.getBearing();
+      m.easeTo({ center: coord, zoom: f === "navigation" ? 16.5 : 15, bearing: brg, pitch: f === "navigation" ? 50 : 0, duration });
     }
   };
 
@@ -180,9 +225,17 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     m.addSource("dest", { type: "geojson", data: pointFC(latest.current.destination?.coord ?? null) });
     m.addLayer({ id: "dest-halo", type: "circle", source: "dest", paint: { "circle-radius": 16, "circle-color": t.accent, "circle-opacity": 0.25 } });
     m.addLayer({ id: "dest-dot", type: "circle", source: "dest", paint: { "circle-radius": 8, "circle-color": t.accent, "circle-stroke-width": 3, "circle-stroke-color": "#FFFFFF" } });
-    m.addSource("me", { type: "geojson", data: pointFC(me.current?.coord ?? null) });
-    m.addLayer({ id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 18, "circle-color": "#2F80ED", "circle-opacity": 0.18 } });
-    m.addLayer({ id: "me-dot", type: "circle", source: "me", paint: { "circle-radius": 8, "circle-color": "#2F80ED", "circle-stroke-width": 3, "circle-stroke-color": "#FFFFFF" } });
+    m.addSource("me", { type: "geojson", data: meFC(me.current?.coord ?? null, me.current?.heading ?? null) });
+    m.addLayer({ id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 24, "circle-color": "#2EC4DA", "circle-opacity": 0.16, "circle-pitch-alignment": "map" } });
+    m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "hasHeading"], 0], paint: { "circle-radius": 8, "circle-color": "#2F80ED", "circle-stroke-width": 3, "circle-stroke-color": "#FFFFFF" } });
+    if (!m.hasImage("darbna-puck")) { const img = puckImage(); if (img) m.addImage("darbna-puck", img, { pixelRatio: 2 }); }
+    m.addLayer({
+      id: "me-arrow", type: "symbol", source: "me", filter: ["==", ["get", "hasHeading"], 1],
+      layout: {
+        "icon-image": "darbna-puck", "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map", "icon-pitch-alignment": "map",
+        "icon-allow-overlap": true, "icon-ignore-placement": true,
+      },
+    });
   };
 
   // ---------------------------------------------------------------- create the map once
@@ -214,6 +267,15 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     }, 4000);
     m.once("remove", () => clearTimeout(fold));
     m.on("style.load", addOverlays);
+    // Standing still: turn the arrow with the phone's compass (when allowed).
+    const compassTimer = setInterval(() => {
+      const cur = me.current, h = compassHeading();
+      if (!cur || cur.moving || h == null) return;
+      if (cur.heading != null && Math.abs(((h - cur.heading + 540) % 360) - 180) < 4) return;
+      cur.heading = h;
+      (m.getSource("me") as GeoJSONSource | undefined)?.setData(meFC(cur.coord, h));
+    }, 400);
+    m.once("remove", () => clearInterval(compassTimer));
 
     m.on("moveend", (e: any) => {
       const b = m.getBounds();
