@@ -23,7 +23,8 @@ export function useLocation(mode: LocationMode) {
       accuracyM: p.coords.accuracy ?? 100,
       speedMps: p.coords.speed,
       headingDeg: p.coords.heading != null && !Number.isNaN(p.coords.heading) ? p.coords.heading : null,
-      timestamp: p.timestamp || Date.now(),
+      // Receipt time: some browsers re-report a cached fix with its original (old) timestamp.
+      timestamp: Date.now(),
     });
   }, []);
 
