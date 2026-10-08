@@ -46,4 +46,6 @@ export interface ServerConfig {
   sampleData: boolean;
   /** "direct" = web preview talking to public services with no Darbna server. */
   mode?: "server" | "direct";
+  /** Direct mode: community reports are shared through Supabase (false = kept on this device). */
+  sharedReports?: boolean;
 }

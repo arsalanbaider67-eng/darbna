@@ -11,16 +11,19 @@ on:
   workflow_dispatch:
     inputs:
       api_url:
-        description: "Darbna API URL baked into the app (your PC on Wi-Fi, e.g. http://192.168.100.100:8080)"
+        description: "'direct' = works anywhere with public map services + shared reports (default); or your PC's Darbna server, e.g. http://192.168.100.100:8080"
         required: true
-        default: "http://192.168.100.100:8080"
+        default: "direct"
 
 jobs:
   ios:
     runs-on: macos-15
     timeout-minutes: 90
     env:
-      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'http://192.168.100.100:8080' }}
+      EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'direct' }}
+      # Public client values (Settings → Variables on GitHub); empty = reports stay on the phone.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       CI: "1"
       NODE_ENV: production

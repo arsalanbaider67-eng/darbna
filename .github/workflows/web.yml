@@ -25,6 +25,9 @@ jobs:
     timeout-minutes: 30
     env:
       EXPO_PUBLIC_API_URL: direct
+      # Public client values (Settings → Variables on GitHub); empty = reports stay on the phone.
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
       EXPO_BASE_URL: /${{ github.event.repository.name }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       NODE_ENV: production

@@ -356,7 +356,7 @@ export function MainScreen() {
       {sheet === "settings" && <SettingsSheet onClose={() => setState({ sheet: null })} />}
       {openReportId && <ReportDetails id={openReportId} onClose={() => setState({ openReportId: null })} />}
 
-      {config.mode === "direct" && mode !== "navigating" && (
+      {config.mode === "direct" && !config.sharedReports && mode !== "navigating" && (
         <View pointerEvents="none" style={[s.sample, { top: insets.top + 72, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
           <Txt size={11} weight="semibold" muted>{t.status.webPreview}</Txt>
         </View>
