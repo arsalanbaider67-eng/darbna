@@ -6,8 +6,8 @@ import { setState, useStore } from "../store";
 import { REPORT_STYLE } from "../theme";
 import { Btn, Chip, Icon, Panel, Row, Txt } from "./ui";
 
-export function RoutePreview({ onStart, onBack, onRetry, onToggleAvoid, canStart }: {
-  onStart(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; canStart: boolean;
+export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, canStart }: {
+  onStart(): void; onDemo(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; canStart: boolean;
 }) {
   const { theme, t, fmtCtx } = useUi();
   const preview = useStore((s) => s.preview);
@@ -104,7 +104,10 @@ export function RoutePreview({ onStart, onBack, onRetry, onToggleAvoid, canStart
         </View>
       )}
 
-      <Btn label={t.preview.start} icon="navigation-variant" onPress={onStart} disabled={!canStart} style={{ marginTop: 12 }} />
+      <Row style={{ marginTop: 12 }}>
+        <Btn label={t.preview.start} icon="navigation-variant" onPress={onStart} disabled={!canStart} style={{ flex: 2 }} />
+        <Btn kind="secondary" label={t.preview.demo} icon="play-circle-outline" onPress={onDemo} disabled={!canStart} style={{ flex: 1 }} accessibilityHint={t.preview.demoHint} />
+      </Row>
     </Panel>
   );
 }

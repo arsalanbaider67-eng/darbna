@@ -117,7 +117,8 @@ function rescore(r: PublicReport): PublicReport {
 // ---------------------------------------------------------------- the API, same shape as the server client
 export const directApi = {
   config: async (): Promise<ServerConfig> => ({
-    map: { styleDay: STYLE, styleNight: STYLE, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
+    // "#night" asks the map to recolour the same style for night driving (darkenStyle).
+    map: { styleDay: STYLE, styleNight: `${STYLE}#night`, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
     routing: { provider: "valhalla", traffic: false, avoidsVerifiedClosures: false },
     features: { offlineMapDisplay: false, offlineRouting: false, liveTraffic: false },
     sampleData: false,

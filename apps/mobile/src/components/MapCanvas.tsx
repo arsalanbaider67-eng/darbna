@@ -1,9 +1,9 @@
-import React, { forwardRef, memo, useCallback, useImperativeHandle, useMemo, useRef } from "react";
+import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import type { LngLat } from "@darbna/core";
+import type { LngLat, LocationFix } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -26,6 +26,8 @@ interface Props {
   onReportPress(id: string): void;
   onRegionChange(bbox: [number, number, number, number], zoom: number, byUser: boolean): void;
   onRoutePress?(idx: number): void;
+  /** Demo drive: a simulated position that replaces the phone GPS for the dot and camera. */
+  simFix?: LocationFix | null;
 }
 
 const BAGHDAD: LngLat = [44.3661, 33.3152];
@@ -126,6 +128,15 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   } : null), [p.destination]);
 
   const navigating = p.follow === "navigation";
+  const sim = p.simFix ?? null;
+  useEffect(() => {
+    if (!sim || p.follow === "none") return;
+    camera.current?.setCamera({
+      centerCoordinate: sim.coord, zoomLevel: navigating ? 16.5 : 15, pitch: navigating ? 45 : 0,
+      heading: navigating && sim.headingDeg != null ? sim.headingDeg : undefined, animationDuration: 950, animationMode: "easeTo",
+    });
+  }, [sim, p.follow]); // eslint-disable-line react-hooks/exhaustive-deps
+  const simShape = useMemo(() => (sim ? { type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: sim.coord } } : null), [sim]);
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -146,7 +157,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
         <Camera
           ref={camera}
           defaultSettings={defaultSettings}
-          followUserLocation={p.follow !== "none"}
+          followUserLocation={p.follow !== "none" && !sim}
           followUserMode={navigating ? "course" : "normal"}
           followZoomLevel={navigating ? 16.5 : 15}
           followPitch={navigating ? 45 : 0}
@@ -191,12 +202,19 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           </ShapeSource>
         )}
 
-        <UserLocation
+        {simShape && (
+          <ShapeSource id="sim-me" shape={simShape}>
+            <CircleLayer id="sim-halo" style={{ circleRadius: 18, circleColor: "#2F80ED", circleOpacity: 0.18 }} />
+            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: "#2F80ED", circleStrokeWidth: 3, circleStrokeColor: "#FFFFFF" }} />
+          </ShapeSource>
+        )}
+
+        {!sim && <UserLocation
           renderMode="native"
           androidRenderMode={navigating ? "gps" : "compass"}
           showsUserHeadingIndicator
           minDisplacement={navigating ? 0 : 5}
-        />
+        />}
       </MapView>
     </View>
   );
@@ -208,6 +226,7 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.routes === b.routes &&
   a.selectedRouteIdx === b.selectedRouteIdx &&
   a.destination === b.destination &&
-  a.reports === b.reports;
+  a.reports === b.reports &&
+  a.simFix === b.simFix;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasInner), sameExceptCallbacks);

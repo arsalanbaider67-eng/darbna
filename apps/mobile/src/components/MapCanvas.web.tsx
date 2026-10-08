@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { lightenStyle, type LngLat } from "@darbna/core";
+import { darkenStyle, lightenStyle, type LngLat, type LocationFix } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -25,6 +25,8 @@ interface Props {
   onReportPress(id: string): void;
   onRegionChange(bbox: [number, number, number, number], zoom: number, byUser: boolean): void;
   onRoutePress?(idx: number): void;
+  /** Demo drive: a simulated position that replaces the browser's GPS for the blue dot and camera. */
+  simFix?: LocationFix | null;
 }
 
 const BAGHDAD: LngLat = [44.3661, 33.3152];
@@ -43,6 +45,13 @@ function ensureRtlPlugin() {
   } catch {
     /* labels still render, just unshaped */
   }
+}
+
+/** Style URL + transform: lightened always; recoloured for night when the URL ends in "#night". */
+function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next: any) => any }] {
+  const night = url.endsWith("#night");
+  const clean = night ? url.slice(0, -"#night".length) : url;
+  return [clean, { transformStyle: (_prev, next) => (night ? darkenStyle(lightenStyle(next)) : lightenStyle(next)) }];
 }
 
 const REPORT_COLOR: any = ["match", ["get", "category"], ...Object.entries(REPORT_STYLE).flatMap(([k, v]) => [k, v.color]), "#666666"];
@@ -92,6 +101,17 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     },
   }), []);
 
+  /** Moves the blue dot and, when following, the camera. */
+  const moveMe = (m: MLMap, coord: LngLat, heading: number | null, speed: number | null, duration = 800) => {
+    me.current = { coord, heading };
+    (m.getSource("me") as GeoJSONSource | undefined)?.setData(pointFC(coord));
+    const f = latest.current.follow;
+    if (f !== "none") {
+      const brg = f === "navigation" && heading != null && !Number.isNaN(heading) && (speed ?? 0) > 2 ? heading : m.getBearing();
+      m.easeTo({ center: coord, zoom: f === "navigation" ? 16.5 : 15, bearing: brg, pitch: f === "navigation" ? 45 : 0, duration });
+    }
+  };
+
   /** (Re)adds Darbna's own sources and layers; needed after every style load. */
   const addOverlays = () => {
     const m = map.current;
@@ -136,7 +156,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       fadeDuration: 0,
     } as any);
     // Same lightening as the server does: no 3D buildings, later POIs.
-    (m as any).setStyle(latest.current.styleUrl, { transformStyle: (_prev: unknown, next: any) => lightenStyle(next) });
+    (m as any).setStyle(...styleArgs(latest.current.styleUrl));
     styleLoaded.current = latest.current.styleUrl;
     m.touchZoomRotate.disableRotation();
     map.current = m;
@@ -180,14 +200,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       watch = navigator.geolocation.watchPosition(
         (pos) => {
-          const coord: LngLat = [pos.coords.longitude, pos.coords.latitude];
-          me.current = { coord, heading: pos.coords.heading };
-          (m.getSource("me") as GeoJSONSource | undefined)?.setData(pointFC(coord));
-          const f = latest.current.follow;
-          if (f !== "none") {
-            const heading = f === "navigation" && pos.coords.heading != null && !Number.isNaN(pos.coords.heading) && (pos.coords.speed ?? 0) > 2 ? pos.coords.heading : m.getBearing();
-            m.easeTo({ center: coord, zoom: f === "navigation" ? 16.5 : 15, bearing: heading, pitch: f === "navigation" ? 45 : 0, duration: 800 });
-          }
+          if (latest.current.simFix) return; // demo drive owns the dot
+          moveMe(m, [pos.coords.longitude, pos.coords.latitude], pos.coords.heading, pos.coords.speed);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
@@ -207,7 +221,9 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const m = map.current;
     if (!m || styleLoaded.current === p.styleUrl) return;
     styleLoaded.current = p.styleUrl;
-    m.setStyle(p.styleUrl, { transformStyle: (_prev: unknown, next: any) => lightenStyle(next) } as any);
+    const [url, opts] = styleArgs(p.styleUrl);
+    // Full reload (no diff), so "style.load" fires and our route/report layers are re-added.
+    (m as any).setStyle(url, { ...opts, diff: false });
   }, [p.styleUrl]);
 
   useEffect(() => {
@@ -224,6 +240,11 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
   useEffect(() => {
     const m = map.current;
+    if (m && p.simFix) moveMe(m, p.simFix.coord, p.simFix.headingDeg, p.simFix.speedMps, 950);
+  }, [p.simFix]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const m = map.current;
     if (!m) return;
     if (p.follow === "none") m.easeTo({ pitch: 0, bearing: 0, duration: 500 });
     else if (me.current) m.easeTo({ center: me.current.coord, zoom: p.follow === "navigation" ? 16.5 : 15, pitch: p.follow === "navigation" ? 45 : 0, duration: 600 });
@@ -234,6 +255,6 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
   a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
-  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports;
+  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

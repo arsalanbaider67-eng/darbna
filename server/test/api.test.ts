@@ -76,7 +76,7 @@ d("Darbna API", () => {
       fetch(req) {
         const u = new URL(req.url);
         if (u.pathname === "/style") return Response.json({ version: 8, sources: {}, layers: [
-          { id: "water", type: "fill" }, { id: "building", type: "fill", minzoom: 13 }, { id: "building-3d", type: "fill-extrusion" },
+          { id: "water", type: "fill", paint: { "fill-color": "#9CC9D3" } }, { id: "building", type: "fill", minzoom: 13 }, { id: "building-3d", type: "fill-extrusion" },
           { id: "poi_r1", type: "symbol", minzoom: 14 }, { id: "road_major", type: "line" },
         ] });
         if (nominatimDown) return new Response("down", { status: 503 });
@@ -111,6 +111,14 @@ d("Darbna API", () => {
     expect(ids).toEqual(["water", "building", "poi_r1", "road_major"]);
     expect(r.body.layers.find((l: any) => l.id === "building").minzoom).toBe(15);
     expect(r.body.layers.find((l: any) => l.id === "poi_r1").minzoom).toBe(15);
+  });
+
+  it("recolours the night style when day and night share one upstream", async () => {
+    const day = await call(app, "GET", "/v1/style/day");
+    const night = await call(app, "GET", "/v1/style/night");
+    expect(day.body.layers[0].paint["fill-color"]).toBe("#9CC9D3");
+    expect(night.body.layers[0].paint["fill-color"]).not.toBe("#9CC9D3");
+    expect(night.body.layers.map((l: any) => l.id)).toEqual(day.body.layers.map((l: any) => l.id));
   });
 
   it("advertises only real capabilities", async () => {

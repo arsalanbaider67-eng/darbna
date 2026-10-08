@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { haversine, type LngLat } from "@darbna/core";
 import { useUi } from "../context";
 import { fmt, fmtDistance } from "../i18n";
+import { sharePlace } from "../share";
 import { saveSaved } from "../storage";
 import { getState, setState, useStore } from "../store";
 import type { Place } from "../types";
@@ -41,7 +42,10 @@ export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose 
           <Icon name="close" size={24} color={theme.textMuted} />
         </Pressable>
       </Row>
-      <Btn label={t.place.directions} icon="directions" onPress={onDirections} style={{ marginTop: 14 }} />
+      <Row style={{ marginTop: 14 }}>
+        <Btn label={t.place.directions} icon="directions" onPress={onDirections} style={{ flex: 1 }} />
+        <Btn kind="secondary" label={t.place.share} icon="share-variant" onPress={() => void sharePlace(place, t.place.linkCopied)} disabled={lookingUp} />
+      </Row>
       <Row style={{ marginTop: 10 }}>
         <Btn
           kind="secondary"

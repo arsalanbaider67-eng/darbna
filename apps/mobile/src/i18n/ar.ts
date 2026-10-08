@@ -24,6 +24,7 @@ export const ar = {
     landmark: "معلم", street: "شارع", pin: "دبوس على الخريطة", shared: "موقع مُرسل", place: "مكان",
   },
   place: {
+    share: "مشاركة", linkCopied: "تم نسخ الرابط — الصقه في واتساب أو الرسائل",
     directions: "المسار",
     save: "حفظ",
     saved: "محفوظ",
@@ -35,6 +36,7 @@ export const ar = {
   },
   saved: { home: "البيت", work: "الدوام", favorites: "المفضلة", setHomeHint: "حدد موقع البيت", setWorkHint: "حدد موقع الدوام", remove: "إزالة" },
   preview: {
+    demo: "قيادة تجريبية", demoHint: "قيادة محاكاة على هذا المسار — جرّب الصوت والمنعطفات دون أن تتحرك",
     title: "المسارات",
     start: "ابدأ",
     fastest: "الأسرع",
@@ -57,6 +59,7 @@ export const ar = {
     },
   },
   nav: {
+    demo: "قيادة تجريبية — موقع محاكى",
     then: "ثم",
     exit: "إنهاء",
     pause: "إيقاف مؤقت",

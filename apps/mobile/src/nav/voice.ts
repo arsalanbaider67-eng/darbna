@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import * as Speech from "expo-speech";
 import type { Lang } from "../i18n";
 
@@ -31,7 +32,10 @@ export async function chooseVoice(lang: Lang): Promise<VoiceChoice> {
     const v = find(l);
     if (v) return (cache[lang] = { lang: l, voiceId: v.identifier, bcp47: v.language, fallback: l !== lang });
   }
-  // No voice list (common on some Android builds): let the engine use its default for the language.
+  // No voice list (common on some Android builds, and in Safari before its voices load): let the
+  // engine use its default for the language. On web, don't cache it so the real list is used later.
+  const fallback: VoiceChoice = { lang, bcp47: lang === "ckb" ? "ckb" : lang === "ar" ? "ar" : "en-US", fallback: false };
+  if (Platform.OS === "web" && !voices.length) return fallback;
   return (cache[lang] = { lang, bcp47: lang === "ckb" ? "ckb" : lang === "ar" ? "ar" : "en-US", fallback: false });
 }
 
@@ -46,4 +50,20 @@ export async function speak(text: string, choice: VoiceChoice, urgent = false): 
 
 export function stopSpeaking(): void {
   void Speech.stop();
+}
+
+/**
+ * iPhone Safari only lets a page talk after it has spoken once inside a tap. Call this
+ * synchronously from the Start button's press handler (before any await) so the prompts
+ * that follow, which are spoken later from timers and GPS updates, are allowed.
+ */
+export function primeVoice(): void {
+  if (Platform.OS !== "web" || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(" ");
+    u.volume = 0;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+    window.speechSynthesis.getVoices(); // starts Safari loading its voice list
+  } catch {}
 }

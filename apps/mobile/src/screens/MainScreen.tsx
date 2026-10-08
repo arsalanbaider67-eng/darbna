@@ -20,7 +20,8 @@ import { useUi } from "../context";
 import { useConnectivity } from "../hooks/useConnectivity";
 import { useLocation } from "../hooks/useLocation";
 import { fmt } from "../i18n";
-import { stopSpeaking } from "../nav/voice";
+import { primeVoice, stopSpeaking } from "../nav/voice";
+import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadTrip, saveCachedConfig, saveRecents, saveTrip } from "../storage";
 import { getState, mergeReports, setState, useStore } from "../store";
@@ -76,7 +77,12 @@ export function MainScreen() {
   const initialCenter = useRef<LngLat | null>(null);
   if (!initialCenter.current && fix) initialCenter.current = fix.coord;
 
-  const { guidance, reroute } = useGuidance(mode === "navigating" ? fix : null, online, fmtCtx);
+  // Demo drive: a simulated position moves along the route instead of the phone's GPS.
+  const [demo, setDemo] = useState(false);
+  const demoFix = useDemoDrive(tripRoute?.geometry ?? null, tripRoute?.distanceM ?? 0, tripRoute?.durationS ?? 0, mode === "navigating" && demo, !!trip?.paused);
+  const navFix = demo ? demoFix : fix;
+
+  const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
 
   // ---------------------------------------------------------------- server config (style URLs, capability flags)
   const loadConfig = useCallback(async () => {
@@ -113,7 +119,12 @@ export function MainScreen() {
     const handle = (url: string | null) => {
       if (!url) return;
       const loc = parseSharedLocation(url);
-      if (loc) pickPlace({ id: `shared:${loc.coord.join(",")}`, name: loc.label ?? t.kinds.shared, kind: "shared", coord: loc.coord }, false);
+      if (!loc) return;
+      // Web links (…/darbna/?to=…): drop the query so a reload doesn't reopen the place.
+      if (typeof window !== "undefined" && window.history?.replaceState && /[?&]to=/.test(url)) {
+        try { window.history.replaceState(null, "", window.location.pathname); } catch {}
+      }
+      pickPlace({ id: `shared:${loc.coord.join(",")}`, name: loc.label ?? t.kinds.shared, kind: "shared", coord: loc.coord }, false);
     };
     void Linking.getInitialURL().then(handle);
     const sub = Linking.addEventListener("url", (e) => handle(e.url));
@@ -208,17 +219,22 @@ export function MainScreen() {
     void requestRoutes(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
   }
 
-  function startNavigation() {
+  function startNavigation(asDemo = false) {
+    // Must run inside the tap, before anything async: lets iPhone Safari speak later prompts.
+    primeVoice();
     const s = getState();
     const route = s.preview.result?.routes[s.preview.selectedIdx];
     if (!route || !s.selected) return;
+    setDemo(asDemo);
     const tripState = { route, destination: s.selected, startedAt: Date.now(), paused: false, muted: false, avoidReportIds: s.preview.avoidReportIds };
     setState({ trip: tripState, mode: "navigating" });
     setFollowing(true);
-    void saveTrip({ route, destination: s.selected, startedAt: tripState.startedAt, avoidReportIds: tripState.avoidReportIds });
+    // A demo isn't a real trip: don't offer to resume it next time.
+    if (!asDemo) void saveTrip({ route, destination: s.selected, startedAt: tripState.startedAt, avoidReportIds: tripState.avoidReportIds });
   }
 
   function endTrip() {
+    setDemo(false);
     void saveTrip(null);
     setState({ trip: null, mode: "browse", selected: null, preview: { loading: false, error: null, result: null, selectedIdx: 0, avoidReportIds: [] } });
   }
@@ -274,6 +290,7 @@ export function MainScreen() {
         onReportPress={onMapReportPress}
         onRegionChange={onMapRegionChange}
         onRoutePress={onMapRoutePress}
+        simFix={mode === "navigating" && demo ? demoFix : null}
       />
 
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}
@@ -306,7 +323,8 @@ export function MainScreen() {
           ? <PermissionPanel state={loc.permission === "granted" ? "unknown" : loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
           : <RoutePreview
               canStart={loc.permission === "granted" && !!fix}
-              onStart={startNavigation}
+              onStart={() => startNavigation(false)}
+              onDemo={() => startNavigation(true)}
               onBack={() => setState({ mode: "place" })}
               onRetry={() => requestRoutes()}
               onToggleAvoid={toggleAvoid}
@@ -341,6 +359,11 @@ export function MainScreen() {
       {config.mode === "direct" && mode !== "navigating" && (
         <View pointerEvents="none" style={[s.sample, { top: insets.top + 72, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
           <Txt size={11} weight="semibold" muted>{t.status.webPreview}</Txt>
+        </View>
+      )}
+      {mode === "navigating" && demo && (
+        <View pointerEvents="none" style={[s.sample, { top: insets.top + 4, backgroundColor: theme.accent }]}>
+          <Txt size={11} weight="bold" style={{ color: theme.onAccent }}>{t.nav.demo}</Txt>
         </View>
       )}
       {config.sampleData && (

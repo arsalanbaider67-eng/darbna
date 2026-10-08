@@ -83,7 +83,9 @@ export function buildApp(deps: Deps) {
   router.add("GET", "/v1/style/:variant", async (ctx) => {
     const variant = oneOf(ctx.params.variant, ["day", "night"] as const, "variant");
     try {
-      const body = await styles.get(variant === "day" ? config.map.styleDay : config.map.styleNight);
+      // Same upstream for day and night (e.g. OpenFreeMap) → recolour it for night ourselves.
+      const recolour = variant === "night" && config.map.styleNight === config.map.styleDay;
+      const body = await styles.get(variant === "day" ? config.map.styleDay : config.map.styleNight, recolour);
       return new Response(body, { headers: { "content-type": "application/json", "cache-control": "public, max-age=3600" } });
     } catch (e) {
       log({ level: "warn", style: variant, url: variant === "day" ? config.map.styleDay : config.map.styleNight, err: (e as Error).message });

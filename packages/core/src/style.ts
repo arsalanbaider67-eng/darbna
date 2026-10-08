@@ -32,3 +32,92 @@ export function lightenStyle(style: MapStyle): MapStyle {
   return { ...style, layers };
 }
 
+
+// ---------------------------------------------------------------- night map
+/** Parse #rgb/#rrggbb/rgb()/rgba()/hsl()/hsla() into RGBA (0–255, alpha 0–1). */
+export function parseColor(c: string): [number, number, number, number] | null {
+  const s = c.trim().toLowerCase();
+  let m = s.match(/^#([0-9a-f]{3,8})$/);
+  if (m) {
+    const h = m[1];
+    if (h.length === 3 || h.length === 4) {
+      const [r, g, b, a] = [...h].map((x) => parseInt(x + x, 16));
+      return [r, g, b, h.length === 4 ? a / 255 : 1];
+    }
+    if (h.length === 6 || h.length === 8) {
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), h.length === 8 ? parseInt(h.slice(6, 8), 16) / 255 : 1];
+    }
+    return null;
+  }
+  m = s.match(/^rgba?\(([^)]+)\)$/);
+  if (m) {
+    const p = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+    if (p.length < 3 || p.some(Number.isNaN)) return null;
+    return [p[0], p[1], p[2], p[3] ?? 1];
+  }
+  m = s.match(/^hsla?\(([^)]+)\)$/);
+  if (m) {
+    const p = m[1].replace(/%/g, "").split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+    if (p.length < 3 || p.some(Number.isNaN)) return null;
+    const [r, g, b] = hslToRgb(p[0], p[1] / 100, p[2] / 100);
+    return [r, g, b, p[3] ?? 1];
+  }
+  return null;
+}
+
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+}
+
+/**
+ * Night version of a colour: lightness is flipped (light land → dark land, dark text → light
+ * text) and saturation toned down so nothing glares while driving at night.
+ * Hue is kept, so water stays blue and parks stay green.
+ */
+export function nightColor(c: string): string {
+  const rgba = parseColor(c);
+  if (!rgba) return c;
+  const [h, s, l] = rgbToHsl(rgba[0], rgba[1], rgba[2]);
+  const nl = 0.08 + (1 - l) * 0.78; // 1 → 0.08, 0 → 0.86
+  const [r, g, b] = hslToRgb(h, s * 0.55, nl);
+  return rgba[3] < 1 ? `rgba(${r},${g},${b},${rgba[3]})` : `#${[r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const COLOR_PROPS = /(^|-)color$/;
+
+function mapColors(v: unknown): unknown {
+  if (typeof v === "string") return nightColor(v);
+  if (Array.isArray(v)) return v.map(mapColors);
+  if (v && typeof v === "object") {
+    // Legacy {stops:[[z, color]]} functions
+    const o = v as Record<string, unknown>;
+    if (Array.isArray(o.stops)) return { ...o, stops: (o.stops as unknown[][]).map(([z, c]) => [z, mapColors(c)]) };
+  }
+  return v;
+}
+
+/** Night map: every colour paint property passed through nightColor. */
+export function darkenStyle(style: MapStyle): MapStyle {
+  return {
+    ...style,
+    layers: style.layers.map((l) => {
+      if (!l.paint) return l;
+      const paint: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(l.paint)) paint[k] = COLOR_PROPS.test(k) ? mapColors(v) : v;
+      return { ...l, paint };
+    }),
+  };
+}

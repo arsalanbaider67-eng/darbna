@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseSharedLocation } from "../src/share";
+import { buildShareLink, parseSharedLocation } from "../src/share";
 
 describe("parseSharedLocation", () => {
   const cases: [string, [number, number] | null][] = [
@@ -27,5 +27,24 @@ describe("parseSharedLocation", () => {
   }
   it("keeps the label", () => {
     expect(parseSharedLocation("geo:0,0?q=33.3,44.3(بيت أبو علي)")?.label).toBe("بيت أبو علي");
+  });
+});
+
+describe("buildShareLink", () => {
+  it("web links round-trip, including an Arabic name", () => {
+    const url = buildShareLink([44.3661, 33.3152], "مطعم الساعة", "https://arsalanbaider67-eng.github.io/darbna/");
+    expect(url.startsWith("https://arsalanbaider67-eng.github.io/darbna/?to=33.315200,44.366100")).toBe(true);
+    const back = parseSharedLocation(url)!;
+    expect(back.coord[0]).toBeCloseTo(44.3661, 5);
+    expect(back.coord[1]).toBeCloseTo(33.3152, 5);
+    expect(back.label).toBe("مطعم الساعة");
+  });
+  it("app links round-trip", () => {
+    const back = parseSharedLocation(buildShareLink([43.1300, 36.3406], "الموصل"))!;
+    expect(back.coord[1]).toBeCloseTo(36.3406, 5);
+    expect(back.label).toBe("الموصل");
+  });
+  it("drops an existing query from the base", () => {
+    expect(buildShareLink([44, 33], undefined, "https://x.io/darbna/?to=1,2")).toBe("https://x.io/darbna/?to=33.000000,44.000000");
   });
 });

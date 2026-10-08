@@ -43,6 +43,14 @@ export function parseSharedLocation(input: string): SharedLocation | null {
     if (c) return { coord: c, label: p.get("name") ?? undefined };
   }
 
+  // Darbna web links: https://…/darbna/?to=lat,lng&name=…
+  m = text.match(/[?&]to=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i);
+  if (m) {
+    const c = valid(num(m[1]), num(m[2]));
+    const qs = text.includes("?") ? new URLSearchParams(text.slice(text.indexOf("?") + 1).split("#")[0]) : null;
+    if (c) return { coord: c, label: qs?.get("name") || undefined };
+  }
+
   // Google Maps long links: ?q=lat,lng | /@lat,lng,zoom | !3dLAT!4dLNG | ll=lat,lng | query=lat,lng
   m = text.match(/[?&](?:q|ll|query|destination|daddr)=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i)
     ?? text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/)
@@ -66,4 +74,18 @@ export function parseSharedLocation(input: string): SharedLocation | null {
     if (c) return { coord: c };
   }
   return null;
+}
+
+/**
+ * A link that opens a place in Darbna. `base` is the web app's address (works for anyone with a
+ * browser); without it, a darbna:// link for the installed app.
+ */
+export function buildShareLink(coord: LngLat, name?: string, base?: string): string {
+  const lat = coord[1].toFixed(6), lng = coord[0].toFixed(6);
+  if (base) {
+    const qs = new URLSearchParams({ to: `${lat},${lng}`, ...(name ? { name } : {}) });
+    return `${base.replace(/[?#].*$/, "")}?${qs.toString().replace("%2C", ",")}`;
+  }
+  const qs = new URLSearchParams({ lat, lng, ...(name ? { name } : {}) });
+  return `darbna://place?${qs}`;
 }

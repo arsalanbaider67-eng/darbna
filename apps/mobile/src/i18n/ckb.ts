@@ -25,11 +25,13 @@ export const ckb: Strings = {
     landmark: "شوێنی دیار", street: "شەقام", pin: "دەبوس لەسەر نەخشە", shared: "شوێنی نێردراو", place: "شوێن",
   },
   place: {
+    share: "هاوبەشکردن", linkCopied: "بەستەر کۆپی کرا — لە واتسئاپ یان نامەکان دایبنێ",
     directions: "ڕێگا", save: "پاشەکەوت", saved: "پاشەکەوتکرا", setHome: "بیکە بە ماڵ", setWork: "بیکە بە کار",
     droppedPin: "دەبوس لەسەر نەخشە", lookingUp: "ناونیشان دەدۆزرێتەوە…", distanceFromYou: "{d} لێتەوە",
   },
   saved: { home: "ماڵ", work: "کار", favorites: "دڵخوازەکان", setHomeHint: "شوێنی ماڵ دیاری بکە", setWorkHint: "شوێنی کار دیاری بکە", remove: "لابردن" },
   preview: {
+    demo: "لێخوڕینی تاقیکاری", demoHint: "لێخوڕینی لاسایی لەسەر ئەم ڕێگایە — دەنگ و پێچەکان تاقی بکەرەوە بێ جوڵە",
     title: "ڕێگاکان", start: "دەست پێبکە", fastest: "خێراترین", alt: "جێگرەوە", via: "لە ڕێگەی {via}",
     noTraffic: "کات خەمڵێنراوە — بێ زانیاری قەرەباڵغیی ڕاستەوخۆ",
     reportsOnRoute: "{n} ڕاپۆرت لەسەر ڕێگا", avoid: "دووربکەوەرەوە", avoided: "دوور دەکەوینەوە",
@@ -46,6 +48,7 @@ export const ckb: Strings = {
     },
   },
   nav: {
+    demo: "لێخوڕینی تاقیکاری — شوێنی لاسایی",
     then: "پاشان", exit: "کۆتایی", pause: "وەستاندن", resume: "بەردەوامبوون", paused: "ڕێنمایی وەستێنراوە",
     mute: "بێدەنگ", unmute: "دەنگ", arrivalAt: "گەیشتن {time}", remaining: "{d} · {t}",
     offRoute: "لە ڕێگا دەرچوویت", rerouting: "ڕێگای نوێ دەدۆزرێتەوە…", rerouted: "ڕێگای نوێ دۆزرایەوە",

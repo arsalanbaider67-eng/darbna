@@ -21,11 +21,13 @@ export const en: Strings = {
     landmark: "Landmark", street: "Street", pin: "Dropped pin", shared: "Shared location", place: "Place",
   },
   place: {
+    share: "Share", linkCopied: "Link copied — paste it in WhatsApp or Messages",
     directions: "Directions", save: "Save", saved: "Saved", setHome: "Set as home", setWork: "Set as work",
     droppedPin: "Dropped pin", lookingUp: "Looking up address…", distanceFromYou: "{d} away",
   },
   saved: { home: "Home", work: "Work", favorites: "Favorites", setHomeHint: "Set home", setWorkHint: "Set work", remove: "Remove" },
   preview: {
+    demo: "Demo drive", demoHint: "Simulated drive along this route — try the voice and turns without moving",
     title: "Routes", start: "Start", fastest: "Fastest", alt: "Alternative", via: "via {via}",
     noTraffic: "Estimated time — no live traffic data",
     reportsOnRoute: "{n} reports on the way", avoid: "Avoid", avoided: "Will avoid",
@@ -42,6 +44,7 @@ export const en: Strings = {
     },
   },
   nav: {
+    demo: "Demo drive — simulated position",
     then: "Then", exit: "Exit", pause: "Pause", resume: "Resume", paused: "Guidance paused",
     mute: "Mute", unmute: "Sound", arrivalAt: "Arrive {time}", remaining: "{d} · {t}",
     offRoute: "Off route", rerouting: "Rerouting…", rerouted: "New route found",
