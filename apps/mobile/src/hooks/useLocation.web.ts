@@ -75,7 +75,7 @@ export function useLocation(mode: LocationMode) {
     // Browsers only report a position when it changes, so a car stopped at a light would look
     // like lost GPS. While navigating, also ask for a fresh fix every 3 s.
     const poll = nav
-      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }), 3000)
+      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 8000 }), 3000)
       : null;
     return () => {
       if (poll) clearInterval(poll);
