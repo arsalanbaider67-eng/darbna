@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Keyboard, Pressable, StyleSheet, TextInput
 import * as Clipboard from "expo-clipboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { arabicKey, haversine, latinKey, parseSharedLocation, type LngLat } from "@darbna/core";
-import { api, ApiError } from "../api";
+import { api, ApiError, DIRECT_MODE } from "../api";
 import { useUi } from "../context";
 import { fmtDistance } from "../i18n";
 import { getState, setState, useStore } from "../store";
@@ -73,7 +73,8 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
     }
     const id = ++seq.current;
     const timer = setTimeout(async () => {
-      if (online === false) {
+      // The web preview's place list is built in, so it can search with no connection at all.
+      if (online === false && !DIRECT_MODE) {
         setResults(localMatch(query, [...(saved.home ? [saved.home] : []), ...(saved.work ? [saved.work] : []), ...saved.favorites, ...recents]));
         setStatus("offline");
         return;
