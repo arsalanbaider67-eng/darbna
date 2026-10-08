@@ -27,7 +27,7 @@ export const en: Strings = {
   },
   saved: { home: "Home", work: "Work", favorites: "Favorites", setHomeHint: "Set home", setWorkHint: "Set work", remove: "Remove" },
   preview: {
-    demo: "Demo drive", demoHint: "Simulated drive along this route — try the voice and turns without moving",
+    demo: "Demo", demoHint: "Simulated drive along this route — try the voice and turns without moving",
     title: "Routes", start: "Start", fastest: "Fastest", alt: "Alternative", via: "via {via}",
     noTraffic: "Estimated time — no live traffic data",
     reportsOnRoute: "{n} reports on the way", avoid: "Avoid", avoided: "Will avoid",
