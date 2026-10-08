@@ -1,6 +1,7 @@
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { ICON_PATHS } from "./iconPaths";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUi } from "../context";
 import { font, TOUCH } from "../theme";
@@ -20,6 +21,16 @@ export function Txt({ style, weight = "regular", muted, size = 16, ...p }: TextP
 
 export function Icon({ name, size = 24, color, style }: { name: IconName; size?: number; color?: string; style?: StyleProp<TextStyle> }) {
   const { theme } = useUi();
+  const d = ICON_PATHS[name];
+  if (d) {
+    // Web: inline SVG, so icons never depend on a downloaded font loading.
+    return (
+      <View style={[{ width: size, height: size }, style as StyleProp<ViewStyle>]} accessible={false} pointerEvents="none">
+        {React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", "aria-hidden": true, style: { display: "block" } },
+          React.createElement("path", { d, fill: color ?? theme.text }))}
+      </View>
+    );
+  }
   return <MaterialCommunityIcons name={name} size={size} color={color ?? theme.text} style={style} />;
 }
 

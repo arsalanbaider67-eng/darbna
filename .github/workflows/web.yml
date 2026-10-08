@@ -60,6 +60,7 @@ jobs:
       - name: Export web build
         working-directory: apps/mobile
         run: |
+          node scripts/gen-web-icons.mjs
           npx expo export --platform web --output-dir dist
           ls -la dist
           grep -c "apple-mobile-web-app-capable" dist/index.html || echo "WARNING: custom index.html template not used"
