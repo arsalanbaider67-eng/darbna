@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import type { ReportCategory } from "@darbna/core";
 
 /**
@@ -73,10 +74,13 @@ export const night: Theme = {
   shadow: "#000000",
 };
 
+// On the web, fall back to the phone's own font if the downloaded one is blocked or slow
+// (Lockdown Mode, in-app browsers), instead of the browser's default serif.
+const FALLBACK = Platform.OS === "web" ? ', system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif' : "";
 export const font = {
-  regular: "NotoSansArabic_400Regular",
-  semibold: "NotoSansArabic_600SemiBold",
-  bold: "NotoSansArabic_700Bold",
+  regular: "NotoSansArabic_400Regular" + FALLBACK,
+  semibold: "NotoSansArabic_600SemiBold" + FALLBACK,
+  bold: "NotoSansArabic_700Bold" + FALLBACK,
 };
 
 /** Minimum touch target: larger than platform minimums, for use in a mounted phone. */
