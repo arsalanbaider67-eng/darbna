@@ -232,7 +232,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     m.addLayer({
       id: "me-arrow", type: "symbol", source: "me", filter: ["==", ["get", "hasHeading"], 1],
       layout: {
-        "icon-image": "darbna-puck", "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map", "icon-pitch-alignment": "map",
+        "icon-image": "darbna-puck", "icon-size": 1.35, "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map", "icon-pitch-alignment": "map",
         "icon-allow-overlap": true, "icon-ignore-placement": true,
       },
     });
