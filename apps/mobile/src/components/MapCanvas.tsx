@@ -5,12 +5,15 @@ import {
 } from "@maplibre/maplibre-react-native";
 import { trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
+import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
 
 export interface MapCanvasHandle {
   fitTo(points: LngLat[], bottomPadding?: number): void;
   flyTo(p: LngLat, zoom?: number): void;
+  /** Save the area on screen for offline use. */
+  downloadVisible(onProgress: (pct: number) => void): Promise<OfflineResult>;
 }
 
 interface Props {
@@ -53,6 +56,9 @@ const REPORT_COLOR: any = [
 function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   const { theme } = useUi();
   const camera = useRef<CameraRef>(null);
+  const mapView = useRef<any>(null);
+  const styleRef = useRef(p.styleUrl);
+  styleRef.current = p.styleUrl;
   const handlers = useRef(p);
   handlers.current = p;
 
@@ -74,6 +80,16 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
     },
     flyTo(pt, zoom = 15) {
       camera.current?.setCamera({ centerCoordinate: pt, zoomLevel: zoom, animationDuration: 500, animationMode: "easeTo" });
+    },
+    async downloadVisible(onProgress) {
+      try {
+        const vb = await mapView.current?.getVisibleBounds(); // [[ne], [sw]]
+        if (!vb) return "failed";
+        const [[e, n], [w, s]] = vb;
+        return downloadAreaBBox([w, s, e, n], styleRef.current.split("#")[0], onProgress);
+      } catch {
+        return "failed";
+      }
     },
   }), []);
 
@@ -161,6 +177,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   return (
     <View style={StyleSheet.absoluteFill}>
       <MapView
+        ref={mapView}
         style={StyleSheet.absoluteFill}
         mapStyle={p.styleUrl}
         surfaceView

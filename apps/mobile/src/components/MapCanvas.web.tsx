@@ -10,6 +10,7 @@ import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
 import type { MapCanvasHandle } from "./MapCanvas";
+import { downloadArea } from "../offline";
 
 export type { MapCanvasHandle } from "./MapCanvas";
 
@@ -134,6 +135,9 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     },
     flyTo(pt, zoom = 15) {
       map.current?.easeTo({ center: pt, zoom, duration: 500 });
+    },
+    downloadVisible(onProgress) {
+      return map.current ? downloadArea(map.current, onProgress) : Promise.resolve("failed" as const);
     },
   }), []);
 

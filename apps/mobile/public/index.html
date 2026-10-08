@@ -24,5 +24,11 @@
   <body>
     <noscript>دربنا يحتاج JavaScript. / Darbna needs JavaScript.</noscript>
     <div id="root"></div>
+    <script>
+      // Offline support (sw.js): the app and map areas you've seen keep working with no internet.
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+      }
+    </script>
   </body>
 </html>

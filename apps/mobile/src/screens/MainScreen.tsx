@@ -375,7 +375,12 @@ export function MainScreen() {
       {mode === "search" && <SearchPanel online={online} userCoord={fix?.coord ?? null} onPick={(p) => pickPlace(p)} onSettings={() => setState({ sheet: "settings" })} />}
 
       {sheet === "report" && <ReportSheet fix={fix} online={online} onClose={() => setState({ sheet: null })} />}
-      {sheet === "settings" && <SettingsSheet onClose={() => setState({ sheet: null })} />}
+      {sheet === "settings" && (
+        <SettingsSheet
+          onClose={() => setState({ sheet: null })}
+          onDownloadArea={(cb) => map.current?.downloadVisible(cb) ?? Promise.resolve("failed")}
+        />
+      )}
       {openReportId && <ReportDetails id={openReportId} onClose={() => setState({ openReportId: null })} />}
 
       {config.mode === "direct" && !config.sharedReports && mode !== "navigating" && (

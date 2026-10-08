@@ -5,17 +5,38 @@ import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
+import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
 import { getState, setState, toast, useStore } from "../store";
 import { ensureDirection } from "../rtl";
 import { TOUCH } from "../theme";
 import { Btn, Icon, Panel, Row, Txt } from "./ui";
 
-export function SettingsSheet({ onClose }: { onClose(): void }) {
+export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; onDownloadArea?: (onProgress: (pct: number) => void) => Promise<OfflineResult> }) {
   const { theme, t } = useUi();
   const settings = useStore((s) => s.settings);
   const config = useStore((s) => s.config);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  const [offline, setOffline] = useState<OfflineSummary | null>(null);
+  const [dlPct, setDlPct] = useState<number | null>(null);
+
+  useEffect(() => { void offlineSummary().then(setOffline); }, []);
+
+  async function download() {
+    if (!onDownloadArea || dlPct !== null) return;
+    setDlPct(0);
+    const r = await onDownloadArea((p) => setDlPct(p)).catch(() => "failed" as const);
+    setDlPct(null);
+    if (r === "ok") toast(t.settings.downloadDone, "ok");
+    else if (r === "too_big") toast(t.settings.offlineZoomIn, "error");
+    else toast(t.settings.downloadFailed, "error");
+    setOffline(await offlineSummary());
+  }
+
+  async function removeOffline() {
+    await clearOffline();
+    setOffline(await offlineSummary());
+  }
 
   useEffect(() => {
     chooseVoice(settings.lang).then((v) => {
@@ -102,11 +123,28 @@ export function SettingsSheet({ onClose }: { onClose(): void }) {
             <Seg value={settings.digits} options={[{ v: "western", label: t.settings.digitsWestern }, { v: "arabic", label: t.settings.digitsArabic }]} onChange={(v) => update({ digits: v })} />
           </View>
         )}
+        <View style={{ gap: 6 }}>
+          <Txt weight="semibold">{t.settings.offlineTitle}</Txt>
+          <Txt size={13} muted>{t.settings.offlineHint}</Txt>
+          {offline && offline.areas > 0 && (
+            <Txt size={13}>{fmt(t.settings.offlineSaved, { n: String(offline.areas), mb: (offline.bytes / 1e6).toFixed(0) })}</Txt>
+          )}
+          <Btn
+            kind="secondary"
+            icon="download-outline"
+            label={dlPct !== null ? fmt(t.settings.downloading, { p: String(dlPct) }) : t.settings.downloadArea}
+            onPress={download}
+            disabled={!onDownloadArea || dlPct !== null}
+          />
+          {offline && offline.areas > 0 && dlPct === null && (
+            <Btn kind="ghost" icon="trash-can-outline" label={t.settings.offlineClear} onPress={removeOffline} />
+          )}
+        </View>
         <View style={[s.box, { backgroundColor: theme.surfaceAlt }]}>
           <Txt weight="semibold">{t.settings.capabilities}</Txt>
           <Txt size={14}>{t.settings.capOfflineNav}</Txt>
           <Txt size={14}>{t.settings.capOfflineSaved}</Txt>
-          <Txt size={14} muted>{t.settings.capOfflineMaps}</Txt>
+          <Txt size={14}>{t.settings.capOfflineMapsOn}</Txt>
           <Txt size={14} muted>{t.settings.capOfflineRouting}</Txt>
           {config?.sharedTraffic
             ? <Txt size={14}>{t.settings.capTrafficLive}</Txt>
