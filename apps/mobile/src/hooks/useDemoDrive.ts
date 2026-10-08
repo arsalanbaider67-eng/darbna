@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cumulativeDistances, pointAlong, type LngLat, type LocationFix } from "@darbna/core";
 
-/** Driving speed for the demo: the route's own average, kept between 30 and 70 km/h. */
+/** Driving speed for the demo: the route's own average, kept between 40 and 70 km/h. */
 function demoSpeed(distanceM: number, durationS: number): number {
   const avg = durationS > 0 ? distanceM / durationS : 12;
-  return Math.max(8.3, Math.min(19.4, avg));
+  return Math.max(11, Math.min(19.4, avg));
 }
 
 /**
