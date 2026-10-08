@@ -7,8 +7,31 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const glyphs = require("@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json");
-const mdi = require("@mdi/js");
+
+/** Find a file inside an installed package by walking up node_modules folders (avoids "exports" limits). */
+function pkgFile(pkg, rel) {
+  for (let d = root; ; d = path.dirname(d)) {
+    const f = path.join(d, "node_modules", pkg, rel);
+    if (fs.existsSync(f)) return f;
+    if (path.dirname(d) === d) throw new Error(`not found: ${pkg}/${rel}`);
+  }
+}
+
+let glyphs, mdi;
+try {
+  const vendor = path.dirname(pkgFile("@expo/vector-icons", "package.json"));
+  const candidates = [
+    "build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json",
+    "build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json",
+  ];
+  const gm = candidates.map((c) => path.join(vendor, c)).find((f) => fs.existsSync(f));
+  glyphs = JSON.parse(fs.readFileSync(gm ?? pkgFile("@expo/vector-icons", candidates[0]), "utf8"));
+  mdi = require(path.dirname(pkgFile("@mdi/js", "package.json")) + "/mdi.js");
+} catch (e) {
+  // Never block a release over this: the app falls back to the icon font.
+  console.log(`::warning title=web icons::SVG icons skipped (${e.message}); using the icon font`);
+  process.exit(0);
+}
 
 const files = [];
 (function walk(d) {
