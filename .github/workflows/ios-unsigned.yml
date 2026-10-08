@@ -22,8 +22,8 @@ jobs:
     env:
       EXPO_PUBLIC_API_URL: ${{ inputs.api_url || 'direct' }}
       # Public client values (Settings → Variables on GitHub); empty = reports stay on the phone.
-      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       CI: "1"
       NODE_ENV: production

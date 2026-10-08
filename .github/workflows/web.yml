@@ -26,14 +26,21 @@ jobs:
     env:
       EXPO_PUBLIC_API_URL: direct
       # Public client values (Settings → Variables on GitHub); empty = reports stay on the phone.
-      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
       EXPO_BASE_URL: /${{ github.event.repository.name }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       NODE_ENV: production
       CI: "1"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check shared reports database (informational)
+        continue-on-error: true
+        run: |
+          curl -sS -m 15 -X POST "$EXPO_PUBLIC_SUPABASE_URL/rest/v1/rpc/darbna_reports" \
+            -H "apikey: $EXPO_PUBLIC_SUPABASE_KEY" -H "content-type: application/json" \
+            -d '{"min_lng":44,"min_lat":33,"max_lng":45,"max_lat":34}' -w "\nHTTP %{http_code}\n"
 
       - uses: actions/setup-node@v4
         with:
