@@ -2,11 +2,10 @@
 # Needs repository secrets: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (Azure voices), ELEVENLABS_API_KEY (ElevenLabs voices: Arabic Sufyan, English Aaden). Runs when the phrase list changes, or manually from the Actions tab.
 name: Record voices
 
+# Manual only: the current voices were recorded on the website (Eleven v3, Generation 2) and must
+# not be overwritten automatically.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ["apps/mobile/assets/voice/phrases.json", "apps/mobile/scripts/gen-voice.mjs", ".github/workflows/voices.yml"]
 
 permissions:
   contents: write
