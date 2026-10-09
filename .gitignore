@@ -11,3 +11,10 @@ server/.env.local
 build-status.txt
 server-status.txt
 Darbna.apk
+
+# Signing keys never go in the repo
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision

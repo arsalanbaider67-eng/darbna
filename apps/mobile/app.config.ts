@@ -15,7 +15,7 @@ const config: ExpoConfig = {
   name: "Darbna",
   slug: "darbna",
   scheme: "darbna",
-  version: "0.1.0",
+  version: "1.0.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
   icon: "./assets/icon.png",
@@ -35,6 +35,8 @@ const config: ExpoConfig = {
   newArchEnabled: false,
   ios: {
     bundleIdentifier: "iq.darbna.app",
+    // Store builds: GitHub's run number, so every upload has a higher build number.
+    buildNumber: process.env.APP_BUILD_NUMBER ?? "1",
     supportsTablet: false,
     infoPlist: {
       CFBundleDisplayName: "دربنا",
@@ -47,11 +49,14 @@ const config: ExpoConfig = {
         : {}),
       CFBundleAllowMixedLocalizations: true,
       CFBundleDevelopmentRegion: "ar",
+      // HTTPS only (standard encryption): no export compliance paperwork for App Store uploads.
+      ITSAppUsesNonExemptEncryption: false,
       CFBundleLocalizations: ["ar", "ckb", "en"],
     },
   },
   android: {
     package: "iq.darbna.app",
+    versionCode: Number(process.env.APP_BUILD_NUMBER ?? 1),
     permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
     // Opens shared "geo:" locations (WhatsApp/Telegram "open with") directly in Darbna.
     intentFilters: [
