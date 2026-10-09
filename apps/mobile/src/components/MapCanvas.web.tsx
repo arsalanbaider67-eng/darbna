@@ -431,7 +431,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
           moveMe(m, coord, pos.coords.heading, pos.coords.speed, acc);
         },
         () => {},
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
+        { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 },
       );
     }
 

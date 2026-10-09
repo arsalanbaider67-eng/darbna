@@ -53,7 +53,7 @@ export function useLocation(mode: LocationMode) {
 
   const request = useCallback(async () => {
     if (!supported) return;
-    navigator.geolocation.getCurrentPosition(onPos, onErr, { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 });
+    navigator.geolocation.getCurrentPosition(onPos, onErr, { enableHighAccuracy: true, timeout: 20_000, maximumAge: 3000 });
   }, [supported, onPos, onErr]);
 
   const openSettings = useCallback(() => {
@@ -71,15 +71,16 @@ export function useLocation(mode: LocationMode) {
     if (permission !== "granted" || !visible || !supported) return;
     const nav = mode === "navigation";
     watchId.current = navigator.geolocation.watchPosition(onPos, onErr, {
-      // Always the precise GPS, never a cached position.
+      // Always the precise GPS. maximumAge only affects the first reading (a ≤3 s old precise fix
+      // from the map's own watcher); every later one is a fresh GPS fix.
       enableHighAccuracy: true,
-      maximumAge: 0,
+      maximumAge: 3000,
       timeout: 30_000,
     });
     // Browsers only report a position when it changes, so a car stopped at a light would look
     // like lost GPS. While navigating, also ask for a fresh fix every 3 s.
     const poll = nav
-      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }), 3000)
+      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 1000, timeout: 8000 }), 3000)
       : null;
     return () => {
       if (poll) clearInterval(poll);
