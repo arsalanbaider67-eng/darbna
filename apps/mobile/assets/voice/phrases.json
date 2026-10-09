@@ -7,8 +7,8 @@
    "voiceId": "9FHjCdVXgA4tYxIYHTcZ"
   },
   "en": {
-   "provider": "azure",
-   "voice": "en-US-AndrewNeural"
+   "provider": "elevenlabs",
+   "voice": "Aaden"
   }
  },
  "distancesM": [

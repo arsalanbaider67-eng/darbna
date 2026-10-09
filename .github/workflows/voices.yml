@@ -1,5 +1,5 @@
 # Records the guidance voice prompts with Azure voices (see assets/voice/phrases.json) and commits them.
-# Needs repository secrets: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (Azure voices), ELEVENLABS_API_KEY (ElevenLabs voices). Runs when the phrase list changes, or manually from the Actions tab.
+# Needs repository secrets: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION (Azure voices), ELEVENLABS_API_KEY (ElevenLabs voices: Arabic Sufyan, English Aaden). Runs when the phrase list changes, or manually from the Actions tab.
 name: Record voices
 
 on:
@@ -30,7 +30,6 @@ jobs:
           AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
           AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
         run: node scripts/gen-voice.mjs
       - name: Commit recordings
         run: |

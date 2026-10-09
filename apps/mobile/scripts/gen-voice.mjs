@@ -34,19 +34,24 @@ async function azure(text, voice) {
   return Buffer.from(await res.arrayBuffer());
 }
 
-let elevenVoiceId = null;
+const elevenIds = new Map();
 /** Finds the voice to use: in the account already, else added from the public Voice Library. */
 async function elevenVoice(name, wantedId) {
-  if (elevenVoiceId) return elevenVoiceId;
+  if (elevenIds.has(name)) return elevenIds.get(name);
+  const id = await findElevenVoice(name, wantedId);
+  elevenIds.set(name, id);
+  return id;
+}
+
+async function findElevenVoice(name, wantedId) {
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error("ELEVENLABS_API_KEY secret is missing");
-  if (process.env.ELEVENLABS_VOICE_ID) return (elevenVoiceId = process.env.ELEVENLABS_VOICE_ID);
   const h = { "xi-api-key": key };
   const lc = name.toLowerCase();
   // 1) Already in the account's voices (same id, or added under its name)?
   const mine = await (await fetch("https://api.elevenlabs.io/v1/voices", { headers: h })).json();
   const own = (mine.voices ?? []).find((v) => v.voice_id === wantedId || v.name?.toLowerCase().startsWith(lc));
-  if (own) return (elevenVoiceId = own.voice_id);
+  if (own) return own.voice_id;
   // 2) Find it in the public Voice Library and add it to the account.
   const shared = await (await fetch(`https://api.elevenlabs.io/v1/shared-voices?search=${encodeURIComponent(name)}&page_size=50`, { headers: h })).json();
   const list = shared.voices ?? [];
@@ -56,11 +61,11 @@ async function elevenVoice(name, wantedId) {
       method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ new_name: name }),
     });
     const j = await added.json().catch(() => ({}));
-    if (added.ok && j.voice_id) { note("elevenlabs", `added "${pick.name}" to your voices`); return (elevenVoiceId = j.voice_id); }
+    if (added.ok && j.voice_id) { note("elevenlabs", `added "${pick.name}" to your voices`); return j.voice_id; }
     note("elevenlabs", `could not add "${pick.name}" automatically: ${JSON.stringify(j).slice(0, 160)}`);
   }
   // 3) Last try: use the library id directly.
-  if (wantedId) return (elevenVoiceId = wantedId);
+  if (wantedId) return wantedId;
   throw new Error(`voice "${name}" not found — open it in the ElevenLabs Voice Library and tap "Add to my voices"`);
 }
 
