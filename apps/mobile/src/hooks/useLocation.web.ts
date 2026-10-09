@@ -77,6 +77,9 @@ export function useLocation(mode: LocationMode) {
       maximumAge: 3000,
       timeout: 30_000,
     });
+    // Show a recent precise fix straight away (the map's own watcher may already have one);
+    // the watcher above then keeps it fresh.
+    navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 15_000, timeout: 10_000 });
     // Browsers only report a position when it changes, so a car stopped at a light would look
     // like lost GPS. While navigating, also ask for a fresh fix every 3 s.
     const poll = nav
