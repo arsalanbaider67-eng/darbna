@@ -11,7 +11,7 @@ on:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       EXPO_PUBLIC_API_URL: direct
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
@@ -29,6 +29,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+          cache: gradle
 
       - name: Install JS dependencies
         run: npm install --no-audit --no-fund
@@ -60,10 +61,10 @@ jobs:
           DARBNA_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
         run: |
           if [ "${{ steps.key.outputs.signed }}" = "1" ]; then
-            ./gradlew --no-daemon bundleRelease
+            ./gradlew --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a bundleRelease
             cp app/build/outputs/bundle/release/app-release.aab "$GITHUB_WORKSPACE/Darbna-${{ github.run_number }}.aab"
           else
-            ./gradlew --no-daemon assembleRelease
+            ./gradlew --no-daemon -PreactNativeArchitectures=arm64-v8a assembleRelease
             cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/Darbna-test-${{ github.run_number }}.apk"
           fi
           rm -f "$RUNNER_TEMP/upload.jks"
