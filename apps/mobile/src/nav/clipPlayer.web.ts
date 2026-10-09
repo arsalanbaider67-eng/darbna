@@ -15,7 +15,14 @@ function context(): AudioContext | null {
   return ctx;
 }
 
+/** A 0.1 s silent WAV: playing it through an <audio> element switches iOS into "playback" mode. */
+const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
 export function unlockClips(): void {
+  // iPhone: web audio is normally muted by the silent switch. Navigation prompts must play anyway:
+  // Safari 17+ has audioSession; older versions switch mode when an <audio> element plays.
+  try { const as = (navigator as any).audioSession; if (as) as.type = "playback"; } catch {}
+  try { const el = new Audio(SILENT_WAV); el.setAttribute("playsinline", ""); void el.play().catch(() => {}); } catch {}
   const c = context();
   if (!c) return;
   try {
