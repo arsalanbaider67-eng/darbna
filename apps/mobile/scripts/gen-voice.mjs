@@ -1,5 +1,4 @@
 // Records Darbna's guidance prompts with the chosen voices (assets/voice/phrases.json):
-//   Arabic: Azure "ar-IQ-RanaNeural" (needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
 //   Voices per language are set in phrases.json: Azure (AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
 //   or ElevenLabs (ELEVENLABS_API_KEY).
 // Writes assets/voice/<lang>/<key>.mp3 and src/nav/voiceClips.ts. Only phrases whose text changed
