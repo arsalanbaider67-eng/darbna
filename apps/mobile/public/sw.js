@@ -3,8 +3,9 @@
  *  - The app itself (page, scripts, icons) is cached so it opens with no internet.
  *  - Map tiles, fonts and icons from OpenFreeMap are cached as you look at the map, and in bulk
  *    by "Download area on screen" (Settings). Tile URLs contain a weekly data version; cache keys
- *    drop that version so downloaded areas keep working after OpenFreeMap updates. Cached tiles
- *    are refreshed in the background after 30 days.
+ *    drop that version so downloaded areas keep working after OpenFreeMap updates. When online
+ *    and a newer map version exists, the new tile is fetched (so new roads appear within days of
+ *    being added to OpenStreetMap); the stored tile is used when offline or the network is slow.
  *  - Routes, search, reports and traffic are never cached here (they must be live).
  */
 const SHELL = "darbna-shell-v1";
@@ -13,7 +14,8 @@ const MAP_HOST = "tiles.openfreemap.org";
 // Arabic/Kurdish label shaping for the map, loaded from a CDN.
 const RTL_PLUGIN = "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js";
 const MAX_MAP_ENTRIES = 20000;
-const REFRESH_AFTER_MS = 30 * 24 * 3600 * 1000;
+const REFRESH_AFTER_MS = 3 * 24 * 3600 * 1000; // fonts/icons (no version in their URL)
+const NET_WAIT_MS = 2500;
 
 self.addEventListener("install", (e) => {
   self.skipWaiting();
@@ -37,16 +39,17 @@ function mapKey(url) {
   return u.toString();
 }
 
-async function stamp(res) {
+async function stamp(res, src) {
   const headers = new Headers(res.headers);
   headers.set("x-darbna-cached-at", String(Date.now()));
+  headers.set("x-darbna-src", src);
   return new Response(await res.blob(), { status: res.status, statusText: res.statusText, headers });
 }
 
 let puts = 0;
-async function putMap(key, res) {
+async function putMap(key, res, src) {
   const cache = await caches.open(MAP);
-  await cache.put(key, await stamp(res));
+  await cache.put(key, await stamp(res, src));
   if (++puts % 300 === 0) {
     const keys = await cache.keys();
     for (let i = 0; i < keys.length - MAX_MAP_ENTRIES; i++) await cache.delete(keys[i]); // oldest first
@@ -59,21 +62,26 @@ async function mapRequest(req) {
   const key = mapKey(req.url);
   const cache = await caches.open(MAP);
   if (isData) {
-    // Tiles, fonts, sprites: cache first.
     const hit = await cache.match(key);
-    if (hit) {
-      const age = Date.now() - Number(hit.headers.get("x-darbna-cached-at") || 0);
-      if (age > REFRESH_AFTER_MS) fetch(req).then((r) => r.ok && putMap(key, r)).catch(() => {});
-      return hit;
+    const fresh = () => fetch(req).then(async (r) => { if (r.ok) await putMap(key, r.clone(), req.url); return r; });
+    if (!hit) return fresh();
+    const versioned = key !== req.url; // a map tile (its URL names the map data version)
+    if (versioned) {
+      // Same map version as stored: use it. A newer version: fetch it, unless offline or slow.
+      if (hit.headers.get("x-darbna-src") === req.url) return hit;
+      const net = fresh().then((r) => (r.ok || r.status === 204 ? r : hit)).catch(() => hit);
+      const slow = new Promise((ok) => setTimeout(() => ok(hit), NET_WAIT_MS));
+      return Promise.race([net, slow]);
     }
-    const res = await fetch(req);
-    if (res.ok) await putMap(key, res.clone());
-    return res;
+    // Fonts, icons: stored copy, refreshed in the background every few days.
+    const age = Date.now() - Number(hit.headers.get("x-darbna-cached-at") || 0);
+    if (age > REFRESH_AFTER_MS) fresh().catch(() => {});
+    return hit;
   }
   // Style and tile index (JSON): network first so the map stays current, cache when offline.
   try {
     const res = await fetch(req);
-    if (res.ok) await putMap(key, res.clone());
+    if (res.ok) await putMap(key, res.clone(), req.url);
     return res;
   } catch (err) {
     const hit = await cache.match(key);

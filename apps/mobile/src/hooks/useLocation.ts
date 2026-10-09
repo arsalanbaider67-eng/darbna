@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Linking } from "react-native";
 import * as Location from "expo-location";
-import type { LocationFix } from "@darbna/core";
+import { FixFilter, type LocationFix } from "@darbna/core";
 
 export type PermissionState = "unknown" | "granted" | "denied" | "blocked" | "services_off";
 export type LocationMode = "idle" | "navigation";
 
 /**
  * One foreground location watcher for the whole app.
- *  - idle: balanced accuracy, ~5 s / 15 m — enough for the blue dot and search bias.
+ *  - idle: high (GPS) accuracy, every 2 s / 3 m, so the dot sits where you really are.
  *  - navigation: best accuracy, every second.
  * Stops entirely when the app is backgrounded (no background tracking outside navigation;
  * background navigation is not implemented yet — see docs/STATUS.md).
@@ -18,6 +18,7 @@ export function useLocation(mode: LocationMode) {
   const [fix, setFix] = useState<LocationFix | null>(null);
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const sub = useRef<Location.LocationSubscription | null>(null);
+  const filter = useRef(new FixFilter());
 
   const check = useCallback(async () => {
     const services = await Location.hasServicesEnabledAsync().catch(() => true);
@@ -58,8 +59,13 @@ export function useLocation(mode: LocationMode) {
       sub.current = await Location.watchPositionAsync(
         nav
           ? { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 0 }
-          : { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 15 },
-        (loc) => !cancelled && setFix(toFix(loc)),
+          : { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 3 },
+        (loc) => {
+          if (cancelled) return;
+          const f = toFix(loc);
+          // Skip rough fixes that land 10+ m away from the good ones around them.
+          if (filter.current.accept({ coord: f.coord, accuracyM: f.accuracyM, at: Date.now() })) setFix(f);
+        },
       );
       if (cancelled) sub.current.remove();
     })().catch(() => setPermission("services_off"));

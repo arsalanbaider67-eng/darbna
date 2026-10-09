@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bearing, darkenStyle, haversine, lightenStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { bearing, darkenStyle, FixFilter, haversine, lightenStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -153,7 +153,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   handlers.current = p;
   const latest = useRef(p);
   latest.current = p;
-  const me = useRef<{ coord: LngLat; heading: number | null; at: number; moving: boolean } | null>(null);
+  const me = useRef<{ coord: LngLat; raw: LngLat; heading: number | null; at: number; moving: boolean } | null>(null);
   const styleLoaded = useRef<string | null>(null);
   const themeRef = useRef(theme);
   themeRef.current = theme;
@@ -180,14 +180,27 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   const pickHeading = (coord: LngLat, gps: number | null, speed: number | null): { h: number | null; moving: boolean } => {
     const prev = me.current;
     if (gps != null && !Number.isNaN(gps) && (speed ?? 0) > 1.5) return { h: gps, moving: true };
-    if (prev && haversine(prev.coord, coord) > 6 && (speed == null || speed > 0.8)) return { h: bearing(prev.coord, coord), moving: true };
+    if (prev && haversine(prev.raw, coord) > 6 && (speed == null || speed > 0.8)) return { h: bearing(prev.raw, coord), moving: true };
     return { h: compassHeading() ?? prev?.heading ?? null, moving: false };
   };
 
   /** Moves your arrow (or dot) and, when following, the camera. */
-  const moveMe = (m: MLMap, coord: LngLat, gpsHeading: number | null, speed: number | null, duration = 800) => {
-    const { h, moving } = pickHeading(coord, gpsHeading, speed);
-    me.current = { coord, heading: h, at: Date.now(), moving };
+  const moveMe = (m: MLMap, raw: LngLat, gpsHeading: number | null, speed: number | null, duration = 800, accuracyM = 10) => {
+    const pk = pickHeading(raw, gpsHeading, speed);
+    const moving = pk.moving;
+    let h = pk.h;
+    let coord = raw;
+    // Navigating: put the arrow on the road you're driving (the route line), like Waze.
+    const L = latest.current;
+    const line = L.follow === "navigation" ? L.routes[L.selectedRouteIdx]?.geometry : undefined;
+    if (line && line.length > 1) {
+      const s = snapToLine(raw, line, Math.min(35, Math.max(15, accuracyM)));
+      if (s) {
+        coord = s.point;
+        if (moving && h != null && Math.abs(((h - s.bearing + 540) % 360) - 180) < 60) h = s.bearing;
+      }
+    }
+    me.current = { coord, raw, heading: h, at: Date.now(), moving };
     (m.getSource("me") as GeoJSONSource | undefined)?.setData(meFC(coord, h));
     const f = latest.current.follow;
     if (f !== "none") {
@@ -311,15 +324,21 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
     // The blue dot comes straight from the browser's geolocation (the screen's own watcher
     // feeds guidance; this one only draws).
+    // Always the phone's precise GPS (never a cached or Wi-Fi guess), and rough fixes that land
+    // 10+ m away from the good ones around them are skipped.
     let watch: number | null = null;
+    const filter = new FixFilter();
     if (typeof navigator !== "undefined" && navigator.geolocation) {
       watch = navigator.geolocation.watchPosition(
         (pos) => {
           if (latest.current.simFix) return; // demo drive owns the dot
-          moveMe(m, [pos.coords.longitude, pos.coords.latitude], pos.coords.heading, pos.coords.speed);
+          const coord: LngLat = [pos.coords.longitude, pos.coords.latitude];
+          const acc = pos.coords.accuracy ?? 50;
+          if (!filter.accept({ coord, accuracyM: acc, at: Date.now() })) return;
+          moveMe(m, coord, pos.coords.heading, pos.coords.speed, 800, acc);
         },
         () => {},
-        { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
       );
     }
 

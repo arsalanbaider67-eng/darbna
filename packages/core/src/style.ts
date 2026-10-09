@@ -23,10 +23,10 @@ export function lightenStyle(style: MapStyle): MapStyle {
     // 3D extrusions and hillshading are the most expensive layers to draw.
     if (l.type === "fill-extrusion" || l.type === "hillshade") continue;
     const next: StyleLayer = { ...l };
-    // Flat building footprints only when zoomed in close.
-    if (l.type === "fill" && /building/i.test(l.id)) next.minzoom = Math.max(l.minzoom ?? 0, 15);
-    // POI icons/labels appear a little later so dense areas (central Baghdad) stay light.
-    if (l.type === "symbol" && /poi/i.test(l.id)) next.minzoom = Math.max(l.minzoom ?? 0, 15);
+    // Flat building footprints and place icons/labels from neighbourhood zoom, so dense areas
+    // (central Baghdad) stay light when zoomed out.
+    if (l.type === "fill" && /building/i.test(l.id)) next.minzoom = Math.max(l.minzoom ?? 0, 14);
+    if (l.type === "symbol" && /poi/i.test(l.id)) next.minzoom = Math.max(l.minzoom ?? 0, 14);
     layers.push(next);
   }
   return { ...style, layers };

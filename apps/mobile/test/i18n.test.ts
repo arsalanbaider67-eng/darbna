@@ -37,14 +37,14 @@ describe("instructions", () => {
   const step = (p: Partial<RouteStep>): RouteStep => ({ index: 1, kind: "right", shapeIndex: 3, location: [44, 33], distanceM: 300, durationS: 30, ...p });
   const arW = { lang: "ar" as const, digits: "western" as const };
   it("Iraqi Arabic turn with street", () => {
-    expect(instructionText(step({ streetName: "شارع فلسطين" }), 480, arW)).toBe("بعد 500 م، لف يمين على شارع فلسطين");
+    expect(instructionText(step({ streetName: "شارع فلسطين" }), 480, arW)).toBe("ورا 500 م، لوف يمين على شارع فلسطين");
   });
   it("roundabout uses local term and ordinal", () => {
     expect(instructionText(step({ kind: "roundabout", roundaboutExit: 2 }), null, arW)).toBe("بالفلكة، اطلع من المخرج الثاني");
     expect(instructionText(step({ kind: "roundabout", roundaboutExit: 2 }), null, { lang: "en", digits: "western" })).toBe("At the roundabout, take the second exit");
   });
   it("spoken distances use words for units", () => {
-    expect(instructionText(step({}), 1234, arW, true)).toBe("ورا 1.2 كيلومتر، لف يمين");
+    expect(instructionText(step({}), 1234, arW, true)).toBe("ورا 1.2 كيلومتر، لوف يمين");
   });
   it("Arabic-Indic digits on screen when chosen", () => {
     expect(fmtDistance(1234, { lang: "ar", digits: "arabic" })).toBe("١٫٢ كم");

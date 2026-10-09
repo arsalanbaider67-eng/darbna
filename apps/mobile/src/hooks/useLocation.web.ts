@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LocationFix } from "@darbna/core";
+import { FixFilter, type LocationFix } from "@darbna/core";
 import type { LocationMode, PermissionState } from "./useLocation";
 
 export type { LocationMode, PermissionState } from "./useLocation";
@@ -16,8 +16,11 @@ export function useLocation(mode: LocationMode) {
   const watchId = useRef<number | null>(null);
   const supported = typeof navigator !== "undefined" && !!navigator.geolocation;
 
+  const filter = useRef(new FixFilter());
   const onPos = useCallback((p: GeolocationPosition) => {
     setPermission("granted");
+    // Skip rough fixes (a Wi-Fi/cell guess 10+ m off) that arrive between good GPS fixes.
+    if (!filter.current.accept({ coord: [p.coords.longitude, p.coords.latitude], accuracyM: p.coords.accuracy ?? 100, at: Date.now() })) return;
     setFix({
       coord: [p.coords.longitude, p.coords.latitude],
       accuracyM: p.coords.accuracy ?? 100,
@@ -50,7 +53,7 @@ export function useLocation(mode: LocationMode) {
 
   const request = useCallback(async () => {
     if (!supported) return;
-    navigator.geolocation.getCurrentPosition(onPos, onErr, { enableHighAccuracy: true, timeout: 20_000, maximumAge: 10_000 });
+    navigator.geolocation.getCurrentPosition(onPos, onErr, { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 });
   }, [supported, onPos, onErr]);
 
   const openSettings = useCallback(() => {
@@ -68,14 +71,15 @@ export function useLocation(mode: LocationMode) {
     if (permission !== "granted" || !visible || !supported) return;
     const nav = mode === "navigation";
     watchId.current = navigator.geolocation.watchPosition(onPos, onErr, {
-      enableHighAccuracy: nav,
-      maximumAge: nav ? 0 : 5000,
+      // Always the precise GPS, never a cached position.
+      enableHighAccuracy: true,
+      maximumAge: 0,
       timeout: 30_000,
     });
     // Browsers only report a position when it changes, so a car stopped at a light would look
     // like lost GPS. While navigating, also ask for a fresh fix every 3 s.
     const poll = nav
-      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 3000, timeout: 8000 }), 3000)
+      ? setInterval(() => navigator.geolocation.getCurrentPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 8000 }), 3000)
       : null;
     return () => {
       if (poll) clearInterval(poll);
