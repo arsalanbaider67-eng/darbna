@@ -7,13 +7,18 @@ import { sharePlace } from "../share";
 import { saveSaved } from "../storage";
 import { getState, setState, useStore } from "../store";
 import type { Place } from "../types";
+import { FuelStatus } from "./Extras";
 import { Btn, Icon, Panel, Row, Txt } from "./ui";
 
-export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose }: {
+export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose, onWalkTo, onForgetParked, onMapProblem }: {
   place: Place; userCoord: LngLat | null; lookingUp: boolean; onDirections(): void; onClose(): void;
+  onWalkTo(): void; onForgetParked(): void; onMapProblem(): void;
 }) {
   const { theme, t, fmtCtx } = useUi();
   const saved = useStore((s) => s.saved);
+  const reports = useStore((s) => s.reports);
+  const parked = place.kind === "parked";
+  const fuel = place.kind === "nearby_fuel" || place.kind === "fuel";
   const isFav = saved.favorites.some((f) => f.id === place.id);
 
   function update(patch: Partial<typeof saved>) {
@@ -28,7 +33,7 @@ export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose 
         <View style={{ flex: 1 }}>
           <Txt size={21} weight="bold" numberOfLines={2}>{lookingUp ? t.place.lookingUp : place.name}</Txt>
           <Txt muted numberOfLines={2}>
-            {[(t.kinds as Record<string, string>)[place.kind] ?? t.kinds.place, place.secondary].filter(Boolean).join(" · ")}
+            {[parked ? t.x.parked.title : place.kind.startsWith("nearby_") ? (t.x.quick as Record<string, string>)[place.kind.slice(7)] : (t.kinds as Record<string, string>)[place.kind] ?? t.kinds.place, place.secondary].filter(Boolean).join(" · ")}
           </Txt>
           {userCoord && <Txt size={14} muted>{fmt(t.place.distanceFromYou, { d: fmtDistance(haversine(userCoord, place.coord), fmtCtx) })}</Txt>}
           {place.quality === "seed_unverified" && (
@@ -42,6 +47,13 @@ export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose 
           <Icon name="close" size={24} color={theme.textMuted} />
         </Pressable>
       </Row>
+      {parked ? (
+        <Row style={{ marginTop: 14 }}>
+          <Btn label={t.x.parked.walk} icon="walk" onPress={onWalkTo} style={{ flex: 1 }} />
+          <Btn kind="secondary" label={t.x.parked.forget} icon="delete-outline" onPress={onForgetParked} />
+        </Row>
+      ) : <>
+      {fuel && <FuelStatus place={place} reports={Object.values(reports)} />}
       <Row style={{ marginTop: 14 }}>
         <Btn label={t.place.directions} icon="directions" onPress={onDirections} style={{ flex: 1 }} />
         <Btn kind="secondary" label={t.place.share} icon="share-variant" onPress={() => void sharePlace(place, t.place.linkCopied)} disabled={lookingUp} />
@@ -57,6 +69,13 @@ export function PlaceSheet({ place, userCoord, lookingUp, onDirections, onClose 
         <Btn kind="secondary" icon="home-outline" label={t.saved.home} onPress={() => update({ home: { ...place, id: `home:${place.id}` } })} style={{ flex: 1 }} accessibilityHint={t.place.setHome} />
         <Btn kind="secondary" icon="briefcase-outline" label={t.saved.work} onPress={() => update({ work: { ...place, id: `work:${place.id}` } })} style={{ flex: 1 }} accessibilityHint={t.place.setWork} />
       </Row>
+      <Pressable accessibilityRole="button" onPress={onMapProblem} style={{ minHeight: 40, justifyContent: "center", alignItems: "center", marginTop: 4 }}>
+        <Row gap={6}>
+          <Icon name="map-marker-question-outline" size={18} color={theme.textMuted} />
+          <Txt size={13} muted>{t.x.mapProblem.button}</Txt>
+        </Row>
+      </Pressable>
+      </>}
     </Panel>
   );
 }

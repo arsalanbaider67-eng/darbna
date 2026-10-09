@@ -9,13 +9,22 @@ import { fmtDistance } from "../i18n";
 import { getState, setState, useStore } from "../store";
 import { font, TOUCH } from "../theme";
 import type { Place } from "../types";
+import type { NearbyKind } from "../external";
+import { QuickSearch } from "./Extras";
 import { Icon, Row, Txt, type IconName } from "./ui";
+
+const QUICK_ICON_FOR: Record<NearbyKind, IconName> = {
+  fuel: "gas-station", mosque: "mosque", hospital: "hospital-box", pharmacy: "pill", restaurant: "silverware-fork-knife", atm: "cash",
+};
 
 interface Props {
   online: boolean | null;
   userCoord: LngLat | null;
   onPick(place: Place): void;
   onSettings(): void;
+  /** Picking a stop on the way: a different title and its own close action. */
+  title?: string;
+  onClose?(): void;
 }
 
 const KIND_ICON: Record<string, IconName> = {
@@ -50,7 +59,7 @@ export function SearchBar({ onFocus, onSettings }: { onFocus(): void; onSettings
   );
 }
 
-export function SearchPanel({ online, userCoord, onPick }: Props) {
+export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props) {
   const { theme, t, fmtCtx } = useUi();
   const insets = useSafeAreaInsets();
   const lang = useStore((s) => s.settings.lang);
@@ -63,6 +72,8 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
   // Bumped when the user presses Search: in direct mode that's the only time Nominatim is queried.
   const [submitted, setSubmitted] = useState(0);
   const seq = useRef(0);
+  // Quick nearby search (fuel, mosque, hospital…): its results replace the saved/recent list.
+  const [near, setNear] = useState<{ kind: NearbyKind; places: Place[] | null; error?: string } | null>(null);
 
   useEffect(() => {
     const query = q.trim();
@@ -110,8 +121,11 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
     return items;
   }, [saved, t]);
 
+  const kindLabel = (k: string) => k.startsWith("nearby_") ? t.x.quick[k.slice(7) as NearbyKind] : (t.kinds as Record<string, string>)[k] ?? t.kinds.place;
   const list: { header?: string; place?: Place }[] = results
     ? results.map((p) => ({ place: p }))
+    : near
+    ? [{ header: t.x.quick[near.kind] }, ...(near.places ?? []).map((p) => ({ place: p }))]
     : [
         ...(saved.favorites.length ? [{ header: t.saved.favorites }, ...saved.favorites.map((p) => ({ place: p }))] : []),
         ...(recents.length ? [{ header: t.search.recent }, ...recents.map((p) => ({ place: p }))] : []),
@@ -120,7 +134,7 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
   return (
     <View style={[StyleSheet.absoluteFill, { backgroundColor: theme.bg, paddingTop: insets.top + 8 }]}>
       <View style={[s.inputRow, { backgroundColor: theme.surface, borderColor: theme.primary }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.common.close} hitSlop={12} onPress={() => { Keyboard.dismiss(); setState({ mode: getState().selected ? "place" : "browse" }); }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.common.close} hitSlop={12} onPress={() => { Keyboard.dismiss(); if (onClose) onClose(); else setState({ mode: getState().selected ? "place" : "browse" }); }}>
           {/* Back arrow mirrors with layout direction: forward in RTL is leftwards. */}
           <Icon name={fmtCtx.lang === "en" ? "arrow-left" : "arrow-right"} size={26} />
         </Pressable>
@@ -129,7 +143,7 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
           value={q}
           onChangeText={(v) => { setQ(v); setSubmitted(0); }}
           onSubmitEditing={() => setSubmitted((n) => n + 1)}
-          placeholder={t.search.placeholder}
+          placeholder={title ?? t.search.placeholder}
           placeholderTextColor={theme.textMuted}
           returnKeyType="search"
           autoCorrect={false}
@@ -141,6 +155,18 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
       </View>
 
       {!results && (
+        <View style={{ paddingHorizontal: 10, marginTop: 10 }}>
+          <QuickSearch userCoord={userCoord} onResults={setNear} />
+        </View>
+      )}
+      {near && !results && (near.places === null || near.error || near.places.length === 0) && (
+        <Row style={[s.notice, { backgroundColor: theme.surfaceAlt }]}>
+          {near.places === null ? <ActivityIndicator color={theme.primary} /> : <Icon name="information-outline" size={18} color={theme.warn} />}
+          <Txt size={14} style={{ flex: 1 }}>{near.places === null ? t.x.quick.searching : near.error ?? t.x.quick.none}</Txt>
+        </Row>
+      )}
+
+      {!results && !near && (
         <View style={s.quickRow}>
           {quick.map((qi) => (
             <Pressable
@@ -160,7 +186,7 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
         </View>
       )}
 
-      {!results && (
+      {!results && !near && (
         <Pressable accessibilityRole="button" onPress={paste} style={[s.paste, { borderColor: theme.border }]}>
           <Icon name="clipboard-text-outline" size={22} color={theme.primary} />
           <View style={{ flex: 1 }}>
@@ -192,12 +218,12 @@ export function SearchPanel({ online, userCoord, onPick }: Props) {
               style={({ pressed }) => [s.item, { borderColor: theme.border, backgroundColor: pressed ? theme.surfaceAlt : "transparent" }]}
             >
               <View style={[s.kindIcon, { backgroundColor: theme.surfaceAlt }]}>
-                <Icon name={KIND_ICON[item.place!.kind] ?? "map-marker-outline"} size={22} color={theme.primary} />
+                <Icon name={KIND_ICON[item.place!.kind] ?? (near ? QUICK_ICON_FOR[near.kind] : "map-marker-outline")} size={22} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Txt weight="semibold" numberOfLines={1}>{item.place!.name}</Txt>
                 <Txt size={13} muted numberOfLines={1}>
-                  {[(t.kinds as Record<string, string>)[item.place!.kind] ?? t.kinds.place, item.place!.secondary].filter(Boolean).join(" · ")}
+                  {[kindLabel(item.place!.kind), item.place!.secondary].filter(Boolean).join(" · ")}
                   {item.place!.quality === "seed_unverified" ? ` · ${t.search.approx}` : ""}
                 </Txt>
               </View>

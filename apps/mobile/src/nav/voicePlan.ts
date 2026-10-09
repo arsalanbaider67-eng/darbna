@@ -31,7 +31,8 @@ export function actionKey(step: RouteStep): string {
 /** A maneuver prompt: optional distance, the action, and an optional "then …". */
 export function instructionClips(step: RouteStep, distanceM: number | null, then?: RouteStep | null): string[] {
   const out: string[] = [];
-  if (step.kind === "arrive") {
+  // A stop on the way is said like an arrival ("you've arrived" / "… your destination").
+  if (step.kind === "arrive" || step.kind === "waypoint") {
     if (distanceM !== null && distanceM >= 50) out.push(distanceKey(distanceM), "arrive_soon");
     else out.push("mv_arrive");
     return out;

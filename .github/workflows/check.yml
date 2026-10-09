@@ -1,0 +1,32 @@
+# Checks a feature branch before it goes live: unit tests and a type check of the app.
+# Nothing is built or published. Results show as annotations on the run.
+name: Check branch
+
+on:
+  push:
+    branches-ignore: [main, web-build]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Core tests
+        working-directory: packages/core
+        run: bun test 2>&1 | tail -5
+      - name: App tests
+        working-directory: apps/mobile
+        run: bun test 2>&1 | tail -5
+      - name: Type check app
+        working-directory: apps/mobile
+        run: |
+          if npx tsc --noEmit -p . > tsc.log 2>&1; then echo "::notice title=typecheck::no type errors"; else
+            grep -E "^src/" tsc.log | head -40 | while read -r l; do echo "::warning title=typecheck::$l"; done; fi

@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bearing, darkenStyle, FixFilter, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { bearing, darkenStyle, FixFilter, goldStyle, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -31,6 +31,10 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** Where you parked. */
+  parked?: LngLat | null;
+  /** Someone's shared trip you're watching. */
+  friend?: { coord: LngLat; heading: number | null } | null;
   /** On a trip: the arrow rides the route line and the part already driven turns grey. */
   traveled?: boolean;
 }
@@ -51,7 +55,6 @@ function ensureAttributionCss() {
 }
 
 const BAGHDAD: LngLat = [44.3661, 33.3152];
-const DRIVEN_COLOR = "#7D8794";
 
 interface Pose { c: LngLat; h: number | null; prog: number | null }
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
@@ -74,10 +77,13 @@ function ensureRtlPlugin() {
   }
 }
 
-/** Style URL + transform: lightened always; "#night" recolours it for night, "#sat" puts it over satellite photos. */
+/** Style URL + transform: lightened always; "#gold" = black & gold map, "#night" recolours for night, "#sat" puts it over satellite photos. */
 function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next: any) => any }] {
   const [clean, tag] = url.split("#");
-  const t = (next: any) => (tag === "night" ? darkenStyle(lightenStyle(next)) : tag === "sat" ? satelliteStyle(lightenStyle(next)) : lightenStyle(next));
+  const t = (next: any) => (
+    tag === "gold" ? goldStyle(lightenStyle(next)) :
+    tag === "night" ? darkenStyle(lightenStyle(next)) :
+    tag === "sat" ? satelliteStyle(lightenStyle(next)) : lightenStyle(next));
   return [clean, { transformStyle: (_prev, next) => t(next) }];
 }
 
@@ -114,26 +120,26 @@ function meFC(c: LngLat | null, heading: number | null): GeoJSON.FeatureCollecti
 }
 
 /** Navigation arrow drawn once into an image (2× for sharp edges on phone screens). */
-function puckImage(): ImageData | null {
+function puckImage(color: string): ImageData | null {
   if (typeof document === "undefined") return null;
   const S = 72, c = document.createElement("canvas");
   c.width = c.height = S;
   const g = c.getContext("2d");
   if (!g) return null;
   g.translate(S / 2, S / 2);
-  g.shadowColor = "rgba(0,0,0,0.45)";
-  g.shadowBlur = 6;
+  g.shadowColor = color;
+  g.shadowBlur = 10;
   g.beginPath();
   g.moveTo(0, -27); // tip (points north; the map rotates it)
   g.lineTo(21, 23);
   g.lineTo(0, 13);
   g.lineTo(-21, 23);
   g.closePath();
-  g.fillStyle = "#2EC4DA";
+  g.fillStyle = color;
   g.fill();
   g.shadowColor = "transparent";
   g.lineWidth = 4;
-  g.strokeStyle = "#FFFFFF";
+  g.strokeStyle = "#0A0907";
   g.lineJoin = "round";
   g.stroke();
   return g.getImageData(0, 0, S, S);
@@ -217,7 +223,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const blue = themeRef.current.route;
     m.setPaintProperty("route-main", "line-gradient", prog == null || !latest.current.traveled
       ? null as any
-      : ["step", ["line-progress"], DRIVEN_COLOR, Math.min(1, Math.max(1e-6, prog)), blue]);
+      : ["step", ["line-progress"], themeRef.current.driven, Math.min(1, Math.max(1e-6, prog)), blue]);
   };
 
   /** Draws one frame: arrow, grey line, and (when following) the camera. Returns true when the camera has settled. */
@@ -296,6 +302,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const t = themeRef.current;
     m.addSource("routes", { type: "geojson", lineMetrics: true, data: routesFC(latest.current.routes, latest.current.selectedRouteIdx) });
     m.addLayer({ id: "route-alt", type: "line", source: "routes", filter: ["==", ["get", "selected"], 0], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeAlt, "line-width": 7 } });
+    // Soft gold glow under the chosen route.
+    m.addLayer({ id: "route-glow", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.route, "line-width": 20, "line-blur": 12, "line-opacity": 0.35 } });
     m.addLayer({ id: "route-casing", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeCasing, "line-width": 11 } });
     m.addLayer({ id: "route-main", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.route, "line-width": 7 } });
     m.addSource("traffic", { type: "geojson", data: trafficFC(latest.current.routes, latest.current.selectedRouteIdx) });
@@ -316,17 +324,26 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     });
     m.addSource("dest", { type: "geojson", data: pointFC(latest.current.destination?.coord ?? null) });
     m.addLayer({ id: "dest-halo", type: "circle", source: "dest", paint: { "circle-radius": 16, "circle-color": t.accent, "circle-opacity": 0.25 } });
-    m.addLayer({ id: "dest-dot", type: "circle", source: "dest", paint: { "circle-radius": 8, "circle-color": t.accent, "circle-stroke-width": 3, "circle-stroke-color": "#FFFFFF" } });
+    m.addLayer({ id: "dest-dot", type: "circle", source: "dest", paint: { "circle-radius": 8, "circle-color": t.accent, "circle-stroke-width": 3, "circle-stroke-color": "#0A0907" } });
+    m.addSource("parked", { type: "geojson", data: pointFC(latest.current.parked ?? null) });
+    m.addLayer({ id: "parked-ring", type: "circle", source: "parked", paint: { "circle-radius": 13, "circle-color": "#0A0907", "circle-stroke-width": 3, "circle-stroke-color": t.primary } });
+    m.addLayer({ id: "parked-dot", type: "circle", source: "parked", paint: { "circle-radius": 4.5, "circle-color": t.primary } });
+    m.addSource("friend", { type: "geojson", data: pointFC(latest.current.friend?.coord ?? null, { heading: latest.current.friend?.heading ?? 0 }) });
+    m.addLayer({ id: "friend-halo", type: "circle", source: "friend", paint: { "circle-radius": 26, "circle-color": t.primary, "circle-opacity": 0.2 } });
     m.addSource("me", { type: "geojson", data: meFC(me.current?.coord ?? null, me.current?.heading ?? null) });
-    m.addLayer({ id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 24, "circle-color": "#2EC4DA", "circle-opacity": 0.16, "circle-pitch-alignment": "map" } });
-    m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "hasHeading"], 0], paint: { "circle-radius": 8, "circle-color": "#2F80ED", "circle-stroke-width": 3, "circle-stroke-color": "#FFFFFF" } });
-    if (!m.hasImage("darbna-puck")) { const img = puckImage(); if (img) m.addImage("darbna-puck", img, { pixelRatio: 2 }); }
+    m.addLayer({ id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 26, "circle-color": t.puck, "circle-opacity": 0.18, "circle-pitch-alignment": "map" } });
+    m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "hasHeading"], 0], paint: { "circle-radius": 8, "circle-color": t.puck, "circle-stroke-width": 3, "circle-stroke-color": "#0A0907" } });
+    if (!m.hasImage("darbna-puck")) { const img = puckImage(t.puck); if (img) m.addImage("darbna-puck", img, { pixelRatio: 2 }); }
     m.addLayer({
       id: "me-arrow", type: "symbol", source: "me", filter: ["==", ["get", "hasHeading"], 1],
       layout: {
         "icon-image": "darbna-puck", "icon-size": 1.35, "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map", "icon-pitch-alignment": "map",
         "icon-allow-overlap": true, "icon-ignore-placement": true,
       },
+    });
+    m.addLayer({
+      id: "friend-arrow", type: "symbol", source: "friend",
+      layout: { "icon-image": "darbna-puck", "icon-size": 1.2, "icon-rotate": ["get", "heading"], "icon-rotation-alignment": "map", "icon-allow-overlap": true, "icon-ignore-placement": true },
     });
     setDriven(m, shown.current?.prog ?? null);
   };
@@ -478,6 +495,14 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   }, [p.destination]);
 
   useEffect(() => {
+    (map.current?.getSource("parked") as GeoJSONSource | undefined)?.setData(pointFC(p.parked ?? null));
+  }, [p.parked]);
+
+  useEffect(() => {
+    (map.current?.getSource("friend") as GeoJSONSource | undefined)?.setData(pointFC(p.friend?.coord ?? null, { heading: p.friend?.heading ?? 0 }));
+  }, [p.friend]);
+
+  useEffect(() => {
     const m = map.current;
     if (m && p.simFix) moveMe(m, p.simFix.coord, p.simFix.headingDeg ?? null, p.simFix.speedMps ?? null, 5);
   }, [p.simFix]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -496,6 +521,6 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
   a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
-  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.traveled === b.traveled;
+  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.traveled === b.traveled && a.parked === b.parked && a.friend === b.friend;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

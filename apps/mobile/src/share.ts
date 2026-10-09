@@ -32,3 +32,29 @@ export async function sharePlace(place: Place, copiedText: string): Promise<void
   }
   await Share.share({ message: `${place.name}\n${link}` }).catch(() => {});
 }
+
+/** The Darbna web app: shared trip links open here on any phone, no install needed. */
+export const WEB_APP_URL = "https://arsalanbaider67-eng.github.io/darbna/";
+
+export function webBase(): string {
+  if (Platform.OS === "web" && typeof window !== "undefined") return window.location.origin + window.location.pathname;
+  return WEB_APP_URL;
+}
+
+/** Live trip link for family: …/darbna/?watch=<id>. */
+export const tripLink = (id: string) => `${webBase()}?watch=${encodeURIComponent(id)}`;
+
+/** Share any text + link: the system share sheet on phones, else copy it. */
+export async function shareText(text: string, url: string, copiedText: string): Promise<void> {
+  const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
+  if (Platform.OS === "web") {
+    if (nav?.share) {
+      try { await nav.share({ text, url }); return; }
+      catch (e: any) { if (e?.name === "AbortError") return; }
+    }
+    await Clipboard.setStringAsync(`${text}`).catch(() => {});
+    toast(copiedText, "ok");
+    return;
+  }
+  await Share.share({ message: text }).catch(() => {});
+}

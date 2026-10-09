@@ -8,6 +8,7 @@ import { chooseVoice, resetVoiceCache } from "../nav/voice";
 import { hasRecordedVoice } from "../nav/prompt";
 import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
+import { PointsCard } from "./Extras";
 import { getState, setState, toast, useStore } from "../store";
 import { ensureDirection } from "../rtl";
 import { TOUCH } from "../theme";
@@ -99,10 +100,15 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
           <Txt weight="semibold">{t.settings.language}</Txt>
           <Seg value={settings.lang} options={LANGS.map((l) => ({ v: l.code, label: l.label }))} onChange={changeLang} />
         </View>
-        <View style={{ gap: 6 }}>
-          <Txt weight="semibold">{t.settings.theme}</Txt>
-          <Seg value={settings.theme} options={[{ v: "auto", label: t.settings.themeAuto }, { v: "day", label: t.settings.themeDay }, { v: "night", label: t.settings.themeNight }]} onChange={(v) => update({ theme: v })} />
-        </View>
+        <PointsCard />
+        <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} style={{ borderColor: theme.danger }} />
+        <Row>
+          <View style={{ flex: 1 }}>
+            <Txt weight="semibold">{t.x.speed.alerts}</Txt>
+            <Txt size={13} muted>{t.x.speed.alertsHint}</Txt>
+          </View>
+          <Switch value={settings.speedAlerts !== false} onValueChange={(v) => update({ speedAlerts: v })} accessibilityLabel={t.x.speed.alerts} />
+        </Row>
         <Row>
           <View style={{ flex: 1 }}>
             <Txt weight="semibold">{t.settings.voice}</Txt>

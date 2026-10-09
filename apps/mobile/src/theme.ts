@@ -2,8 +2,8 @@ import { Platform } from "react-native";
 import type { ReportCategory } from "@darbna/core";
 
 /**
- * Darbna identity: Tigris teal + date-palm gold on warm sand. Calm, high-contrast,
- * nothing cartoonish — the map is the hero.
+ * Darbna identity: black and gold. A black map, metallic-gold route and arrow, black glass
+ * panels with thin gold edges. Danger stays red and warnings amber so they never blend into the gold.
  */
 export interface Theme {
   dark: boolean;
@@ -26,53 +26,40 @@ export interface Theme {
   banner: string;
   onBanner: string;
   shadow: string;
+  /** Your arrow on the map. */
+  puck: string;
+  /** Part of the route already driven. */
+  driven: string;
 }
 
-export const day: Theme = {
-  dark: false,
-  bg: "#F4EFE6",
-  surface: "#FFFFFF",
-  surfaceAlt: "#F7F3EC",
-  text: "#14232A",
-  textMuted: "#55666C",
-  border: "#E1D8C8",
-  primary: "#0E5E6F",
-  onPrimary: "#FFFFFF",
-  accent: "#E0A526",
-  onAccent: "#1F1606",
-  danger: "#B3261E",
-  warn: "#B4551F",
-  ok: "#1E7B4D",
-  route: "#0E7C93",
-  routeCasing: "#0A4A57",
-  routeAlt: "#8FA7AE",
-  banner: "#0E5E6F",
-  onBanner: "#FFFFFF",
+export const gold: Theme = {
+  dark: true,
+  bg: "#070707",
+  surface: "#121212",
+  surfaceAlt: "#1B1A17",
+  text: "#F6F0E1",
+  textMuted: "#A99F88",
+  border: "#3A3220",
+  primary: "#D4AF37",
+  onPrimary: "#0A0907",
+  accent: "#E6C35C",
+  onAccent: "#0A0907",
+  danger: "#FF5A4E",
+  warn: "#F2A23A",
+  ok: "#5BD39A",
+  route: "#E2B53E",
+  routeCasing: "#2E2408",
+  routeAlt: "#5E5643",
+  banner: "#121212",
+  onBanner: "#F6F0E1",
   shadow: "#000000",
+  puck: "#F1C94B",
+  driven: "#4A4740",
 };
 
-export const night: Theme = {
-  dark: true,
-  bg: "#0F1A1F",
-  surface: "#18262C",
-  surfaceAlt: "#1F3036",
-  text: "#EAF2F3",
-  textMuted: "#9DB2B7",
-  border: "#2B3D44",
-  primary: "#46B9CC",
-  onPrimary: "#04161B",
-  accent: "#F2B544",
-  onAccent: "#1F1606",
-  danger: "#FF7A6E",
-  warn: "#FF9F5A",
-  ok: "#5BD39A",
-  route: "#46B9CC",
-  routeCasing: "#0B2A31",
-  routeAlt: "#4D646B",
-  banner: "#123D47",
-  onBanner: "#EAF2F3",
-  shadow: "#000000",
-};
+// The app has one look now (black & gold); both names kept for older imports.
+export const day = gold;
+export const night = gold;
 
 // On the web, fall back to the phone's own font if the downloaded one is blocked or slow
 // (Lockdown Mode, in-app browsers), instead of the browser's default serif.

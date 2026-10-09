@@ -15,6 +15,10 @@ export interface RouteRequest {
   excludePolygons: LngLat[][];
   /** "walk" = on foot (Valhalla pedestrian costing). Default car. */
   travel?: "car" | "walk";
+  /** Stops on the way, in order. */
+  via?: LngLat[];
+  /** Car only: stay off highways / dirt roads. */
+  avoid?: { highways?: boolean; unpaved?: boolean };
 }
 
 export type RoutingErrorCode = "no_route" | "off_network" | "unavailable" | "timeout";

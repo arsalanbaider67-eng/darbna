@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Switch, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { freshness, REPORT_CATEGORIES, type LocationFix, type ReportCategory } from "@darbna/core";
 import { api, ApiError } from "../api";
 import { useUi } from "../context";
@@ -7,6 +7,7 @@ import { fmt, fmtClock, fmtNumber } from "../i18n";
 import { loadQueue, saveQueue } from "../storage";
 import { mergeReports, removeReport, toast, useStore } from "../store";
 import { REPORT_STYLE, TOUCH } from "../theme";
+import { refreshPoints } from "./Extras";
 import { Btn, Chip, Icon, Panel, Row, Txt } from "./ui";
 
 const STOPPED_MPS = 2; // ~7 km/h
@@ -29,6 +30,8 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
       mergeReports([r.report]);
       toast(r.duplicate ? t.reports.merged : t.reports.sent, "ok");
       onClose();
+      // Points for helping: show what this report earned.
+      void refreshPoints().then((n) => { if (n && n > 0) toast(`${r.duplicate ? t.reports.merged : t.reports.sent} ${fmt(t.x.points.earned, { n })}`, "ok"); });
     } catch (e) {
       if (e instanceof ApiError && e.isNetwork) {
         const q = await loadQueue();
@@ -56,7 +59,7 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
           <Switch value={passenger} onValueChange={setPassenger} accessibilityLabel={t.reports.imPassenger} />
         </Row>
       )}
-      <View style={s.grid}>
+      <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={s.grid}>
         {REPORT_CATEGORIES.map((c) => (
           <Pressable
             key={c}
@@ -68,12 +71,12 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
             style={({ pressed }) => [s.cell, { backgroundColor: theme.surfaceAlt, borderColor: theme.border, opacity: !allowed ? 0.4 : pressed || busy === c ? 0.7 : 1 }]}
           >
             <View style={[s.circle, { backgroundColor: REPORT_STYLE[c].color }]}>
-              <Icon name={REPORT_STYLE[c].icon as any} size={30} color="#fff" />
+              <Icon name={REPORT_STYLE[c].icon as any} size={26} color="#fff" />
             </View>
-            <Txt size={15} weight="semibold" style={{ textAlign: "center" }}>{t.reports.categories[c]}</Txt>
+            <Txt size={14} weight="semibold" numberOfLines={2} style={{ textAlign: "center" }}>{t.reports.categories[c]}</Txt>
           </Pressable>
         ))}
-      </View>
+      </ScrollView>
     </Panel>
   );
 }
@@ -82,12 +85,27 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
 export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) {
   const { theme, t, fmtCtx } = useUi();
   const r = useStore((s) => s.reports[id]);
+  const social = useStore((s) => !!s.config?.social);
   const [busy, setBusy] = useState(false);
   if (!r) return null;
   const f = freshness(new Date(r.createdAt));
   const fresh = fmt(t.reports.freshness[f.bucket], {
     n: fmtNumber(f.bucket === "minutes" ? f.minutes : f.bucket === "hours" ? Math.floor(f.minutes / 60) : Math.floor(f.minutes / 1440), fmtCtx),
   });
+
+  async function thank() {
+    setBusy(true);
+    try {
+      const res = await api.thank(r.id);
+      mergeReports([res.report]);
+      toast(t.x.thanks.done, "ok");
+    } catch (e) {
+      const code = e instanceof ApiError ? e.code : "";
+      toast(code === "already_thanked" ? t.x.thanks.already : code === "own_report" ? t.reports.own : t.common.retry, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function vote(v: "confirm" | "gone" | "flag") {
     setBusy(true);
@@ -125,6 +143,7 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
           : <Chip icon="account-group" text={t.reports.community} color={theme.surfaceAlt} textColor={theme.text} />}
         {!r.verified && <Chip text={fmt(t.reports.confidence, { p: fmtNumber(Math.round(r.confidence * 100), fmtCtx) })} color={theme.surfaceAlt} textColor={theme.text} />}
         {r.confirms > 0 && <Chip text={fmt(t.reports.confirms, { n: fmtNumber(r.confirms, fmtCtx) })} color={theme.surfaceAlt} textColor={theme.text} />}
+        {(r.thanks ?? 0) > 0 && <Chip icon="thumb-up" text={fmt(t.x.thanks.count, { n: fmtNumber(r.thanks ?? 0, fmtCtx) })} color={theme.surfaceAlt} textColor={theme.primary} />}
         {r.isSample && <Chip icon="flask-outline" text={t.reports.sample} color={theme.accent} textColor={theme.onAccent} />}
       </Row>
       {r.officialRef && <Txt size={13} muted style={{ marginTop: 6 }}>{r.officialRef}</Txt>}
@@ -134,6 +153,9 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
             <Btn label={t.reports.stillThere} icon="thumb-up-outline" onPress={() => vote("confirm")} loading={busy} style={{ flex: 1 }} />
             <Btn kind="secondary" label={t.reports.notThere} icon="close-circle-outline" onPress={() => vote("gone")} disabled={busy} style={{ flex: 1 }} />
           </Row>
+          {social && !r.isSample && (
+            <Btn kind="ghost" icon="thumb-up-outline" label={t.x.thanks.button} onPress={() => void thank()} disabled={busy} style={{ marginTop: 6, borderColor: theme.border }} />
+          )}
           <Pressable onPress={() => vote("flag")} disabled={busy} style={{ minHeight: TOUCH - 12, justifyContent: "center", alignItems: "center" }}>
             <Txt size={13} style={{ color: theme.danger }}>{t.reports.flag}</Txt>
           </Pressable>
@@ -163,7 +185,7 @@ export async function flushReportQueue(): Promise<void> {
 const s = StyleSheet.create({
   warn: { padding: 10, borderRadius: 12, marginBottom: 8, flexWrap: "wrap" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" },
-  cell: { width: "31%", minHeight: 108, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center", gap: 6, padding: 8 },
-  circle: { width: 54, height: 54, borderRadius: 27, alignItems: "center", justifyContent: "center" },
+  cell: { width: "31%", minHeight: 96, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, alignItems: "center", justifyContent: "center", gap: 6, padding: 8 },
+  circle: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
   circleSm: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
 });

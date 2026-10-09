@@ -18,12 +18,12 @@ import * as Crypto from "expo-crypto";
 import {
   applyTraffic, arabicKey, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
-  type SpeedSample, type TrafficCell, type Travel,
+  type SpeedSample, type TrafficCell,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
 import { ApiError } from "./apiError";
 import { getInstallId } from "./storage";
-import type { Place, PublicReport, RouteResult, ServerConfig } from "./types";
+import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
 
 const VALHALLA = "https://valhalla1.openstreetmap.de";
 const NOMINATIM = "https://nominatim.openstreetmap.org";
@@ -149,15 +149,15 @@ function rescore(r: PublicReport): PublicReport {
 // ---------------------------------------------------------------- the API, same shape as the server client
 export const directApi = {
   config: async (): Promise<ServerConfig> => ({
-    // "#night" asks the map to recolour the same style for night driving (darkenStyle).
-    // (Only the web map knows how to recolour; the phone app keeps the day style at night for now.)
-    map: { styleDay: STYLE, styleNight: Platform.OS === "web" ? `${STYLE}#night` : STYLE, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
+    // "#gold": the map is recoloured black & gold in the app (goldStyle), day and night.
+    map: { styleDay: `${STYLE}#gold`, styleNight: `${STYLE}#gold`, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
     routing: { provider: "valhalla", traffic: false, avoidsVerifiedClosures: false },
     features: { offlineMapDisplay: false, offlineRouting: false, liveTraffic: false },
     sampleData: false,
     mode: "direct",
     sharedReports: SHARED_REPORTS,
     sharedTraffic: SHARED_REPORTS,
+    social: SHARED_REPORTS,
   }),
 
   search: async (q: string, lang: string, near?: LngLat, opts: { remote?: boolean } = {}) => {
@@ -181,15 +181,18 @@ export const directApi = {
     return { result: it && !it.error ? (mapNominatim(it, lang, 1) as Place) : null };
   },
 
-  route: async (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[]; travel?: Travel } = {}): Promise<RouteResult> => {
+  route: async (origin: LngLat, destination: LngLat, opts: RouteOpts = {}): Promise<RouteResult> => {
     if (haversine(origin, destination) < 25) throw new ApiError("too_close", 422);
-    if (opts.travel === "walk") return walkRoute(origin, destination, opts.alternatives ?? true);
+    const via = opts.via ?? [];
+    if (opts.travel === "walk") return walkRoute(origin, destination, opts.alternatives ?? true, via);
     // Same policy as the server: verified closures are always avoided; others only when the driver asks.
     const [nearby, cells] = await Promise.all([reportsNear(origin, destination), trafficNear(origin, destination)]);
     const chosen = new Set(opts.avoidReportIds ?? []);
-    const toAvoid = nearby.filter((r) => r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display"));
-    const excludePolygons = toAvoid.map((r) => boxAround(r.coord, r.category === "closure" || r.category === "flooding" ? 60 : 35));
-    const base = { origin, destination, originHeading: opts.heading };
+    const toAvoid = nearby.filter((r) => r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display")
+      // "Avoid checkpoints": go around every checkpoint drivers reported.
+      || (opts.avoid?.checkpoints && (r.category === "checkpoint" || r.category === "checkpoint_slow")));
+    const excludePolygons = toAvoid.map((r) => boxAround(r.coord, r.category === "closure" || r.category === "flooding" ? 60 : r.category.startsWith("checkpoint") ? 120 : 35));
+    const base = { origin, destination, originHeading: opts.heading, via, avoid: { highways: opts.avoid?.highways, unpaved: opts.avoid?.unpaved } };
     let trips: ReturnType<typeof mapValhallaResponse>;
     let avoidFailed = false;
     try {
@@ -259,6 +262,36 @@ export const directApi = {
     await rpc("darbna_traffic_submit", { trip, samples });
   },
 
+  /** "Thanks" for a report: +2 points to whoever reported it. */
+  thank: async (id: string) => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    const r = await rpc<{ report: PublicReport }>("darbna_thank", { install: await getInstallId(), report_id: id });
+    return { report: rescore(r.report) };
+  },
+
+  /** Your helper points. */
+  me: async () => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    return rpc<{ points: number; reports: number; thanks: number }>("darbna_me", { install: await getInstallId() });
+  },
+
+  /** Start a live "share my trip" link; only this phone (holding the secret) can move it. */
+  shareStart: async (destName: string, dest: LngLat, travel: string) => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    return rpc<{ id: string; secret: string }>("darbna_share_start", { install: await getInstallId(), dest_name: destName, dest_lng: dest[0], dest_lat: dest[1], travel });
+  },
+  shareUpdate: async (id: string, secret: string, u: { coord: LngLat; heading: number | null; etaS: number; remainingM: number; ended?: boolean }) => {
+    if (!SHARED_REPORTS) return;
+    await rpc("darbna_share_update", {
+      share_id: id, secret, lng: u.coord[0], lat: u.coord[1], heading: u.heading ?? -1,
+      eta_s: Math.round(u.etaS), remaining_m: Math.round(u.remainingM), ended: !!u.ended,
+    });
+  },
+  shareGet: async (id: string) => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    return rpc<SharedTrip>("darbna_share_get", { share_id: id });
+  },
+
   deleteMe: async () => {
     await AsyncStorage.removeItem(REPORTS_KEY);
     if (SHARED_REPORTS) await rpc("darbna_delete_me", { install: await getInstallId() });
@@ -283,8 +316,8 @@ async function valhallaRoute(body: Record<string, unknown>) {
  * main streets only.
  */
 /** On foot: footpaths and pedestrian streets, walking-speed times; no traffic or road-closure detours. */
-async function walkRoute(origin: LngLat, destination: LngLat, alternatives: boolean): Promise<RouteResult> {
-  const trips = await routeWithSnapFallbacks({ origin, destination, alternatives, travel: "walk" });
+async function walkRoute(origin: LngLat, destination: LngLat, alternatives: boolean, via: LngLat[]): Promise<RouteResult> {
+  const trips = await routeWithSnapFallbacks({ origin, destination, alternatives, travel: "walk", via });
   const routes = trips
     .map((r) => ({ ...r, travel: "walk" as const, avoidedClosureIds: [], reportIdsOnRoute: [], trafficSpans: [], trafficExtraS: 0, startGapM: r.geometry.length ? Math.round(haversine(origin, r.geometry[0])) : 0 }))
     .sort((a, b) => a.durationS - b.durationS);

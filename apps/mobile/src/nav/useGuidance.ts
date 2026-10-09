@@ -14,6 +14,12 @@ export type RerouteStatus = "idle" | "requesting" | "offline" | "failed";
  * Binds the pure GuidanceEngine to device location, voice and the network.
  * Guidance itself is entirely on-device; only rerouting needs the server.
  */
+/** Car route options from settings (stay off highways / dirt roads / checkpoints). */
+export function routeAvoid() {
+  const st = getState().settings;
+  return { highways: st.avoidHighways === true, unpaved: st.avoidUnpaved === true, checkpoints: st.avoidCheckpoints === true };
+}
+
 export function useGuidance(fix: LocationFix | null, online: boolean | null, fmtCtx: FormatCtx) {
   const trip = useStore((s) => s.trip);
   const routeId = trip?.route.id;
@@ -60,6 +66,8 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
         alternatives: false,
         avoidReportIds: t.avoidReportIds,
         travel: t.route.travel ?? "car",
+        via: getState().stops.map((s) => s.coord),
+        avoid: routeAvoid(),
       });
       const route = res.routes[0];
       const cur = getState().trip;

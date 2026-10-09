@@ -7,8 +7,9 @@ import { REPORT_STYLE } from "../theme";
 import type { Travel } from "@darbna/core";
 import { Btn, Chip, Icon, Panel, Row, Txt } from "./ui";
 
-export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, onTravel, canStart }: {
-  onStart(): void; onDemo(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; onTravel(t: Travel): void; canStart: boolean;
+export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, onTravel, onAddStop, onRemoveStop, onOption, canStart }: {
+  onStart(): void; onDemo(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; onTravel(t: Travel): void;
+  onAddStop(): void; onRemoveStop(i: number): void; onOption(k: "avoidHighways" | "avoidUnpaved" | "avoidCheckpoints"): void; canStart: boolean;
 }) {
   const { theme, t, fmtCtx } = useUi();
   const preview = useStore((s) => s.preview);
@@ -17,6 +18,41 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
   const { result, selectedIdx, loading, error, avoidReportIds } = preview;
   const travel = useStore((s) => s.settings.travel ?? "car");
   const walking = travel === "walk";
+  const settings = useStore((s) => s.settings);
+  const stops = useStore((s) => s.stops);
+
+  // Stops on the way and (by car) what to stay off. Shown in every state so they can be changed.
+  const extras = (
+    <View style={{ marginTop: 8, gap: 6 }}>
+      {stops.map((st, i) => (
+        <Row key={`${st.id}-${i}`} style={[s.stop, { borderColor: theme.border }]}>
+          <View style={[s.stopNum, { backgroundColor: theme.primary }]}><Txt size={13} weight="bold" style={{ color: theme.onPrimary }}>{fmtNumber(i + 1, fmtCtx)}</Txt></View>
+          <Txt size={14} numberOfLines={1} style={{ flex: 1 }}>{st.name}</Txt>
+          <Pressable accessibilityRole="button" accessibilityLabel={t.x.stops.remove} onPress={() => onRemoveStop(i)} hitSlop={10}>
+            <Icon name="close-circle-outline" size={20} color={theme.textMuted} />
+          </Pressable>
+        </Row>
+      ))}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+        {stops.length < 3 && (
+          <Pressable accessibilityRole="button" accessibilityHint={t.x.stops.addHint} onPress={onAddStop} style={[s.opt, { borderColor: theme.primary }]}>
+            <Icon name="plus" size={16} color={theme.primary} />
+            <Txt size={13} weight="semibold" style={{ color: theme.primary }}>{t.x.stops.add}</Txt>
+          </Pressable>
+        )}
+        {!walking && ([["avoidHighways", "highway", t.x.avoid.highways], ["avoidUnpaved", "road-variant", t.x.avoid.unpaved], ["avoidCheckpoints", "shield-car", t.x.avoid.checkpoints]] as const).map(([k, icon, label]) => {
+          const on = settings[k] === true;
+          return (
+            <Pressable key={k} accessibilityRole="switch" accessibilityState={{ checked: on }} onPress={() => onOption(k)}
+              style={[s.opt, { borderColor: on ? theme.primary : theme.border, backgroundColor: on ? theme.primary : "transparent" }]}>
+              <Icon name={icon} size={16} color={on ? theme.onPrimary : theme.textMuted} />
+              <Txt size={13} weight="semibold" style={{ color: on ? theme.onPrimary : theme.textMuted }}>{label}</Txt>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
   const header = (
     <Row style={{ marginBottom: 8 }}>
@@ -45,6 +81,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
     return (
       <Panel>
         {header}
+        {extras}
         <Row style={{ paddingVertical: 24, justifyContent: "center" }}>
           <ActivityIndicator color={theme.primary} />
           <Txt muted>{t.preview.loading}</Txt>
@@ -57,6 +94,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
     return (
       <Panel>
         {header}
+        {extras}
         <Row style={{ paddingVertical: 12 }}>
           <Icon name="alert-circle-outline" color={theme.danger} />
           <Txt style={{ flex: 1 }}>{msg}</Txt>
@@ -88,6 +126,8 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
           </Pressable>
         ))}
       </ScrollView>
+
+      {extras}
 
       {/* Honest ETA labeling: say exactly what the time is based on. */}
       <Row gap={6} style={{ marginTop: 8 }}>
@@ -143,6 +183,9 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
 
 const s = StyleSheet.create({
   card: { minWidth: 160, padding: 12, borderRadius: 16, borderWidth: 2 },
+  stop: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
+  stopNum: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  opt: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, minHeight: 36 },
   modes: { flexDirection: "row", borderRadius: 22, borderWidth: 1, padding: 3, gap: 2 },
   mode: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, minHeight: 36, borderRadius: 18 },
   rep: { padding: 8, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },

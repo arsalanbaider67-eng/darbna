@@ -1,10 +1,15 @@
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ICON_PATHS } from "./iconPaths";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUi } from "../context";
 import { font, TOUCH } from "../theme";
+
+/** Black frosted glass (the blur shows on the web; phones get the solid black). */
+const GLASS = "rgba(18,18,18,0.86)";
+const GLASS_PANEL = "rgba(12,12,12,0.94)";
+const BLUR: any = Platform.OS === "web" ? { backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } : null;
 
 export type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
@@ -54,6 +59,7 @@ export function Btn({
       style={({ pressed }) => [
         s.btn,
         { backgroundColor: bg, opacity: disabled ? 0.45 : pressed ? 0.85 : 1, borderColor: kind === "secondary" ? theme.border : "transparent" },
+        kind === "primary" && Platform.OS === "web" ? ({ boxShadow: "0 0 18px rgba(212,175,55,0.35)" } as any) : null,
         style,
       ]}
     >
@@ -73,10 +79,11 @@ export function RoundBtn({ icon, onPress, label, active, size = TOUCH }: { icon:
       hitSlop={8}
       style={({ pressed }) => [
         s.round,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: active ? theme.primary : theme.surface, borderColor: theme.border, opacity: pressed ? 0.85 : 1, shadowColor: theme.shadow },
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: active ? theme.primary : GLASS, borderColor: active ? theme.primary : theme.border, opacity: pressed ? 0.85 : 1, shadowColor: theme.shadow },
+        BLUR,
       ]}
     >
-      <Icon name={icon} color={active ? theme.onPrimary : theme.text} size={26} />
+      <Icon name={icon} color={active ? theme.onPrimary : theme.primary} size={26} />
     </Pressable>
   );
 }
@@ -86,7 +93,7 @@ export function Panel({ children, style }: { children: React.ReactNode; style?: 
   const { theme } = useUi();
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.panel, { backgroundColor: theme.surface, paddingBottom: Math.max(insets.bottom, 12) + 4, shadowColor: theme.shadow, borderColor: theme.border }, style]}>
+    <View style={[s.panel, BLUR, { backgroundColor: GLASS_PANEL, paddingBottom: Math.max(insets.bottom, 12) + 4, shadowColor: theme.shadow, borderColor: theme.border }, style]}>
       <View style={[s.grabber, { backgroundColor: theme.border }]} />
       {children}
     </View>
@@ -108,10 +115,10 @@ export function Row({ children, style, gap = 8 }: { children: React.ReactNode; s
 
 const s = StyleSheet.create({
   btn: { minHeight: TOUCH, borderRadius: 16, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderWidth: 1 },
-  round: { alignItems: "center", justifyContent: "center", borderWidth: StyleSheet.hairlineWidth, elevation: 4, shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  round: { alignItems: "center", justifyContent: "center", borderWidth: 1, elevation: 4, shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   panel: {
     position: "absolute", left: 0, right: 0, bottom: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 16, paddingTop: 8, elevation: 12, shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: -2 }, borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16, paddingTop: 8, elevation: 12, shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: -2 }, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1,
   },
   grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, marginBottom: 8 },
   chip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, alignSelf: "flex-start" },

@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import {
   Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import { lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
@@ -33,13 +33,16 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** Where you parked. */
+  parked?: LngLat | null;
+  /** Someone's shared trip you're watching. */
+  friend?: { coord: LngLat; heading: number | null } | null;
   /** On a trip: the part of the route already driven turns grey. */
   traveled?: boolean;
 }
 
 const TRAFFIC_COLOR = ["match", ["get", "level"], "heavy", "#E5383B", "#F2994A"];
 const BAGHDAD: LngLat = [44.3661, 33.3152];
-const DRIVEN_COLOR = "#7D8794";
 
 // Category → colour as a GPU-side expression, so markers cost nothing per frame.
 const REPORT_COLOR: any = [
@@ -62,13 +65,14 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   const mapView = useRef<any>(null);
   const styleRef = useRef(p.styleUrl.split("#")[0]);
   styleRef.current = p.styleUrl.split("#")[0];
-  // "#sat": satellite photos with the roads and names on top, built from the normal style.
   const [mapStyle, setMapStyle] = useState<string | object>(styleRef.current);
   useEffect(() => {
     const [url, tag] = p.styleUrl.split("#");
-    if (tag !== "sat") { setMapStyle(url); return; }
+    if (!tag) { setMapStyle(url); return; }
+    // "#gold" black & gold map, "#night" dark map, "#sat" satellite: built from the normal style.
+    const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st)) : tag === "night" ? darkenStyle(lightenStyle(st)) : goldStyle(lightenStyle(st));
     let live = true;
-    fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(satelliteStyle(lightenStyle(st))); }).catch(() => live && setMapStyle(url));
+    fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(make(st)); }).catch(() => live && setMapStyle(url));
     return () => { live = false; };
   }, [p.styleUrl]);
 
@@ -241,7 +245,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
             <LineLayer id="route-main" filter={["==", ["get", "selected"], 1]}
               style={{
                 lineColor: theme.route, lineWidth: 7, lineCap: "round", lineJoin: "round",
-                ...(p.traveled && driven != null ? { lineGradient: ["step", ["line-progress"], DRIVEN_COLOR, Math.min(1, Math.max(1e-6, driven)), theme.route] as any } : {}),
+                ...(p.traveled && driven != null ? { lineGradient: ["step", ["line-progress"], theme.driven, Math.min(1, Math.max(1e-6, driven)), theme.route] as any } : {}),
               }} />
           </ShapeSource>
         )}
@@ -285,10 +289,23 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           </ShapeSource>
         )}
 
+        {p.parked && (
+          <ShapeSource id="parked" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.parked } }}>
+            <CircleLayer id="parked-ring" style={{ circleRadius: 13, circleColor: "#0A0907", circleStrokeWidth: 3, circleStrokeColor: theme.primary }} />
+            <CircleLayer id="parked-dot" style={{ circleRadius: 4.5, circleColor: theme.primary }} />
+          </ShapeSource>
+        )}
+        {p.friend && (
+          <ShapeSource id="friend" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.friend.coord } }}>
+            <CircleLayer id="friend-halo" style={{ circleRadius: 24, circleColor: theme.primary, circleOpacity: 0.2 }} />
+            <CircleLayer id="friend-dot" style={{ circleRadius: 9, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: "#0A0907" }} />
+          </ShapeSource>
+        )}
+
         {simShape && (
           <ShapeSource id="sim-me" shape={simShape}>
-            <CircleLayer id="sim-halo" style={{ circleRadius: 18, circleColor: "#2F80ED", circleOpacity: 0.18 }} />
-            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: "#2F80ED", circleStrokeWidth: 3, circleStrokeColor: "#FFFFFF" }} />
+            <CircleLayer id="sim-halo" style={{ circleRadius: 18, circleColor: theme.puck, circleOpacity: 0.18 }} />
+            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: "#0A0907" }} />
           </ShapeSource>
         )}
 
@@ -313,6 +330,8 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.reports === b.reports &&
   a.simFix === b.simFix &&
   a.jams === b.jams &&
-  a.traveled === b.traveled;
+  a.traveled === b.traveled &&
+  a.parked === b.parked &&
+  a.friend === b.friend;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasInner), sameExceptCallbacks);

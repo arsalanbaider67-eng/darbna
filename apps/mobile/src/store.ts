@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import type { ApiRoute, Place, PublicReport, RouteResult, ServerConfig } from "./types";
+import type { LngLat, SpeedLimitSpan } from "@darbna/core";
+import type { ApiRoute, Place, PublicReport, RouteResult, ServerConfig, SharedTrip } from "./types";
 import { DEFAULT_SETTINGS, type SavedPlaces, type Settings } from "./storage";
 
 export type Mode = "browse" | "search" | "place" | "preview" | "navigating" | "arrived";
@@ -19,7 +20,21 @@ export interface AppState {
   reports: Record<string, PublicReport>;
   /** Report the user tapped on the map. */
   openReportId: string | null;
-  sheet: null | "report" | "settings";
+  sheet: null | "report" | "settings" | "navMenu" | "sos" | "mapProblem" | "stopSearch";
+  /** Stops on the way (route screen and trip), in order. */
+  stops: Place[];
+  /** Search is picking a stop to add, not a destination. */
+  searchFor: "destination" | "stop";
+  /** "Share my trip" link while it's live. */
+  share: { id: string; secret: string; url: string } | null;
+  /** Where you parked (saved at the end of a car trip). */
+  parked: { coord: LngLat; at: number } | null;
+  /** Speed limits along the current trip's route. */
+  limits: { routeId: string; spans: SpeedLimitSpan[] } | null;
+  /** Someone's shared trip you're watching (opened from their link). */
+  watch: { id: string; trip: SharedTrip | null; error: string | null } | null;
+  /** Your helper points (shared reports only). */
+  points: { points: number; reports: number; thanks: number } | null;
   toast: { text: string; kind: "info" | "error" | "ok"; at: number } | null;
 }
 
@@ -37,6 +52,13 @@ let state: AppState = {
   openReportId: null,
   sheet: null,
   toast: null,
+  stops: [],
+  searchFor: "destination",
+  share: null,
+  parked: null,
+  limits: null,
+  watch: null,
+  points: null,
 };
 
 const listeners = new Set<() => void>();

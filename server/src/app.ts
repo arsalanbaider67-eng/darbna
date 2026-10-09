@@ -131,8 +131,11 @@ export function buildApp(deps: Deps) {
 
   // ------------------------------------------------------------ routing
   router.add("POST", "/v1/route", async (ctx) => {
-    const body = await ctx.json<{ origin: unknown; destination: unknown; heading?: unknown; alternatives?: unknown; avoidReportIds?: unknown; travel?: unknown }>();
+    const body = await ctx.json<{ origin: unknown; destination: unknown; heading?: unknown; alternatives?: unknown; avoidReportIds?: unknown; travel?: unknown; via?: unknown; avoid?: unknown }>();
     const travel = body.travel === "walk" ? "walk" : "car";
+    const via = Array.isArray(body.via) ? body.via.slice(0, 3).map((v, i) => lngLat(v, `via[${i}]`)) : [];
+    const av = (body.avoid && typeof body.avoid === "object" ? body.avoid : {}) as Record<string, unknown>;
+    const avoid = { highways: av.highways === true, unpaved: av.unpaved === true };
     const origin = lngLat(body.origin, "origin");
     const destination = lngLat(body.destination, "destination");
     const heading = optNumber(body.heading, "heading", 0, 360);
@@ -152,12 +155,12 @@ export function buildApp(deps: Deps) {
 
     let routes: Route[];
     try {
-      routes = await routing.route({ origin, destination, originHeading: heading, alternatives: body.alternatives !== false, excludePolygons, travel });
+      routes = await routing.route({ origin, destination, originHeading: heading, alternatives: body.alternatives !== false, excludePolygons, travel, via, avoid });
     } catch (e) {
       if (!(e instanceof RoutingError)) throw e;
       // If exclusions made the trip impossible, fall back to an unrestricted route and say so.
       if (e.code === "no_route" && excludePolygons.length) {
-        routes = await routing.route({ origin, destination, originHeading: heading, alternatives: false, excludePolygons: [], travel });
+        routes = await routing.route({ origin, destination, originHeading: heading, alternatives: false, excludePolygons: [], travel, via, avoid });
         return json(decorate(routes, nearby, [], true));
       }
       const map = { no_route: 422, off_network: 422, unavailable: 503, timeout: 504 } as const;

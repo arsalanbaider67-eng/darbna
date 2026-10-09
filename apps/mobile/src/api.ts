@@ -1,6 +1,6 @@
-import type { LngLat, ReportCategory, SpeedSample, TrafficCell, Travel } from "@darbna/core";
+import type { LngLat, ReportCategory, SpeedSample, TrafficCell } from "@darbna/core";
 import { getInstallId } from "./storage";
-import type { Place, PublicReport, RouteResult, ServerConfig } from "./types";
+import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
 import { ApiError } from "./apiError";
 import { directApi } from "./apiDirect";
 
@@ -46,10 +46,10 @@ const serverApi = {
   reverse: (at: LngLat, lang: string) =>
     request<{ result: Place | null }>(`/v1/reverse?at=${at[0].toFixed(6)},${at[1].toFixed(6)}&lang=${lang}`, { timeoutMs: 6000 }),
 
-  route: (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[]; travel?: Travel } = {}) =>
+  route: (origin: LngLat, destination: LngLat, opts: RouteOpts = {}) =>
     request<RouteResult>("/v1/route", {
       method: "POST",
-      body: { origin, destination, heading: opts.heading, alternatives: opts.alternatives ?? true, avoidReportIds: opts.avoidReportIds ?? [], travel: opts.travel ?? "car" },
+      body: { origin, destination, heading: opts.heading, alternatives: opts.alternatives ?? true, avoidReportIds: opts.avoidReportIds ?? [], travel: opts.travel ?? "car", via: opts.via ?? [], avoid: opts.avoid ?? {} },
       timeoutMs: 15_000,
     }),
 
@@ -67,6 +67,13 @@ const serverApi = {
   // Live traffic is only implemented for direct mode (Supabase) so far.
   traffic: async (_bbox: [number, number, number, number]): Promise<TrafficCell[]> => [],
   trafficSubmit: async (_trip: string, _samples: SpeedSample[]): Promise<void> => {},
+
+  // Points, thanks and trip sharing are only implemented for direct mode (Supabase) so far.
+  thank: async (_id: string): Promise<{ report: PublicReport }> => { throw new ApiError("unsupported"); },
+  me: async (): Promise<{ points: number; reports: number; thanks: number }> => { throw new ApiError("unsupported"); },
+  shareStart: async (_destName: string, _dest: LngLat, _travel: string): Promise<{ id: string; secret: string }> => { throw new ApiError("unsupported"); },
+  shareUpdate: async (_id: string, _secret: string, _u: { coord: LngLat; heading: number | null; etaS: number; remainingM: number; ended?: boolean }): Promise<void> => {},
+  shareGet: async (_id: string): Promise<SharedTrip> => { throw new ApiError("unsupported"); },
 };
 
 export const api: typeof serverApi = DIRECT_MODE ? (directApi as unknown as typeof serverApi) : serverApi;

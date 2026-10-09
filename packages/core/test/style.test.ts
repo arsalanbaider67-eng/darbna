@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { darkenStyle, lightenStyle, nightColor, parseColor, satelliteStyle } from "../src/style";
+import { darkenStyle, goldStyle, lightenStyle, nightColor, parseColor, satelliteStyle } from "../src/style";
 
 const lum = (c: string) => { const [r, g, b] = parseColor(c)!; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
 
@@ -53,5 +53,21 @@ describe("satelliteStyle", () => {
     expect((s.sources as any)["darbna-sat"].type).toBe("raster");
     expect((s.sources as any).openmaptiles).toBeDefined();
     expect(s.layers[2].paint!["text-color"]).toBe("#FFFFFF");
+  });
+});
+
+describe("goldStyle", () => {
+  it("makes land black, motorways gold-tinted and labels light", () => {
+    const s = goldStyle({ version: 8, layers: [
+      { id: "background", type: "background", paint: { "background-color": "#fff" } },
+      { id: "water", type: "fill", paint: { "fill-color": "#aad" } },
+      { id: "highway_motorway", type: "line", paint: { "line-color": "#f90" } },
+      { id: "highway_motorway_casing", type: "line", paint: { "line-color": "#c60" } },
+      { id: "label_city", type: "symbol", paint: { "text-color": "#333" } },
+    ] } as any);
+    expect(lum(s.layers[0].paint!["background-color"] as string)).toBeLessThan(0.05);
+    expect(s.layers[2].paint!["line-color"]).toBe("#6B5622");
+    expect(s.layers[3].paint!["line-color"]).toBe("#000000");
+    expect(lum(s.layers[4].paint!["text-color"] as string)).toBeGreaterThan(0.7);
   });
 });

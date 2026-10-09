@@ -13,6 +13,7 @@ const K = {
   trip: "darbna:activeTrip",
   queue: "darbna:reportQueue",
   config: "darbna:config",
+  parked: "darbna:parked",
 };
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -48,6 +49,12 @@ export interface Settings {
   satellite?: boolean;
   /** Last chosen way to travel (route screen). */
   travel?: Travel;
+  /** Car routes: stay off highways / dirt roads / reported checkpoints. */
+  avoidHighways?: boolean;
+  avoidUnpaved?: boolean;
+  avoidCheckpoints?: boolean;
+  /** Warn about speed cameras and going over the limit. */
+  speedAlerts?: boolean;
 }
 export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: true };
 export const loadSettings = () => getJSON<Settings | null>(K.settings, null);
@@ -83,11 +90,15 @@ export interface QueuedReport {
 export const loadQueue = () => getJSON<QueuedReport[]>(K.queue, []);
 export const saveQueue = (q: QueuedReport[]) => setJSON(K.queue, q.slice(-10));
 
+/** Where you parked: only on this phone. */
+export const loadParked = () => getJSON<{ coord: LngLat; at: number } | null>(K.parked, null);
+export const saveParked = (p: { coord: LngLat; at: number } | null) => (p ? setJSON(K.parked, p) : AsyncStorage.removeItem(K.parked).catch(() => {}));
+
 export const loadCachedConfig = () => getJSON<ServerConfig | null>(K.config, null);
 export const saveCachedConfig = (c: ServerConfig) => setJSON(K.config, c);
 
 /** "Delete my data": everything except the language/theme preference. */
 export async function wipeLocalData(): Promise<void> {
-  await AsyncStorage.multiRemove([K.install, K.saved, K.recents, K.trip, K.queue]);
+  await AsyncStorage.multiRemove([K.install, K.saved, K.recents, K.trip, K.queue, K.parked]);
   installId = null;
 }

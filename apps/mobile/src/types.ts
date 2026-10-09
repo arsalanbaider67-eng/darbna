@@ -1,4 +1,4 @@
-import type { LngLat, ReportCategory, ReportSource, Route, RoutingTreatment, TrafficSpan } from "@darbna/core";
+import type { LngLat, ReportCategory, ReportSource, Route, RoutingTreatment, TrafficSpan, Travel } from "@darbna/core";
 
 export interface Place {
   id: string;
@@ -26,6 +26,33 @@ export interface PublicReport {
   treatment: RoutingTreatment;
   isSample: boolean;
   officialRef?: string;
+  /** "Thanks" other drivers gave this report. */
+  thanks?: number;
+}
+
+/** Route request options. */
+export interface RouteOpts {
+  heading?: number;
+  alternatives?: boolean;
+  avoidReportIds?: string[];
+  travel?: Travel;
+  /** Stops on the way, in order. */
+  via?: LngLat[];
+  /** Car only. */
+  avoid?: { highways?: boolean; unpaved?: boolean; checkpoints?: boolean };
+}
+
+/** What a family member sees on a shared trip link. */
+export interface SharedTrip {
+  destName: string | null;
+  dest: LngLat;
+  coord: LngLat | null;
+  heading: number | null;
+  remainingM: number | null;
+  travel: Travel;
+  ended: boolean;
+  eta: string | null;
+  updatedAt: string;
 }
 
 export interface ApiRoute extends Route {
@@ -55,4 +82,6 @@ export interface ServerConfig {
   sharedReports?: boolean;
   /** Live traffic from Darbna drivers is available. */
   sharedTraffic?: boolean;
+  /** Points, thanks and "share my trip" are available (Supabase). */
+  social?: boolean;
 }

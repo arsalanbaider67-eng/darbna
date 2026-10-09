@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { GuidanceState, ManeuverKind, Route } from "@darbna/core";
+import { laneHint, type GuidanceState, type ManeuverKind, type Route } from "@darbna/core";
 import { useUi } from "../context";
 import { fmt, fmtClock, fmtDistance, fmtDuration, instructionText } from "../i18n";
 import type { RerouteStatus } from "../nav/useGuidance";
 import { TOUCH } from "../theme";
+import type { PublicReport } from "../types";
+import { AheadChip, LaneHintView, SpeedSign } from "./Extras";
 import { Btn, Icon, RoundBtn, Row, Txt, type IconName } from "./ui";
 
 /**
@@ -20,6 +22,7 @@ export const MANEUVER_ICON: Record<ManeuverKind, IconName> = {
   exit_right: "arrow-top-right", exit_left: "arrow-top-left",
   keep_right: "arrow-top-right", keep_left: "arrow-top-left", keep_straight: "arrow-up",
   merge: "call-merge", roundabout: "rotate-left", roundabout_exit: "arrow-top-right", ferry: "ferry",
+  waypoint: "map-marker-check",
 };
 
 interface Props {
@@ -37,6 +40,14 @@ interface Props {
   onMuteToggle(): void;
   onReport(): void;
   onRecenter(): void;
+  /** "More": share trip, add stop, SOS. */
+  onMenu(): void;
+  /** Speed limit where you are (km/h), when the map knows it. */
+  limitKmh: number | null;
+  /** Nearest checkpoint / camera / crash… ahead on the route. */
+  ahead: { report: PublicReport; distanceM: number } | null;
+  /** Your trip is being shared live. */
+  sharing: boolean;
 }
 
 /**
@@ -57,6 +68,9 @@ export function NavHud(p: Props) {
   const current = step ? p.route.steps[Math.max(0, step.index - 1)] : undefined;
   const street = current?.streetName ?? "";
   const kmh = Math.max(0, Math.round((p.speedMps ?? 0) * 3.6));
+  const over = p.limitKmh != null && kmh > p.limitKmh + 5;
+  // Lane hint for exits/forks, from about 1 km before them.
+  const lanes = step && dist < 1000 ? laneHint(step) : null;
 
   let status: { text: string; icon: IconName; color: string } | null = null;
   if (p.paused) status = { text: t.nav.paused, icon: "pause-circle", color: theme.textMuted };
@@ -72,23 +86,30 @@ export function NavHud(p: Props) {
   return (
     <>
       {/* Maneuver banner — biggest, highest-contrast thing on screen. */}
-      <View style={[s.banner, { top: insets.top + 8, backgroundColor: theme.banner }]} accessibilityLiveRegion="polite">
+      <View style={[s.banner, { top: insets.top + 8, backgroundColor: theme.banner, borderColor: theme.border }]} accessibilityLiveRegion="polite">
         {step && (
           <Row gap={14}>
-            <Icon name={MANEUVER_ICON[step.kind]} size={50} color={theme.onBanner} />
+            <Icon name={MANEUVER_ICON[step.kind]} size={50} color={theme.primary} />
             <View style={{ flex: 1 }}>
               <Txt size={30} weight="bold" style={{ color: theme.onBanner, lineHeight: 40 }}>{fmtDistance(dist, fmtCtx)}</Txt>
               <Txt size={18} weight="semibold" numberOfLines={2} style={{ color: theme.onBanner }}>{instructionText(step, null, fmtCtx)}</Txt>
             </View>
           </Row>
         )}
+        {lanes && <LaneHintView hint={lanes} />}
         {thenSoon && then && (
-          <Row gap={6} style={[s.then, { borderTopColor: "rgba(255,255,255,0.25)" }]}>
+          <Row gap={6} style={[s.then, { borderTopColor: theme.border }]}>
             <Txt size={14} style={{ color: theme.onBanner }}>{t.nav.then}</Txt>
             <Icon name={MANEUVER_ICON[then.kind]} size={22} color={theme.onBanner} />
           </Row>
         )}
       </View>
+
+      {p.ahead && !status && (
+        <View style={[s.aheadWrap, { top: insets.top + (lanes ? 196 : 150) }]} pointerEvents="none">
+          <AheadChip report={p.ahead.report} distanceM={p.ahead.distanceM} />
+        </View>
+      )}
 
       {status && (
         <View style={[s.status, { top: insets.top + 150, backgroundColor: theme.surface, borderColor: status.color }]}>
@@ -98,8 +119,9 @@ export function NavHud(p: Props) {
       )}
 
       {/* Top corners under the banner: sound on the right, re-center on the left when you've panned away. */}
-      <View style={[s.topRight, { top: insets.top + 150 }]}>
+      <View style={[s.topRight, { top: insets.top + (lanes ? 196 : 150) }]}>
         <RoundBtn icon={p.muted ? "volume-off" : "volume-high"} label={p.muted ? t.nav.unmute : t.nav.mute} onPress={p.onMuteToggle} size={52} />
+        <RoundBtn icon={p.sharing ? "share-variant" : "dots-horizontal"} active={p.sharing} label={t.x.menu.title} onPress={p.onMenu} size={52} />
       </View>
       {!p.following && (
         <View style={[s.topLeft, { top: insets.top + 150 }]}>
@@ -113,14 +135,21 @@ export function NavHud(p: Props) {
           <Icon name="walk" size={34} />
         </View>
       ) : (
-        <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: theme.border }]} accessibilityLabel={`${kmh} km/h`}>
-          <Txt size={28} weight="bold" style={{ lineHeight: 32 }}>{String(kmh)}</Txt>
-          <Txt size={11} muted style={{ lineHeight: 13 }}>km/h</Txt>
-        </View>
+        <>
+          <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: over ? theme.danger : theme.primary }]} accessibilityLabel={`${kmh} km/h`}>
+            <Txt size={28} weight="bold" style={{ lineHeight: 32, color: over ? theme.danger : theme.text }}>{String(kmh)}</Txt>
+            <Txt size={11} muted style={{ lineHeight: 13 }}>km/h</Txt>
+          </View>
+          {p.limitKmh != null && (
+            <View style={[s.limit, { bottom: barH + 96 }]}>
+              <SpeedSign kmh={p.limitKmh} over={over} />
+            </View>
+          )}
+        </>
       )}
       {!!street && (
         <View style={[s.street, { bottom: barH + 22 }]} pointerEvents="none">
-          <View style={[s.streetPill, { backgroundColor: "rgba(10,16,20,0.92)" }]}>
+          <View style={[s.streetPill, { backgroundColor: "rgba(8,8,8,0.92)", borderColor: theme.border, borderWidth: 1 }]}>
             <Txt size={16} weight="semibold" numberOfLines={2} style={{ color: "#FFFFFF", textAlign: "center" }}>{street}</Txt>
           </View>
         </View>
@@ -149,7 +178,7 @@ export function NavHud(p: Props) {
               <Icon name="close" size={26} color={theme.danger} />
             </Pressable>
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Txt size={24} weight="bold" style={{ color: theme.ok, lineHeight: 30 }}>{fmtDuration(remainingS, fmtCtx)}</Txt>
+              <Txt size={24} weight="bold" style={{ color: theme.primary, lineHeight: 30 }}>{fmtDuration(remainingS, fmtCtx)}</Txt>
               <Txt size={14} muted>
                 {fmtDistance(remainingM, fmtCtx)} · {fmt(t.nav.arrivalAt, { time: fmtClock(new Date(Date.now() + remainingS * 1000), fmtCtx) })}
               </Txt>
@@ -165,10 +194,12 @@ export function NavHud(p: Props) {
 }
 
 const s = StyleSheet.create({
-  banner: { position: "absolute", left: 10, right: 10, borderRadius: 20, padding: 14, elevation: 8, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  banner: { position: "absolute", left: 10, right: 10, borderRadius: 20, padding: 14, borderWidth: 1, elevation: 8, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   then: { marginTop: 10, paddingTop: 8, borderTopWidth: 1 },
   status: { position: "absolute", alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 2, maxWidth: "70%" },
-  topRight: { position: "absolute", right: 12 },
+  topRight: { position: "absolute", right: 12, gap: 10 },
+  aheadWrap: { position: "absolute", left: 12, right: 76 },
+  limit: { position: "absolute", left: 21 },
   topLeft: { position: "absolute", left: 12 },
   speed: {
     position: "absolute", left: 12, width: 76, height: 76, borderRadius: 38, borderWidth: 3, alignItems: "center", justifyContent: "center",

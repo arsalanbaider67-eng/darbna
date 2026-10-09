@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { haversine, parseSharedLocation, type LngLat, type TrafficCell, type Travel } from "@darbna/core";
+import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, type LngLat, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -20,13 +20,18 @@ import { UiOverride, useUi } from "../context";
 import { enableCompass } from "../compass";
 import { useConnectivity } from "../hooks/useConnectivity";
 import { useLocation } from "../hooks/useLocation";
-import { fmt } from "../i18n";
+import { fmt, fmtClock } from "../i18n";
 import { primeVoice, stopSpeaking } from "../nav/prompt";
 import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useGuidance } from "../nav/useGuidance";
-import { loadCachedConfig, loadTrip, saveCachedConfig, saveRecents, saveSettings, saveTrip } from "../storage";
-import { getState, mergeReports, setState, useStore } from "../store";
+import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
+import { MapProblemSheet, NavMenuSheet, SosSheet, WatchCard } from "../components/Extras";
+import { routeSpeedLimits } from "../external";
+import { chime } from "../nav/chime";
+import { routeAvoid } from "../nav/useGuidance";
+import { shareText, tripLink } from "../share";
+import { getState, mergeReports, setState, toast, useStore } from "../store";
 import type { Place } from "../types";
 
 const REPORT_MIN_ZOOM = 11;
@@ -54,6 +59,11 @@ export function MainScreen() {
   const lang = useStore((s) => s.settings.lang);
   const shareTraffic = useStore((s) => s.settings.shareTraffic);
   const satellite = useStore((s) => s.settings.satellite === true);
+  const speedAlerts = useStore((s) => s.settings.speedAlerts !== false);
+  const share = useStore((s) => s.share);
+  const parked = useStore((s) => s.parked);
+  const limits = useStore((s) => s.limits);
+  const watch = useStore((s) => s.watch);
   const [jams, setJams] = useState<TrafficCell[]>([]);
 
   const online = useConnectivity();
@@ -106,6 +116,120 @@ export function MainScreen() {
   // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
   useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
 
+  // ---------------------------------------------------------------- stops passed on the way
+  const passed = useRef<{ routeId: string; n: number }>({ routeId: "", n: 0 });
+  const nextIdx = guidance?.nextStep?.index ?? -1;
+  useEffect(() => {
+    if (!tripRoute || nextIdx < 0) return;
+    if (passed.current.routeId !== tripRoute.id) passed.current = { routeId: tripRoute.id, n: 0 };
+    const n = tripRoute.steps.filter((s) => s.kind === "waypoint" && s.index < nextIdx).length;
+    if (n > passed.current.n) {
+      const d = n - passed.current.n;
+      passed.current.n = n;
+      setState((st) => ({ stops: st.stops.slice(d) }));
+      toast(t.x.stops.reached, "ok");
+    }
+  }, [tripRoute, nextIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------- speed limits along the trip (car)
+  useEffect(() => {
+    if (!tripRoute || tripRoute.travel === "walk" || mode !== "navigating") return;
+    if (getState().limits?.routeId === tripRoute.id) return;
+    let live = true;
+    void routeSpeedLimits(tripRoute.geometry).then((spans) => { if (live) setState({ limits: { routeId: tripRoute.id, spans } }); });
+    return () => { live = false; };
+  }, [tripRoute, mode]);
+  const limitKmh = mode === "navigating" && tripRoute && guidance && limits?.routeId === tripRoute.id ? speedLimitAt(limits.spans, guidance.segmentIndex) : null;
+  const kmhNow = Math.round((speedRef.current ?? 0) * 3.6);
+  const overLimit = limitKmh != null && kmhNow > limitKmh + 5;
+  const lastOverChime = useRef(0);
+  useEffect(() => {
+    if (overLimit && speedAlerts && !trip?.muted && Date.now() - lastOverChime.current > 30_000) {
+      lastOverChime.current = Date.now();
+      chime(true);
+    }
+  }, [overLimit]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------- checkpoints, cameras, crashes ahead
+  const tripCum = useMemo(() => (tripRoute ? cumulativeDistances(tripRoute.geometry) : null), [tripRoute]);
+  const warnItems = useMemo(
+    () => reportList.filter((r) => WARN_AHEAD[r.category] && (r.category !== "camera" || speedAlerts)),
+    [reportList, speedAlerts],
+  );
+  const ahead = mode === "navigating" && tripRoute && tripCum && guidance && guidance.status !== "arrived"
+    ? reportsAhead(tripRoute.geometry, guidance.distanceAlongM, warnItems, tripCum)[0] ?? null
+    : null;
+  const warned = useRef(new Set<string>());
+  useEffect(() => {
+    if (ahead && !warned.current.has(ahead.item.id)) {
+      warned.current.add(ahead.item.id);
+      if (!trip?.muted) chime();
+    }
+  }, [ahead?.item.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------- "share my trip": live updates
+  const navFixRef = useRef(navFix);
+  navFixRef.current = navFix;
+  const guidanceRef = useRef(guidance);
+  guidanceRef.current = guidance;
+  useEffect(() => {
+    if (!share || mode !== "navigating") return;
+    const push = () => {
+      const f = navFixRef.current, g = guidanceRef.current;
+      if (!f) return;
+      void api.shareUpdate(share.id, share.secret, { coord: f.coord, heading: f.headingDeg ?? null, etaS: g?.remainingS ?? 0, remainingM: g?.remainingM ?? 0 }).catch(() => {});
+    };
+    push();
+    const i = setInterval(push, 15_000);
+    return () => clearInterval(i);
+  }, [share, mode]);
+
+  async function toggleShare() {
+    const s = getState();
+    setState({ sheet: null });
+    if (s.share) {
+      void api.shareUpdate(s.share.id, s.share.secret, { coord: navFix?.coord ?? s.trip?.destination.coord ?? [0, 0], heading: null, etaS: 0, remainingM: 0, ended: true }).catch(() => {});
+      setState({ share: null });
+      return;
+    }
+    if (!s.trip) return;
+    try {
+      const r = await api.shareStart(s.trip.destination.name, s.trip.destination.coord, s.trip.route.travel ?? "car");
+      const url = tripLink(r.id);
+      setState({ share: { ...r, url } });
+      await shareText(fmt(t.x.share.message, { name: s.trip.destination.name, url }), url, t.x.share.started);
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === "unsupported" ? t.x.share.unsupported : e instanceof ApiError && e.isNetwork ? t.status.offline : t.common.retry, "error");
+    }
+  }
+
+  // ---------------------------------------------------------------- watching someone's shared trip
+  const fittedWatch = useRef(false);
+  useEffect(() => {
+    if (!watch?.id) return;
+    let live = true;
+    const load = async () => {
+      try {
+        const tr = await api.shareGet(watch.id);
+        if (!live) return;
+        setState((st) => ({ watch: st.watch ? { ...st.watch, trip: tr, error: null } : null }));
+        if (!fittedWatch.current && tr.coord) {
+          fittedWatch.current = true;
+          map.current?.fitTo([tr.coord, tr.dest], 300);
+        }
+      } catch (e) {
+        if (live && e instanceof ApiError && !e.isNetwork) setState((st) => ({ watch: st.watch ? { ...st.watch, error: e.code } : null }));
+      }
+    };
+    void load();
+    const i = setInterval(load, 10_000);
+    return () => { live = false; clearInterval(i); };
+  }, [watch?.id]);
+  const friend = useMemo(() => (watch?.trip?.coord && !watch.trip.ended ? { coord: watch.trip.coord, heading: watch.trip.heading } : null), [watch?.trip]);
+
+  // ---------------------------------------------------------------- where you parked
+  useEffect(() => { void loadParked().then((p) => setState({ parked: p })); }, []);
+
   // ---------------------------------------------------------------- server config (style URLs, capability flags)
   const loadConfig = useCallback(async () => {
     setConfigError(false);
@@ -140,6 +264,15 @@ export function MainScreen() {
   useEffect(() => {
     const handle = (url: string | null) => {
       if (!url) return;
+      const w = url.match(/[?&]watch=([0-9a-f-]{36})/i);
+      if (w) {
+        if (typeof window !== "undefined" && window.history?.replaceState) {
+          try { window.history.replaceState(null, "", window.location.pathname); } catch {}
+        }
+        fittedWatch.current = false;
+        setState({ watch: { id: w[1], trip: null, error: null } });
+        return;
+      }
       const loc = parseSharedLocation(url);
       if (!loc) return;
       // Web links (…/darbna/?to=…): drop the query so a reload doesn't reopen the place.
@@ -194,7 +327,7 @@ export function MainScreen() {
       setState({ recents });
       void saveRecents(recents);
     }
-    setState({ selected: p, mode: "place", preview: { ...getState().preview, result: null, error: null } });
+    setState({ selected: p, mode: "place", stops: [], preview: { ...getState().preview, result: null, error: null } });
     map.current?.flyTo(p.coord, p.kind === "city" ? 12 : 15);
   }
 
@@ -225,7 +358,10 @@ export function MainScreen() {
     setState({ mode: "preview", preview: { loading: true, error: null, result: null, selectedIdx: 0, avoidReportIds: avoidIds } });
     try {
       if (online === false) throw new ApiError("offline");
-      const res = await api.route(fix.coord, dest.coord, { avoidReportIds: avoidIds, travel: getState().settings.travel ?? "car" });
+      const res = await api.route(fix.coord, dest.coord, {
+        avoidReportIds: avoidIds, travel: getState().settings.travel ?? "car",
+        via: getState().stops.map((s) => s.coord), avoid: routeAvoid(),
+      });
       mergeReports(res.reports);
       setState({ preview: { loading: false, error: null, result: res, selectedIdx: 0, avoidReportIds: avoidIds } });
       const pts = res.routes.flatMap((r) => [r.geometry[0], r.geometry[Math.floor(r.geometry.length / 2)], r.geometry[r.geometry.length - 1]]);
@@ -248,6 +384,46 @@ export function MainScreen() {
     void requestRoutes(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
   }
 
+  function setOption(k: "avoidHighways" | "avoidUnpaved" | "avoidCheckpoints") {
+    const next = { ...getState().settings, [k]: !getState().settings[k] };
+    setState({ settings: next });
+    void saveSettings(next);
+    void requestRoutes();
+  }
+
+  async function addStop(p: Place) {
+    const stops = [...getState().stops, p].slice(0, 3);
+    setState({ stops, sheet: null });
+    const s = getState();
+    if (s.mode === "preview") return void requestRoutes();
+    if (s.mode !== "navigating" || !s.trip || !navFix) return;
+    // On a trip: new route from here through the stops.
+    try {
+      const res = await api.route(navFix.coord, s.trip.destination.coord, {
+        alternatives: false, avoidReportIds: s.trip.avoidReportIds, travel: s.trip.route.travel ?? "car",
+        via: stops.map((x) => x.coord), avoid: routeAvoid(),
+      });
+      const cur = getState().trip;
+      if (cur && res.routes[0]) {
+        setState({ trip: { ...cur, route: res.routes[0] } });
+        toast(t.nav.rerouted, "ok");
+      }
+    } catch (e) {
+      toast(e instanceof ApiError && e.isNetwork ? t.status.offline : t.common.retry, "error");
+    }
+  }
+
+  function removeStop(i: number) {
+    setState((st) => ({ stops: st.stops.filter((_, j) => j !== i) }));
+    void requestRoutes();
+  }
+
+  function openParked() {
+    const p = getState().parked;
+    if (!p) return;
+    pickPlace({ id: "parked", name: t.x.parked.title, kind: "parked", coord: p.coord, secondary: fmt(t.x.parked.ago, { time: fmtClock(new Date(p.at), fmtCtx) }) }, false);
+  }
+
   function startNavigation(asDemo = false) {
     // Must run inside the tap, before anything async: lets iPhone Safari speak later prompts.
     primeVoice(getState().settings.lang);
@@ -264,9 +440,20 @@ export function MainScreen() {
   }
 
   function endTrip() {
+    const s = getState();
+    // Arrived by car (a real trip): remember where you parked.
+    if (s.mode === "arrived" && !demo && s.trip && s.trip.route.travel !== "walk") {
+      const p = { coord: fix?.coord ?? s.trip.destination.coord, at: Date.now() };
+      setState({ parked: p });
+      void saveParked(p);
+      toast(t.x.parked.saved, "ok");
+    }
+    if (s.share) {
+      void api.shareUpdate(s.share.id, s.share.secret, { coord: fix?.coord ?? s.trip?.destination.coord ?? [0, 0], heading: null, etaS: 0, remainingM: 0, ended: true }).catch(() => {});
+    }
     setDemo(false);
     void saveTrip(null);
-    setState({ trip: null, mode: "browse", selected: null, preview: { loading: false, error: null, result: null, selectedIdx: 0, avoidReportIds: [] } });
+    setState({ trip: null, mode: "browse", selected: null, stops: [], share: null, limits: null, preview: { loading: false, error: null, result: null, selectedIdx: 0, avoidReportIds: [] } });
   }
 
   function onRegionChange(bbox: [number, number, number, number], zoom: number, byUser: boolean) {
@@ -347,14 +534,18 @@ export function MainScreen() {
         simFix={mode === "navigating" && demo ? demoFix : null}
         jams={mode === "browse" || mode === "place" ? jams : NO_JAMS}
         traveled={mode === "navigating"}
+        parked={mode === "navigating" ? null : parked?.coord ?? null}
+        friend={friend}
       />
 
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}
       {mode !== "navigating" && <ConnectionPill online={online} top={pillTop} />}
       {mode === "browse" && loc.permission === "granted" && !fix && online !== false && <LocatingPill top={pillTop} />}
 
-      {(mode === "browse" || mode === "place") && (
-        <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 240 : 28) }]}>
+      {(mode === "browse" || mode === "place") && !watch && (
+        <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 300 : 28) }]}>
+          <RoundBtn icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
+          {parked && mode === "browse" && <RoundBtn icon="car-back" label={t.x.parked.title} onPress={openParked} />}
           <RoundBtn icon={satellite ? "map-outline" : "satellite-variant"} label={satellite ? t.settings.mapView : t.settings.satellite} onPress={toggleSatellite} />
           {loc.permission === "granted" && fix && <>
             <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
@@ -363,7 +554,7 @@ export function MainScreen() {
         </View>
       )}
 
-      {mode === "browse" && !sheet && !openReportId && (
+      {mode === "browse" && !sheet && !openReportId && !watch && (
         <PermissionPanel state={loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
       )}
 
@@ -374,6 +565,9 @@ export function MainScreen() {
           lookingUp={lookingUp}
           onDirections={() => requestRoutes([])}
           onClose={() => setState({ mode: "browse", selected: null })}
+          onWalkTo={() => setTravel("walk")}
+          onForgetParked={() => { setState({ parked: null, mode: "browse", selected: null }); void saveParked(null); }}
+          onMapProblem={() => setState({ sheet: "mapProblem" })}
         />
       )}
 
@@ -388,6 +582,9 @@ export function MainScreen() {
               onRetry={() => requestRoutes()}
               onToggleAvoid={toggleAvoid}
               onTravel={setTravel}
+              onAddStop={() => setState({ sheet: "stopSearch" })}
+              onRemoveStop={removeStop}
+              onOption={setOption}
             />
       )}
 
@@ -406,6 +603,10 @@ export function MainScreen() {
           onMuteToggle={() => { stopSpeaking(); setState({ trip: { ...trip, muted: !trip.muted } }); }}
           onReport={() => setState({ sheet: "report" })}
           onRecenter={() => setFollowing(true)}
+          onMenu={() => setState({ sheet: "navMenu" })}
+          limitKmh={limitKmh}
+          ahead={ahead ? { report: ahead.item, distanceM: ahead.distanceM } : null}
+          sharing={!!share}
         />
       )}
 
@@ -421,6 +622,29 @@ export function MainScreen() {
         />
       )}
       {openReportId && <ReportDetails id={openReportId} onClose={() => setState({ openReportId: null })} />}
+      {sheet === "sos" && <SosSheet coord={navFix?.coord ?? fix?.coord ?? null} onClose={() => setState({ sheet: null })} />}
+      {sheet === "navMenu" && (
+        <NavMenuSheet
+          onClose={() => setState({ sheet: null })}
+          onShare={() => void toggleShare()}
+          onAddStop={() => setState({ sheet: "stopSearch" })}
+          onSos={() => setState({ sheet: "sos" })}
+        />
+      )}
+      {sheet === "mapProblem" && selected && <MapProblemSheet at={selected.coord} onClose={() => setState({ sheet: null })} />}
+      {sheet === "stopSearch" && (
+        <SearchPanel
+          online={online}
+          userCoord={navFix?.coord ?? fix?.coord ?? null}
+          title={t.x.stops.picking}
+          onPick={(p) => void addStop(p)}
+          onClose={() => setState({ sheet: null })}
+          onSettings={() => {}}
+        />
+      )}
+      {watch && mode === "browse" && !sheet && (
+        <WatchCard onClose={() => { fittedWatch.current = false; setState({ watch: null }); }} />
+      )}
 
       {config.mode === "direct" && !config.sharedReports && mode !== "navigating" && (
         <View pointerEvents="none" style={[s.sample, { top: insets.top + 72, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>

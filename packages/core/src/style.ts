@@ -149,3 +149,71 @@ export function darkenStyle(style: MapStyle): MapStyle {
     }),
   };
 }
+
+
+// ---------------------------------------------------------------- black & gold map
+const GOLD_MAP = {
+  background: "#050505",
+  land: "#0A0A0A",
+  water: "#0B1317",
+  green: "#0C110C",
+  building: "#141414",
+  buildingLine: "#1E1E1E",
+  minorRoad: "#262421",
+  road: "#34312A",
+  mainRoad: "#4A3F22",
+  motorway: "#6B5622",
+  casing: "#000000",
+  waterway: "#12202A",
+  boundary: "#4A3F22",
+  label: "#D9D0B8",
+  labelMuted: "#9C927B",
+  poiLabel: "#C9A84A",
+  halo: "#000000",
+};
+
+/**
+ * Black & gold map: near-black land, dark water, quiet grey streets and gold-tinted main roads,
+ * so the gold route stays the brightest thing on screen. Works from any OpenMapTiles style.
+ */
+export function goldStyle(style: MapStyle): MapStyle {
+  const C = GOLD_MAP;
+  return {
+    ...style,
+    layers: style.layers.map((l) => {
+      const id = l.id.toLowerCase();
+      const paint: Record<string, unknown> = { ...(l.paint ?? {}) };
+      if (l.type === "background") paint["background-color"] = C.background;
+      else if (l.type === "fill") {
+        const color = /water|ocean|sea|lake|river/.test(id) ? C.water
+          : /building/.test(id) ? C.building
+          : /park|wood|forest|grass|green|garden|cemetery|scrub|farm|wetland/.test(id) ? C.green
+          : C.land;
+        paint["fill-color"] = color;
+        if (/building/.test(id)) paint["fill-outline-color"] = C.buildingLine;
+        delete paint["fill-pattern"];
+      } else if (l.type === "line") {
+        const casing = /casing|outline/.test(id);
+        const color = /waterway|river|stream|canal/.test(id) ? C.waterway
+          : /boundary|admin/.test(id) ? C.boundary
+          : casing ? C.casing
+          : /motorway|trunk/.test(id) ? C.motorway
+          : /primary|secondary/.test(id) ? C.mainRoad
+          : /tertiary|street|road|highway|transport|bridge|tunnel/.test(id) ? C.road
+          : /path|track|service|minor|pedestrian|footway|cycle/.test(id) ? C.minorRoad
+          : C.road;
+        paint["line-color"] = color;
+      } else if (l.type === "symbol") {
+        const poi = /poi/.test(id);
+        const muted = /road|street|transport|highway/.test(id);
+        paint["text-color"] = poi ? C.poiLabel : muted ? C.labelMuted : C.label;
+        paint["text-halo-color"] = C.halo;
+        paint["text-halo-width"] = 1.3;
+        if (poi) paint["icon-opacity"] = 0.75;
+      } else if (l.type === "fill-extrusion") {
+        paint["fill-extrusion-color"] = C.building;
+      }
+      return { ...l, paint };
+    }),
+  };
+}
