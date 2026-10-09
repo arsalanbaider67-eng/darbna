@@ -78,7 +78,7 @@ export const ckb: Strings = {
     imPassenger: "من سەرنشینم",
     sent: "سوپاس! ڕاپۆرتەکەت گەیشت.", merged: "پێشتر ڕاپۆرت کراوە — وەک پشتڕاستکردنەوە هەژمار کرا.",
     rateLimited: "گەیشتیتە سنووری ڕاپۆرت. دواتر هەوڵ بدەرەوە.", failedQueued: "ئینتەرنێت نییە — ڕاپۆرتەکە خۆکارانە دەنێردرێت.",
-    categories: { congestion: "قەرەباڵغی", crash: "ڕووداو", closure: "ڕێگا داخراوە", roadworks: "کاری ڕێگا", pothole: "چاڵ", flooding: "لافاو / ئاو" },
+    categories: { congestion: "قەرەباڵغی", crash: "ڕووداو", closure: "ڕێگا داخراوە", roadworks: "کاری ڕێگا", pothole: "چاڵ", flooding: "لافاو / ئاو", checkpoint: "خاڵی پشکنین", checkpoint_slow: "خاڵی پشکنین – چاوەڕوانی درێژ", camera: "کامێرای خێرایی", fuel_queue: "بەنزینخانە – ڕیزی درێژ", fuel_closed: "بەنزینخانە داخراوە" },
     stillThere: "هێشتا هەیە", notThere: "نەماوە", flag: "ڕاپۆرتی هەڵە یان نەشیاو",
     community: "ڕاپۆرتی شۆفێران", official: "زانیاریی فەرمیی پشتڕاستکراوە", sample: "داتای تاقیکاری",
     confidence: "متمانە: {p}٪",

@@ -93,4 +93,9 @@ export const REPORT_STYLE: Record<ReportCategory, { icon: string; color: string 
   roadworks: { icon: "traffic-cone", color: "#E09A1A" },
   pothole: { icon: "alert-circle-outline", color: "#6D5A3A" },
   flooding: { icon: "waves", color: "#1F6FB2" },
+  checkpoint: { icon: "shield-car", color: "#2E7D5B" },
+  checkpoint_slow: { icon: "shield-alert", color: "#B4442C" },
+  camera: { icon: "cctv", color: "#5B4BB7" },
+  fuel_queue: { icon: "gas-station", color: "#C27A12" },
+  fuel_closed: { icon: "gas-station-off", color: "#6B6B6B" },
 };

@@ -39,12 +39,14 @@ export interface ValhallaResponse {
 export function mapValhallaTrip(trip: ValhallaTrip, id: string): Route {
   const geometry: LngLat[] = [];
   const steps: RouteStep[] = [];
-  for (const leg of trip.legs) {
+  trip.legs.forEach((leg, li) => {
+    const lastLeg = li === trip.legs.length - 1;
     const offset = geometry.length ? geometry.length - 1 : 0;
     const shape = decodePolyline(leg.shape, 6);
     geometry.push(...(geometry.length ? shape.slice(1) : shape));
     for (const m of leg.maneuvers) {
-      const kind = VALHALLA_TYPES[m.type] ?? "straight";
+      let kind = VALHALLA_TYPES[m.type] ?? "straight";
+      if (kind === "arrive" && !lastLeg) kind = "waypoint";
       // Intermediate "arrive"/"depart" between legs are noise for a single-destination trip.
       if (steps.length && kind === "depart") continue;
       const shapeIndex = m.begin_shape_index + offset;
@@ -59,7 +61,7 @@ export function mapValhallaTrip(trip: ValhallaTrip, id: string): Route {
         roundaboutExit: m.roundabout_exit_count,
       });
     }
-  }
+  });
   // Main roads: longest named steps, up to 2.
   const via = [...steps]
     .filter((s) => s.streetName)
@@ -99,6 +101,10 @@ export interface ValhallaRouteInput {
   snap?: "default" | "connected" | "main" | "major";
   /** "walk": footpaths, pedestrian streets, crossings, both directions of one-way streets. */
   travel?: "car" | "walk";
+  /** Stops on the way, in order. */
+  via?: LngLat[];
+  /** Car only: stay off motorways/trunk roads, or off dirt roads. */
+  avoid?: { highways?: boolean; unpaved?: boolean };
 }
 
 /** Request body for Valhalla's /route (used by the server and by the server-less web build). */
@@ -115,6 +121,7 @@ export function valhallaRouteBody(r: ValhallaRouteInput): Record<string, unknown
   const body: Record<string, unknown> = {
     locations: [
       { lon: r.origin[0], lat: r.origin[1], ...heading, ...originExtra },
+      ...(r.via ?? []).map((v) => ({ lon: v[0], lat: v[1], type: "break", ...extra })),
       { lon: r.destination[0], lat: r.destination[1], ...extra },
     ],
     costing: walk ? "pedestrian" : "auto",
@@ -122,6 +129,11 @@ export function valhallaRouteBody(r: ValhallaRouteInput): Record<string, unknown
     directions_type: "maneuvers",
     alternates: r.alternatives ? 2 : 0,
   };
+  if (!walk && (r.avoid?.highways || r.avoid?.unpaved)) {
+    body.costing_options = { auto: { ...(r.avoid.highways ? { use_highways: 0 } : {}), ...(r.avoid.unpaved ? { exclude_unpaved: true } : {}) } };
+  }
+  // More than one stop: alternatives aren't offered by Valhalla.
+  if (r.via?.length) body.alternates = 0;
   if (r.excludePolygons?.length) body.exclude_polygons = r.excludePolygons.map((ring) => ring.map(([lng, lat]) => [lng, lat]));
   return body;
 }

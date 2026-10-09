@@ -34,7 +34,12 @@ insert into darbna_private.categories values
   ('closure',     360,  2880, 120),
   ('roadworks',  4320, 20160, 150),
   ('pothole',   20160, 86400,  40),
-  ('flooding',    360,  1440, 150)
+  ('flooding',    360,  1440, 150),
+  ('checkpoint',      120,    480, 200),
+  ('checkpoint_slow',  60,    240, 200),
+  ('camera',        43200, 525600,  80),
+  ('fuel_queue',       90,    360,  80),
+  ('fuel_closed',     360,   1440,  80)
 on conflict (category) do update set
   ttl_initial_min = excluded.ttl_initial_min, ttl_max_min = excluded.ttl_max_min,
   duplicate_radius_m = excluded.duplicate_radius_m;
@@ -56,6 +61,7 @@ create table if not exists darbna_private.reports (
   reporter_hash text,
   ip_hash text
 );
+alter table darbna_private.reports add column if not exists thanks int not null default 0;
 create index if not exists reports_live on darbna_private.reports (lat, lng) where status = 'active';
 create index if not exists reports_by_reporter on darbna_private.reports (reporter_hash, created_at);
 create index if not exists reports_by_ip on darbna_private.reports (ip_hash, created_at);
@@ -68,6 +74,23 @@ create table if not exists darbna_private.votes (
   primary key (report_id, voter_hash)
 );
 create index if not exists votes_by_voter on darbna_private.votes (voter_hash, created_at);
+
+-- Points for helping other drivers (reports others confirm, thanks received, confirming reports).
+create table if not exists darbna_private.points (
+  who text primary key,
+  points int not null default 0,
+  reports int not null default 0,
+  thanks int not null default 0,
+  updated_at timestamptz not null default now()
+);
+create table if not exists darbna_private.thanks (
+  report_id uuid not null references darbna_private.reports(id) on delete cascade,
+  voter_hash text not null,
+  created_at timestamptz not null default now(),
+  primary key (report_id, voter_hash)
+);
+alter table darbna_private.points enable row level security;
+alter table darbna_private.thanks enable row level security;
 
 alter table darbna_private.settings enable row level security;
 alter table darbna_private.categories enable row level security;
@@ -105,6 +128,13 @@ language sql immutable as $$
     cos(radians(lat1)) * cos(radians(lat2)) * power(sin(radians(lng2 - lng1) / 2), 2)));
 $$;
 
+create or replace function darbna_private.add_points(h text, n int, d_reports int default 0, d_thanks int default 0) returns void
+language sql volatile security definer set search_path = darbna_private, extensions, public as $$
+  insert into darbna_private.points (who, points, reports, thanks) values (h, greatest(n, 0), d_reports, d_thanks)
+  on conflict (who) do update set points = darbna_private.points.points + n,
+    reports = darbna_private.points.reports + d_reports, thanks = darbna_private.points.thanks + d_thanks, updated_at = now();
+$$;
+
 create or replace function darbna_private.to_public(r darbna_private.reports) returns json
 language sql stable as $$
   select json_build_object(
@@ -112,7 +142,7 @@ language sql stable as $$
     'coord', json_build_array(r.lng, r.lat), 'heading', r.heading,
     'createdAt', to_char(r.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'expiresAt', to_char(r.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-    'confirms', r.confirms, 'gone', r.gone, 'isSample', false);
+    'confirms', r.confirms, 'gone', r.gone, 'thanks', r.thanks, 'isSample', false);
 $$;
 
 -- ------------------------------------------------------------------ public API (what the app calls)
@@ -176,6 +206,9 @@ begin
     set confirms = r.confirms, gone = r.gone, flags = r.flags, expires_at = r.expires_at,
         status = r.status, hidden_reason = r.hidden_reason
     where id = r.id;
+  -- Points: helping keep the map right (+1), and your report confirmed by another driver (+5).
+  if vote in ('confirm', 'gone') then perform darbna_private.add_points(voter, 1); end if;
+  if vote = 'confirm' and r.reporter_hash is not null then perform darbna_private.add_points(r.reporter_hash, 5); end if;
   return json_build_object('report', darbna_private.to_public(r));
 end $$;
 
@@ -232,6 +265,7 @@ begin
   insert into darbna_private.reports (category, lat, lng, heading, expires_at, reporter_hash, ip_hash)
     values (c.category, lat, lng, heading, now() + make_interval(mins => c.ttl_initial_min), reporter, ip)
     returning * into r;
+  perform darbna_private.add_points(reporter, 10, 1, 0);
 
   -- Housekeeping: forget IP hashes after a day; drop reports a week after they ended.
   update darbna_private.reports set ip_hash = null where ip_hash is not null and created_at < now() - interval '1 day';
@@ -249,6 +283,9 @@ begin
   get diagnostics nv = row_count;
   delete from darbna_private.reports where reporter_hash = h;
   get diagnostics nr = row_count;
+  delete from darbna_private.thanks where voter_hash = h;
+  delete from darbna_private.points where who = h;
+  delete from darbna_private.shares where owner_hash = h;
   return json_build_object('deleted', json_build_object('reports', nr, 'votes', nv));
 end $$;
 
@@ -334,7 +371,107 @@ begin
     'serverTime', to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
 end $$;
 
--- Only the six API functions are callable from the app.
+-- ------------------------------------------------------------------ thanks & points
+-- "Thanks" for a report: +2 points to whoever reported it, +1 to you. Once per report.
+create or replace function public.darbna_thank(install text, report_id uuid)
+returns json language plpgsql volatile security definer set search_path = darbna_private, extensions, public as $$
+#variable_conflict use_variable
+declare voter text := darbna_private.check_install(install); r darbna_private.reports; n int;
+begin
+  select count(*) into n from darbna_private.thanks where voter_hash = voter and created_at > now() - interval '1 hour';
+  if n >= 60 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  select * into r from darbna_private.reports where id = report_id and status = 'active' for update;
+  if not found then raise exception 'report_not_active' using errcode = 'P0001'; end if;
+  if r.reporter_hash = voter then raise exception 'own_report' using errcode = 'P0001'; end if;
+  begin
+    insert into darbna_private.thanks (report_id, voter_hash) values (r.id, voter);
+  exception when unique_violation then
+    raise exception 'already_thanked' using errcode = 'P0001';
+  end;
+  update darbna_private.reports set thanks = thanks + 1 where id = r.id returning * into r;
+  if r.reporter_hash is not null then perform darbna_private.add_points(r.reporter_hash, 2, 0, 1); end if;
+  perform darbna_private.add_points(voter, 1);
+  return json_build_object('report', darbna_private.to_public(r));
+end $$;
+
+-- Your points (only you can see them: needs your install id).
+create or replace function public.darbna_me(install text)
+returns json language plpgsql stable security definer set search_path = darbna_private, extensions, public as $$
+declare h text := darbna_private.check_install(install); p darbna_private.points;
+begin
+  select * into p from darbna_private.points where who = h;
+  return json_build_object('points', coalesce(p.points, 0), 'reports', coalesce(p.reports, 0), 'thanks', coalesce(p.thanks, 0));
+end $$;
+
+-- ------------------------------------------------------------------ "share my trip"
+-- A live link that shows family where you are and when you'll arrive. Only the person who
+-- started it (holding the secret) can move it; it stops by itself 30 min after the last update.
+create table if not exists darbna_private.shares (
+  id uuid primary key default gen_random_uuid(),
+  owner_hash text not null,
+  secret_hash text not null,
+  dest_name text,
+  dest_lat double precision, dest_lng double precision,
+  lat double precision, lng double precision, heading real,
+  eta timestamptz, remaining_m int,
+  travel text not null default 'car',
+  ended boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists shares_by_owner on darbna_private.shares (owner_hash, created_at);
+alter table darbna_private.shares enable row level security;
+
+create or replace function public.darbna_share_start(install text, dest_name text, dest_lng float8, dest_lat float8, travel text default 'car')
+returns json language plpgsql volatile security definer set search_path = darbna_private, extensions, public as $$
+#variable_conflict use_variable
+declare h text := darbna_private.check_install(install); n int; sec text := encode(extensions.gen_random_bytes(18), 'hex'); sid uuid;
+begin
+  select count(*) into n from darbna_private.shares where owner_hash = h and created_at > now() - interval '1 day';
+  if n >= 30 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  insert into darbna_private.shares (owner_hash, secret_hash, dest_name, dest_lat, dest_lng, travel)
+    values (h, darbna_private.hash('share:' || sec), left(dest_name, 120), dest_lat, dest_lng, case when travel = 'walk' then 'walk' else 'car' end)
+    returning id into sid;
+  delete from darbna_private.shares where updated_at < now() - interval '1 day';
+  return json_build_object('id', sid, 'secret', sec);
+end $$;
+
+create or replace function public.darbna_share_update(share_id uuid, secret text, lng float8, lat float8, heading float8, eta_s int, remaining_m int, ended boolean default false)
+returns json language plpgsql volatile security definer set search_path = darbna_private, extensions, public as $$
+#variable_conflict use_variable
+declare sh darbna_private.shares;
+begin
+  select * into sh from darbna_private.shares where id = share_id for update;
+  if not found or sh.secret_hash <> darbna_private.hash('share:' || coalesce(secret, '')) then
+    raise exception 'share_not_found' using errcode = 'P0001';
+  end if;
+  if sh.ended then raise exception 'share_ended' using errcode = 'P0001'; end if;
+  if sh.lat is not null and sh.updated_at > now() - interval '3 seconds' and not ended then return json_build_object('ok', true); end if;
+  update darbna_private.shares set
+    lat = case when lat between 28.9 and 37.5 then lat else sh.lat end,
+    lng = case when lng between 38.7 and 48.9 then lng else sh.lng end,
+    heading = case when heading >= 0 and heading < 360 then heading else null end,
+    eta = case when eta_s between 0 and 172800 then now() + make_interval(secs => eta_s) else sh.eta end,
+    remaining_m = greatest(0, remaining_m), ended = ended, updated_at = now()
+    where id = share_id;
+  return json_build_object('ok', true);
+end $$;
+
+create or replace function public.darbna_share_get(share_id uuid)
+returns json language plpgsql stable security definer set search_path = darbna_private, extensions, public as $$
+declare sh darbna_private.shares;
+begin
+  select * into sh from darbna_private.shares where id = share_id;
+  if not found or sh.updated_at < now() - interval '30 minutes' then raise exception 'share_not_found' using errcode = 'P0001'; end if;
+  return json_build_object(
+    'destName', sh.dest_name, 'dest', json_build_array(sh.dest_lng, sh.dest_lat),
+    'coord', case when sh.lat is null then null else json_build_array(sh.lng, sh.lat) end,
+    'heading', sh.heading, 'remainingM', sh.remaining_m, 'travel', sh.travel, 'ended', sh.ended,
+    'eta', to_char(sh.eta at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+    'updatedAt', to_char(sh.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
+end $$;
+
+-- Only the API functions are callable from the app.
 revoke all on all functions in schema darbna_private from public, anon, authenticated;
 revoke all on function public.darbna_reports(float8, float8, float8, float8) from public;
 revoke all on function public.darbna_vote(text, uuid, text) from public;
@@ -348,3 +485,13 @@ revoke all on function public.darbna_traffic_submit(text, json) from public;
 revoke all on function public.darbna_traffic(float8, float8, float8, float8) from public;
 grant execute on function public.darbna_traffic_submit(text, json) to anon, authenticated;
 grant execute on function public.darbna_traffic(float8, float8, float8, float8) to anon, authenticated;
+revoke all on function public.darbna_thank(text, uuid) from public;
+revoke all on function public.darbna_me(text) from public;
+revoke all on function public.darbna_share_start(text, text, float8, float8, text) from public;
+revoke all on function public.darbna_share_update(uuid, text, float8, float8, float8, int, int, boolean) from public;
+revoke all on function public.darbna_share_get(uuid) from public;
+grant execute on function public.darbna_thank(text, uuid) to anon, authenticated;
+grant execute on function public.darbna_me(text) to anon, authenticated;
+grant execute on function public.darbna_share_start(text, text, float8, float8, text) to anon, authenticated;
+grant execute on function public.darbna_share_update(uuid, text, float8, float8, float8, int, int, boolean) to anon, authenticated;
+grant execute on function public.darbna_share_get(uuid) to anon, authenticated;

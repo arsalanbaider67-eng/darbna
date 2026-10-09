@@ -1,4 +1,8 @@
-export const REPORT_CATEGORIES = ["congestion", "crash", "closure", "roadworks", "pothole", "flooding"] as const;
+export const REPORT_CATEGORIES = [
+  "congestion", "crash", "closure", "roadworks", "pothole", "flooding",
+  // Iraq specifics: security checkpoints (moving / long wait), speed cameras, fuel stations.
+  "checkpoint", "checkpoint_slow", "camera", "fuel_queue", "fuel_closed",
+] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 
 export type ReportSource = "community" | "official";
@@ -11,6 +15,11 @@ export const REPORT_TTL_MIN: Record<ReportCategory, { initial: number; max: numb
   roadworks: { initial: 4320, max: 20160 },
   pothole: { initial: 20160, max: 86400 },
   flooding: { initial: 360, max: 1440 },
+  checkpoint: { initial: 120, max: 480 },
+  checkpoint_slow: { initial: 60, max: 240 },
+  camera: { initial: 43200, max: 525600 },
+  fuel_queue: { initial: 90, max: 360 },
+  fuel_closed: { initial: 360, max: 1440 },
 };
 
 /** Two reports of the same category closer than this are treated as the same event. */
@@ -21,7 +30,19 @@ export const DUPLICATE_RADIUS_M: Record<ReportCategory, number> = {
   roadworks: 150,
   pothole: 40,
   flooding: 150,
+  checkpoint: 200,
+  checkpoint_slow: 200,
+  camera: 80,
+  fuel_queue: 80,
+  fuel_closed: 80,
 };
+
+/** Things a driver should be warned about ahead on the route (banner + chime). */
+export const WARN_AHEAD: Partial<Record<ReportCategory, number>> = {
+  checkpoint: 800, checkpoint_slow: 1500, camera: 600, crash: 800, closure: 1000, flooding: 800,
+};
+/** Fuel-station status reports: shown on the map and on the station, never on routes. */
+export const FUEL_CATEGORIES: ReportCategory[] = ["fuel_queue", "fuel_closed"];
 
 export interface ReportVoteCounts {
   confirms: number;

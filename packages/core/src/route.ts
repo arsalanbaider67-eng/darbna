@@ -7,7 +7,9 @@ export type ManeuverKind =
   | "ramp_right" | "ramp_left" | "ramp_straight"
   | "exit_right" | "exit_left"
   | "keep_right" | "keep_left" | "keep_straight"
-  | "merge" | "roundabout" | "roundabout_exit" | "ferry";
+  | "merge" | "roundabout" | "roundabout_exit" | "ferry"
+  /** Reaching a stop you added on the way (not the final destination). */
+  | "waypoint";
 
 export interface RouteStep {
   index: number;

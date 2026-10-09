@@ -30,6 +30,8 @@ export interface GuidanceState {
   nextStep: RouteStep | null;
   distanceToNextM: number;
   offRouteDistanceM: number;
+  /** Route segment you're on (index into the route geometry). */
+  segmentIndex: number;
   /** True exactly once per off-route episode (and again after the cooldown if still off). */
   shouldReroute: boolean;
   announcement: Announcement | null;
@@ -124,7 +126,7 @@ export class GuidanceEngine {
       status: "gps_weak", snapped: null, distanceAlongM: 0,
       remainingM: this.totalM, remainingS: this.route.durationS,
       nextStep: this.route.steps[1] ?? null, distanceToNextM: this.stepStart[1] ?? this.totalM,
-      offRouteDistanceM: 0, shouldReroute: false, announcement: null, lastFixAt: null,
+      offRouteDistanceM: 0, segmentIndex: 0, shouldReroute: false, announcement: null, lastFixAt: null,
     };
   }
 
@@ -211,7 +213,7 @@ export class GuidanceEngine {
       const last = this.route.steps[this.route.steps.length - 1] ?? null;
       this.last = {
         status: "arrived", snapped: dest, distanceAlongM: this.totalM, remainingM: 0, remainingS: 0,
-        nextStep: last, distanceToNextM: 0, offRouteDistanceM: 0, shouldReroute: false,
+        nextStep: last, distanceToNextM: 0, offRouteDistanceM: 0, segmentIndex: this.route.geometry.length - 2, shouldReroute: false,
         announcement: last ? { step: last, stage: "now", distanceM: 0 } : null, lastFixAt: now,
       };
       return this.last;
@@ -297,6 +299,7 @@ export class GuidanceEngine {
       nextStep,
       distanceToNextM: distToNext,
       offRouteDistanceM: offDist,
+      segmentIndex: this.segIndex,
       shouldReroute,
       announcement,
       lastFixAt: now,

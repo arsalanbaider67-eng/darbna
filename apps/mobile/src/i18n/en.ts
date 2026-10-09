@@ -74,7 +74,7 @@ export const en: Strings = {
     imPassenger: "I'm a passenger",
     sent: "Thanks! Report sent.", merged: "Already reported — counted as a confirmation.",
     rateLimited: "Report limit reached. Try again later.", failedQueued: "Offline — the report will be sent automatically.",
-    categories: { congestion: "Traffic", crash: "Crash", closure: "Road closed", roadworks: "Roadworks", pothole: "Pothole", flooding: "Flooding" },
+    categories: { congestion: "Traffic", crash: "Crash", closure: "Road closed", roadworks: "Roadworks", pothole: "Pothole", flooding: "Flooding", checkpoint: "Checkpoint", checkpoint_slow: "Checkpoint – long wait", camera: "Speed camera", fuel_queue: "Fuel – long queue", fuel_closed: "Fuel station closed" },
     stillThere: "Still there", notThere: "Not there", flag: "Wrong or abusive report",
     community: "Driver report", official: "Verified official information", sample: "Sample data",
     confidence: "Confidence: {p}%",
