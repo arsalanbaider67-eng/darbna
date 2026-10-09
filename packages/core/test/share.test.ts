@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, test } from "bun:test";
 import { buildShareLink, parseSharedLocation } from "../src/share";
 
 describe("parseSharedLocation", () => {
@@ -46,5 +46,23 @@ describe("buildShareLink", () => {
   });
   it("drops an existing query from the base", () => {
     expect(buildShareLink([44, 33], undefined, "https://x.io/darbna/?to=1,2")).toBe("https://x.io/darbna/?to=33.000000,44.000000");
+  });
+});
+
+import { valhallaRouteBody } from "../src";
+describe("valhallaRouteBody snapping fallbacks", () => {
+  const base = { origin: [44.0, 36.1] as [number, number], destination: [44.01, 36.19] as [number, number], originHeading: 90, alternatives: true };
+  test("default keeps heading, no reachability", () => {
+    const b: any = valhallaRouteBody(base);
+    expect(b.locations[0].heading).toBe(90);
+    expect(b.locations[1].minimum_reachability).toBeUndefined();
+  });
+  test("connected / main snap to the connected network and drop the heading", () => {
+    const c: any = valhallaRouteBody({ ...base, snap: "connected" });
+    expect(c.locations[0].heading).toBeUndefined();
+    expect(c.locations[0].minimum_reachability).toBe(100);
+    expect(c.locations[1].minimum_reachability).toBe(100);
+    const m: any = valhallaRouteBody({ ...base, snap: "main" });
+    expect(m.locations[1].search_filter).toEqual({ min_road_class: "residential" });
   });
 });

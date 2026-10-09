@@ -86,14 +86,29 @@ export interface ValhallaRouteInput {
   originHeading?: number;
   alternatives: boolean;
   excludePolygons?: LngLat[][];
+  /**
+   * How to attach the start/end points to the road network.
+   *  - "default": nearest road.
+   *  - "connected": only roads that connect to a large part of the network (skips car parks,
+   *    private lanes and other small islands that make Valhalla answer "no path").
+   *  - "main": like "connected", and ignore service roads entirely (last resort).
+   * The heading hint is dropped for the fallbacks (a wrong heading can also cause "no path").
+   */
+  snap?: "default" | "connected" | "main";
 }
 
 /** Request body for Valhalla's /route (used by the server and by the server-less web build). */
 export function valhallaRouteBody(r: ValhallaRouteInput): Record<string, unknown> {
+  const snap = r.snap ?? "default";
+  const extra: Record<string, unknown> =
+    snap === "default" ? {} :
+    snap === "connected" ? { minimum_reachability: 100, radius: 0 } :
+    { minimum_reachability: 100, search_filter: { min_road_class: "residential" } };
+  const heading = snap === "default" && r.originHeading !== undefined ? { heading: Math.round(r.originHeading), heading_tolerance: 45 } : {};
   const body: Record<string, unknown> = {
     locations: [
-      { lon: r.origin[0], lat: r.origin[1], ...(r.originHeading !== undefined ? { heading: Math.round(r.originHeading), heading_tolerance: 45 } : {}) },
-      { lon: r.destination[0], lat: r.destination[1] },
+      { lon: r.origin[0], lat: r.origin[1], ...heading, ...extra },
+      { lon: r.destination[0], lat: r.destination[1], ...extra },
     ],
     costing: "auto",
     units: "kilometers",

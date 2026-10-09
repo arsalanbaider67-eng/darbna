@@ -43,8 +43,22 @@ export class ValhallaProvider implements RoutingProvider {
   readonly supportsExclusions = true;
   constructor(private baseUrl: string, private timeoutMs: number) {}
 
+  /** Retries "no path" answers with stricter snapping (see ValhallaRouteInput.snap). */
   async route(r: RouteRequest): Promise<Route[]> {
-    const body = valhallaRouteBody(r);
+    let last: unknown;
+    for (const snap of ["default", "connected", "main"] as const) {
+      try {
+        return await this.routeOnce(r, snap);
+      } catch (e) {
+        last = e;
+        if (!(e instanceof RoutingError && (e.code === "no_route" || e.code === "off_network"))) throw e;
+      }
+    }
+    throw last;
+  }
+
+  private async routeOnce(r: RouteRequest, snap: "default" | "connected" | "main"): Promise<Route[]> {
+    const body = valhallaRouteBody({ ...r, snap });
     const res = await fetchWithTimeout(`${this.baseUrl}/route`, {
       method: "POST",
       headers: { "content-type": "application/json" },

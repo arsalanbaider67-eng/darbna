@@ -192,11 +192,11 @@ export const directApi = {
     let trips: ReturnType<typeof mapValhallaResponse>;
     let avoidFailed = false;
     try {
-      trips = await valhallaRoute(valhallaRouteBody({ ...base, alternatives: opts.alternatives ?? true, excludePolygons }));
+      trips = await routeWithSnapFallbacks({ ...base, alternatives: opts.alternatives ?? true, excludePolygons });
     } catch (e) {
       // If avoiding made the trip impossible, fall back to the normal route and say so.
       if (!(e instanceof ApiError && e.code === "no_route" && excludePolygons.length)) throw e;
-      trips = await valhallaRoute(valhallaRouteBody({ ...base, alternatives: false }));
+      trips = await routeWithSnapFallbacks({ ...base, alternatives: false });
       avoidFailed = true;
     }
     const avoided = avoidFailed ? [] : toAvoid.map((r) => r.id);
@@ -272,6 +272,24 @@ async function valhallaRoute(body: Record<string, unknown>) {
     if (e?.body) throw new ApiError(valhallaErrorCode(e.body) === "unavailable" ? "generic" : valhallaErrorCode(e.body), e.status);
     throw e;
   }
+}
+
+/**
+ * "No path" usually means a start or end point got attached to a road island (car park, private
+ * lane, pedestrian zone). Try again attaching both ends to the connected network, then to
+ * main streets only.
+ */
+async function routeWithSnapFallbacks(input: Parameters<typeof valhallaRouteBody>[0]) {
+  let last: unknown;
+  for (const snap of ["default", "connected", "main"] as const) {
+    try {
+      return await valhallaRoute(valhallaRouteBody({ ...input, snap }));
+    } catch (e) {
+      last = e;
+      if (!(e instanceof ApiError && (e.code === "no_route" || e.code === "off_network"))) throw e;
+    }
+  }
+  throw last;
 }
 
 function distanceToLine(p: LngLat, line: LngLat[], step = 1): number {
