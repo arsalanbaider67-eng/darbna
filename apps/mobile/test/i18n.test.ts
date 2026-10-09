@@ -44,7 +44,7 @@ describe("instructions", () => {
     expect(instructionText(step({ kind: "roundabout", roundaboutExit: 2 }), null, { lang: "en", digits: "western" })).toBe("At the roundabout, take the second exit");
   });
   it("spoken distances use words for units", () => {
-    expect(instructionText(step({}), 1234, arW, true)).toBe("بعد 1.2 كيلومتر، لف يمين");
+    expect(instructionText(step({}), 1234, arW, true)).toBe("ورا 1.2 كيلومتر، لف يمين");
   });
   it("Arabic-Indic digits on screen when chosen", () => {
     expect(fmtDistance(1234, { lang: "ar", digits: "arabic" })).toBe("١٫٢ كم");

@@ -108,7 +108,7 @@ export const ar = {
     roundabout_exit: "اطلع من الفلكة",
     ferry: "خذ العبّارة",
     onto: "{action} على {street}",
-    inDistance: "بعد {d}، {action}",
+    inDistance: "ورا {d}، {action}",
   },
   ordinals: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"],
   units: { m: "{v} م", km: "{v} كم", mSpoken: "{v} متر", kmSpoken: "{v} كيلومتر", min: "{v} د", hr: "{h} س {m} د" },
