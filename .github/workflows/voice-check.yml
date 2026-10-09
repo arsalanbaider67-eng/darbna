@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["apps/mobile/assets/voice/ar/**", "apps/mobile/assets/voice/en/**", ".github/workflows/voice-check.yml"]
+    paths: ["apps/mobile/assets/voice/ar/**", "apps/mobile/assets/voice/en/**", ".github/workflows/voice-check.yml", "scripts/check_voice_clips.py"]
 
 jobs:
   check:
