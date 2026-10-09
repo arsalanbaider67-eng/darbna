@@ -27,7 +27,7 @@ const config: ExpoConfig = {
     lang: "ar",
     themeColor: "#070707",
     backgroundColor: "#070707",
-    favicon: "./public/favicon.png",
+    favicon: "./public/favicon-gold.png",
   },
   // GitHub Pages serves the web build from /<repo>/ — set by the web workflow.
   experiments: process.env.EXPO_BASE_URL ? { baseUrl: process.env.EXPO_BASE_URL } : undefined,

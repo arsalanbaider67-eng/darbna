@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -487,7 +487,7 @@ export function MainScreen() {
     return (
       <View style={[s.center, { backgroundColor: theme.bg }]}>
         <StatusBar style={theme.dark ? "light" : "dark"} />
-        <Icon name="map-search-outline" size={56} color={theme.primary} />
+        <Image source={require("../../assets/icon.png")} style={{ width: 96, height: 96, borderRadius: 22 }} accessibilityIgnoresInvertColors />
         <Txt size={22} weight="bold" style={{ color: theme.primary }}>{t.appName}</Txt>
         {configError ? (
           <>
