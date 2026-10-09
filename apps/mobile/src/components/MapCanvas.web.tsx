@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bearing, darkenStyle, FixFilter, haversine, lightenStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { bearing, darkenStyle, FixFilter, satelliteStyle, haversine, lightenStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -66,11 +66,11 @@ function ensureRtlPlugin() {
   }
 }
 
-/** Style URL + transform: lightened always; recoloured for night when the URL ends in "#night". */
+/** Style URL + transform: lightened always; "#night" recolours it for night, "#sat" puts it over satellite photos. */
 function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next: any) => any }] {
-  const night = url.endsWith("#night");
-  const clean = night ? url.slice(0, -"#night".length) : url;
-  return [clean, { transformStyle: (_prev, next) => (night ? darkenStyle(lightenStyle(next)) : lightenStyle(next)) }];
+  const [clean, tag] = url.split("#");
+  const t = (next: any) => (tag === "night" ? darkenStyle(lightenStyle(next)) : tag === "sat" ? satelliteStyle(lightenStyle(next)) : lightenStyle(next));
+  return [clean, { transformStyle: (_prev, next) => t(next) }];
 }
 
 const REPORT_COLOR: any = ["match", ["get", "category"], ...Object.entries(REPORT_STYLE).flatMap(([k, v]) => [k, v.color]), "#666666"];

@@ -33,6 +33,34 @@ export function lightenStyle(style: MapStyle): MapStyle {
 }
 
 
+// ---------------------------------------------------------------- satellite map
+/** Esri World Imagery: free satellite photos, used with credit shown on the map. */
+export const SATELLITE_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+export const SATELLITE_CREDIT = "Imagery © Esri, Maxar, Earthstar Geographics";
+
+/**
+ * Satellite photos with the map's roads and names drawn on top ("hybrid"), so roads that aren't
+ * on the map yet can still be seen. Land, water and building colours are dropped (the photo
+ * shows them), and labels turn white with a dark outline so they read on any photo.
+ */
+export function satelliteStyle(style: MapStyle): MapStyle {
+  const sources = { ...((style.sources as Record<string, unknown>) ?? {}) };
+  sources["darbna-sat"] = { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_CREDIT };
+  const layers: StyleLayer[] = [{ id: "darbna-sat", type: "raster", source: "darbna-sat" }];
+  for (const l of style.layers) {
+    if (l.type === "background" || l.type === "fill" || l.type === "fill-extrusion" || l.type === "hillshade") continue;
+    const next: StyleLayer = { ...l };
+    if (l.type === "symbol") {
+      next.paint = { ...(l.paint ?? {}), "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,0.85)", "text-halo-width": 1.6 };
+    }
+    if (l.type === "line" && /road|highway|street|transportation|bridge|tunnel/i.test(l.id)) {
+      next.paint = { ...(l.paint ?? {}), "line-opacity": 0.85 };
+    }
+    layers.push(next);
+  }
+  return { ...style, sources, layers };
+}
+
 // ---------------------------------------------------------------- night map
 /** Parse #rgb/#rrggbb/rgb()/rgba()/hsl()/hsla() into RGBA (0–255, alpha 0–1). */
 export function parseColor(c: string): [number, number, number, number] | null {

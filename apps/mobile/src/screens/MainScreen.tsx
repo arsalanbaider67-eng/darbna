@@ -25,7 +25,7 @@ import { primeVoice, stopSpeaking } from "../nav/prompt";
 import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useGuidance } from "../nav/useGuidance";
-import { loadCachedConfig, loadTrip, saveCachedConfig, saveRecents, saveTrip } from "../storage";
+import { loadCachedConfig, loadTrip, saveCachedConfig, saveRecents, saveSettings, saveTrip } from "../storage";
 import { getState, mergeReports, setState, useStore } from "../store";
 import type { Place } from "../types";
 
@@ -53,6 +53,7 @@ export function MainScreen() {
   const openReportId = useStore((s) => s.openReportId);
   const lang = useStore((s) => s.settings.lang);
   const shareTraffic = useStore((s) => s.settings.shareTraffic);
+  const satellite = useStore((s) => s.settings.satellite === true);
   const [jams, setJams] = useState<TrafficCell[]>([]);
 
   const online = useConnectivity();
@@ -306,7 +307,15 @@ export function MainScreen() {
   }
 
   // Driving is always on the dark map (easier on the eyes, makes the route and arrow pop).
-  const styleUrl = theme.dark || mode === "navigating" ? config.map.styleNight : config.map.styleDay;
+  // Satellite: photos with the roads and names on top (same day or night).
+  const styleUrl = satellite
+    ? `${config.map.styleDay.split("#")[0]}#sat`
+    : theme.dark || mode === "navigating" ? config.map.styleNight : config.map.styleDay;
+  const toggleSatellite = () => {
+    const next = { ...getState().settings, satellite: !satellite };
+    setState({ settings: next });
+    void saveSettings(next);
+  };
   const selectedIdx = mode === "preview" ? preview.selectedIdx : 0;
   const showSearchBar = mode === "browse" || mode === "place";
   const pillTop = insets.top + 80;
@@ -336,10 +345,13 @@ export function MainScreen() {
       {mode !== "navigating" && <ConnectionPill online={online} top={pillTop} />}
       {mode === "browse" && loc.permission === "granted" && !fix && online !== false && <LocatingPill top={pillTop} />}
 
-      {(mode === "browse" || mode === "place") && loc.permission === "granted" && fix && (
+      {(mode === "browse" || mode === "place") && (
         <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 240 : 28) }]}>
-          <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
-          <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15); }} />
+          <RoundBtn icon={satellite ? "map-outline" : "satellite-variant"} label={satellite ? t.settings.mapView : t.settings.satellite} onPress={toggleSatellite} />
+          {loc.permission === "granted" && fix && <>
+            <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
+            <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15); }} />
+          </>}
         </View>
       )}
 

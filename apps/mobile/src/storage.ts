@@ -43,6 +43,8 @@ export interface Settings {
   digits: "arabic" | "western";
   /** Send anonymous speed samples while navigating (live traffic). */
   shareTraffic: boolean;
+  /** Satellite photos under the roads and names. */
+  satellite?: boolean;
 }
 export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: true };
 export const loadSettings = () => getJSON<Settings | null>(K.settings, null);

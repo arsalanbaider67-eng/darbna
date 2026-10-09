@@ -1,9 +1,9 @@
-import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import { trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { lightenStyle, satelliteStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
@@ -57,8 +57,17 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   const { theme } = useUi();
   const camera = useRef<CameraRef>(null);
   const mapView = useRef<any>(null);
-  const styleRef = useRef(p.styleUrl);
-  styleRef.current = p.styleUrl;
+  const styleRef = useRef(p.styleUrl.split("#")[0]);
+  styleRef.current = p.styleUrl.split("#")[0];
+  // "#sat": satellite photos with the roads and names on top, built from the normal style.
+  const [mapStyle, setMapStyle] = useState<string | object>(styleRef.current);
+  useEffect(() => {
+    const [url, tag] = p.styleUrl.split("#");
+    if (tag !== "sat") { setMapStyle(url); return; }
+    let live = true;
+    fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(satelliteStyle(lightenStyle(st))); }).catch(() => live && setMapStyle(url));
+    return () => { live = false; };
+  }, [p.styleUrl]);
   const handlers = useRef(p);
   handlers.current = p;
 
@@ -179,7 +188,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
       <MapView
         ref={mapView}
         style={StyleSheet.absoluteFill}
-        mapStyle={p.styleUrl}
+        mapStyle={mapStyle as any}
         surfaceView
         logoEnabled={false}
         attributionEnabled

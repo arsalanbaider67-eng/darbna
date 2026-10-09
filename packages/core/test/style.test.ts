@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { darkenStyle, lightenStyle, nightColor, parseColor } from "../src/style";
+import { darkenStyle, lightenStyle, nightColor, parseColor, satelliteStyle } from "../src/style";
 
 const lum = (c: string) => { const [r, g, b] = parseColor(c)!; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; };
 
@@ -34,5 +34,24 @@ describe("map styles", () => {
   it("lightenStyle removes 3D buildings", () => {
     const s = lightenStyle({ layers: [{ id: "b3d", type: "fill-extrusion" }, { id: "water", type: "fill" }] });
     expect(s.layers.map((l) => l.id)).toEqual(["water"]);
+  });
+});
+
+describe("satelliteStyle", () => {
+  const base = {
+    version: 8, sources: { openmaptiles: { type: "vector" } },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#eee" } },
+      { id: "landcover", type: "fill" },
+      { id: "road_primary", type: "line", paint: { "line-color": "#fff" } },
+      { id: "label_city", type: "symbol", paint: { "text-color": "#333" } },
+    ],
+  };
+  it("photos under roads and names, no land colours", () => {
+    const s = satelliteStyle(base as any);
+    expect(s.layers.map((l) => l.id)).toEqual(["darbna-sat", "road_primary", "label_city"]);
+    expect((s.sources as any)["darbna-sat"].type).toBe("raster");
+    expect((s.sources as any).openmaptiles).toBeDefined();
+    expect(s.layers[2].paint!["text-color"]).toBe("#FFFFFF");
   });
 });

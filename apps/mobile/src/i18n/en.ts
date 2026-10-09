@@ -96,6 +96,7 @@ export const en: Strings = {
     openSettings: "Open Settings", servicesOff: "Location services are off on this device. Turn them on so we can find you.",
   },
   settings: {
+    satellite: "Satellite view", mapView: "Map view",
     shareTraffic: "Help with live traffic", shareTrafficHint: "While you navigate, Darbna sends how fast traffic is moving — anonymously, never the start or end of your trip.",
     capTrafficLive: "✓ Live traffic where Darbna drivers are on the road (more users = more traffic info)",
     capOfflineMapsOn: "✓ Map areas you've viewed or downloaded below",
