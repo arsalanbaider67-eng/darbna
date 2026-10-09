@@ -2,8 +2,9 @@
  "_about": "Every sentence Darbna's guidance voice can say. scripts/gen-voice.mjs records each one with the chosen voices into assets/voice/<lang>/<key>.mp3. Street names are never spoken (they stay on screen).",
  "voices": {
   "ar": {
-   "provider": "azure",
-   "voice": "ar-IQ-RanaNeural"
+   "provider": "elevenlabs",
+   "voice": "Sufyan",
+   "voiceId": "9FHjCdVXgA4tYxIYHTcZ"
   },
   "en": {
    "provider": "azure",

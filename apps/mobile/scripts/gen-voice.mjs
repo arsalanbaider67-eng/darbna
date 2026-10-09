@@ -1,6 +1,7 @@
 // Records Darbna's guidance prompts with the chosen voices (assets/voice/phrases.json):
 //   Arabic: Azure "ar-IQ-RanaNeural" (needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
-//   English: Azure (see phrases.json; ElevenLabs is also supported via ELEVENLABS_API_KEY)
+//   Voices per language are set in phrases.json: Azure (AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
+//   or ElevenLabs (ELEVENLABS_API_KEY).
 // Writes assets/voice/<lang>/<key>.mp3 and src/nav/voiceClips.ts. Only phrases whose text changed
 // (or that are missing) are recorded again. Run by .github/workflows/voices.yml.
 import fs from "node:fs";
@@ -35,31 +36,37 @@ async function azure(text, voice) {
 }
 
 let elevenVoiceId = null;
-async function elevenVoice(name) {
+/** Finds the voice to use: in the account already, else added from the public Voice Library. */
+async function elevenVoice(name, wantedId) {
   if (elevenVoiceId) return elevenVoiceId;
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error("ELEVENLABS_API_KEY secret is missing");
   if (process.env.ELEVENLABS_VOICE_ID) return (elevenVoiceId = process.env.ELEVENLABS_VOICE_ID);
   const h = { "xi-api-key": key };
-  // 1) Already in the account's voices?
+  const lc = name.toLowerCase();
+  // 1) Already in the account's voices (same id, or added under its name)?
   const mine = await (await fetch("https://api.elevenlabs.io/v1/voices", { headers: h })).json();
-  const own = (mine.voices ?? []).find((v) => v.name?.toLowerCase().startsWith(name.toLowerCase()));
+  const own = (mine.voices ?? []).find((v) => v.voice_id === wantedId || v.name?.toLowerCase().startsWith(lc));
   if (own) return (elevenVoiceId = own.voice_id);
   // 2) Find it in the public Voice Library and add it to the account.
-  const shared = await (await fetch(`https://api.elevenlabs.io/v1/shared-voices?search=${encodeURIComponent(name)}&page_size=30`, { headers: h })).json();
-  const pick = (shared.voices ?? []).find((v) => v.name?.toLowerCase().startsWith(name.toLowerCase()));
-  if (!pick) throw new Error(`voice "${name}" not found in your ElevenLabs voices or the Voice Library`);
-  const added = await fetch(`https://api.elevenlabs.io/v1/voices/add/${pick.public_owner_id}/${pick.voice_id}`, {
-    method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ new_name: pick.name }),
-  });
-  const j = await added.json().catch(() => ({}));
-  if (!added.ok) throw new Error(`could not add "${pick.name}" to your voices: ${JSON.stringify(j).slice(0, 200)}`);
-  note("elevenlabs", `using "${pick.name}" (${j.voice_id ?? pick.voice_id})`);
-  return (elevenVoiceId = j.voice_id ?? pick.voice_id);
+  const shared = await (await fetch(`https://api.elevenlabs.io/v1/shared-voices?search=${encodeURIComponent(name)}&page_size=50`, { headers: h })).json();
+  const list = shared.voices ?? [];
+  const pick = list.find((v) => v.voice_id === wantedId) ?? list.find((v) => v.name?.toLowerCase().startsWith(lc));
+  if (pick) {
+    const added = await fetch(`https://api.elevenlabs.io/v1/voices/add/${pick.public_owner_id}/${pick.voice_id}`, {
+      method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ new_name: name }),
+    });
+    const j = await added.json().catch(() => ({}));
+    if (added.ok && j.voice_id) { note("elevenlabs", `added "${pick.name}" to your voices`); return (elevenVoiceId = j.voice_id); }
+    note("elevenlabs", `could not add "${pick.name}" automatically: ${JSON.stringify(j).slice(0, 160)}`);
+  }
+  // 3) Last try: use the library id directly.
+  if (wantedId) return (elevenVoiceId = wantedId);
+  throw new Error(`voice "${name}" not found — open it in the ElevenLabs Voice Library and tap "Add to my voices"`);
 }
 
-async function eleven(text, name) {
-  const id = await elevenVoice(name);
+async function eleven(text, name, wantedId) {
+  const id = await elevenVoice(name, wantedId);
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
@@ -78,9 +85,9 @@ for (const [lang, phrases] of Object.entries(cfg.phrases)) {
   try {
     for (const [key, text] of Object.entries(phrases)) {
       const file = path.join(dir, `${key}.mp3`);
-      const sig = hash(`${v.provider}|${v.voice}|${text}`);
+      const sig = hash(`${v.provider}|${v.voiceId ?? v.voice}|${text}`);
       if (fs.existsSync(file) && manifest[`${lang}/${key}`] === sig) { kept++; continue; }
-      const audio = v.provider === "azure" ? await azure(text, v.voice) : await eleven(text, v.voice);
+      const audio = v.provider === "azure" ? await azure(text, v.voice) : await eleven(text, v.voice, v.voiceId);
       fs.writeFileSync(file, audio);
       manifest[`${lang}/${key}`] = sig;
       made++;
