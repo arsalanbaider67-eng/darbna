@@ -5,7 +5,8 @@ import { api, ApiError } from "../api";
 import { instructionText, strings, type FormatCtx } from "../i18n";
 import { saveTrip } from "../storage";
 import { getState, setState, toast, useStore } from "../store";
-import { chooseVoice, speak } from "./voice";
+import { sayPrompt } from "./prompt";
+import { instructionClips } from "./voicePlan";
 
 export type RerouteStatus = "idle" | "requesting" | "offline" | "failed";
 
@@ -23,11 +24,11 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
   const busy = useRef(false);
   const lastFix = useRef<LocationFix | null>(null);
 
-  async function say(text: (ctx: FormatCtx) => string, urgent = false) {
+  /** `clips`: the recorded-voice version of the same prompt (see voicePlan.ts). */
+  async function say(text: (ctx: FormatCtx) => string, clips: string[] | null, urgent = false) {
     const s = getState();
     if (!s.settings.voice || s.trip?.muted || s.trip?.paused) return;
-    const v = await chooseVoice(s.settings.lang);
-    await speak(text({ lang: v.lang, digits: "western" }), v, urgent);
+    await sayPrompt(s.settings.lang, (lang) => text({ lang, digits: "western" }), clips, urgent);
   }
 
   // Opening prompt.
@@ -35,7 +36,7 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
     if (!engine) return;
     const steps = engine.route.steps;
     const next = steps[1];
-    if (next) void say((c) => `${strings(c.lang).maneuver.depart}. ${instructionText(next, steps[0].distanceM, c, true)}`);
+    if (next) void say((c) => `${strings(c.lang).maneuver.depart}. ${instructionText(next, steps[0].distanceM, c, true)}`, ["mv_depart", ...instructionClips(next, steps[0].distanceM)]);
   }, [engine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function doReroute(from: LocationFix) {
@@ -49,7 +50,7 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
     }
     busy.current = true;
     setReroute("requesting");
-    void say((c) => strings(c.lang).nav.rerouting, true);
+    void say((c) => strings(c.lang).nav.rerouting, ["rerouting"], true);
     try {
       const res = await api.route(from.coord, t.destination.coord, {
         heading: from.headingDeg != null && from.headingDeg >= 0 && (from.speedMps ?? 0) > 2 ? from.headingDeg : undefined,
@@ -83,7 +84,7 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
     setG(st);
     if (st.status === "on_route" && reroute !== "idle" && reroute !== "requesting") setReroute("idle");
     if (st.status === "arrived") {
-      void say((c) => strings(c.lang).maneuver.arrive, true);
+      void say((c) => strings(c.lang).maneuver.arrive, ["mv_arrive"], true);
       void saveTrip(null);
       setState({ mode: "arrived" });
       return;
@@ -94,7 +95,7 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
         let txt = instructionText(a.step, a.stage === "now" ? null : a.distanceM, c, true);
         if (a.then) txt += `${c.lang === "en" ? ", " : "، "}${strings(c.lang).nav.then} ${instructionText(a.then, null, c, true)}`;
         return txt;
-      }, a.stage === "now");
+      }, instructionClips(a.step, a.stage === "now" ? null : a.distanceM, a.then), a.stage === "now");
     }
     if (st.shouldReroute) void doReroute(fix);
   }, [fix, engine]); // eslint-disable-line react-hooks/exhaustive-deps

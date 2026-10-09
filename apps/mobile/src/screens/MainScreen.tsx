@@ -21,7 +21,7 @@ import { enableCompass } from "../compass";
 import { useConnectivity } from "../hooks/useConnectivity";
 import { useLocation } from "../hooks/useLocation";
 import { fmt } from "../i18n";
-import { primeVoice, stopSpeaking } from "../nav/voice";
+import { primeVoice, stopSpeaking } from "../nav/prompt";
 import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useGuidance } from "../nav/useGuidance";
@@ -242,7 +242,7 @@ export function MainScreen() {
 
   function startNavigation(asDemo = false) {
     // Must run inside the tap, before anything async: lets iPhone Safari speak later prompts.
-    primeVoice();
+    primeVoice(getState().settings.lang);
     enableCompass(); // iPhone asks once, and only from a tap: lets the arrow turn with the phone
     const s = getState();
     const route = s.preview.result?.routes[s.preview.selectedIdx];

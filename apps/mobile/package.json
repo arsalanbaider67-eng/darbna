@@ -23,6 +23,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",
     "expo": "~54.0.0",
+    "expo-audio": "~1.0.0",
     "expo-build-properties": "~1.0.0",
     "expo-clipboard": "~8.0.0",
     "expo-crypto": "~15.0.0",

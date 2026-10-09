@@ -5,6 +5,7 @@ import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
+import { hasRecordedVoice } from "../nav/prompt";
 import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
 import { getState, setState, toast, useStore } from "../store";
@@ -41,7 +42,8 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   useEffect(() => {
     chooseVoice(settings.lang).then((v) => {
       const name = LANGS.find((l) => l.code === v.lang)?.label ?? v.lang;
-      setVoiceNote(v.fallback ? fmt(t.settings.voiceUnavailable, { lang: name }) : null);
+      // The recorded voices (Arabic, English) don't depend on what's installed on the phone.
+      setVoiceNote(v.fallback && !(settings.lang !== "ckb" && hasRecordedVoice(settings.lang)) ? fmt(t.settings.voiceUnavailable, { lang: name }) : null);
     });
   }, [settings.lang, t]);
 

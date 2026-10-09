@@ -1,0 +1,43 @@
+# Records the guidance voice prompts (Arabic: Azure Rana, English: ElevenLabs Aaden) and commits them.
+# Needs repository secrets: AZURE_SPEECH_KEY, AZURE_SPEECH_REGION, ELEVENLABS_API_KEY
+# (optional ELEVENLABS_VOICE_ID). Runs when the phrase list changes, or manually from the Actions tab.
+name: Record voices
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["apps/mobile/assets/voice/phrases.json", "apps/mobile/scripts/gen-voice.mjs", ".github/workflows/voices.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: voices
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Record prompts
+        working-directory: apps/mobile
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+        run: node scripts/gen-voice.mjs
+      - name: Commit recordings
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add apps/mobile/assets/voice apps/mobile/src/nav/voiceClips.ts
+          if git diff --cached --quiet; then echo "::notice title=voices::nothing new to commit"; exit 0; fi
+          git commit -q -m "Record guidance voice prompts"
+          git push

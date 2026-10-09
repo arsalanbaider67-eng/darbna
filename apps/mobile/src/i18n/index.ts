@@ -60,7 +60,8 @@ export function instructionText(step: RouteStep, distanceM: number | null, ctx: 
   } else {
     action = mv[step.kind];
   }
-  if (step.streetName && step.kind !== "arrive" && step.kind !== "roundabout") {
+  // Spoken prompts skip street names (they stay on screen).
+  if (!spoken && step.streetName && step.kind !== "arrive" && step.kind !== "roundabout") {
     action = fmt(mv.onto, { action, street: step.streetName });
   }
   if (distanceM === null || step.kind === "arrive" && distanceM < 50) return action;
