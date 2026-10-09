@@ -81,6 +81,12 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
             : config?.sharedTraffic ? t.preview.noTrafficData : t.preview.noTraffic}
         </Txt>
       </Row>
+      {(route.startGapM ?? 0) > 150 && (
+        <Row gap={6} style={{ marginTop: 6 }}>
+          <Icon name="map-marker-distance" size={16} color={theme.warn} />
+          <Txt size={13} muted style={{ flex: 1 }}>{fmt(t.preview.startFromRoad, { d: fmtDistance(route.startGapM ?? 0, fmtCtx) })}</Txt>
+        </Row>
+      )}
       {route.avoidedClosureIds && route.avoidedClosureIds.length > 0 && (
         <Chip icon="shield-check" text={t.preview.officialAvoided} color={theme.ok} textColor="#fff" />
       )}

@@ -208,7 +208,9 @@ export const directApi = {
       const step = r.geometry.length > 4000 ? 3 : 1;
       const onRoute = nearby.filter((rep) => !avoided.includes(rep.id) && distanceToLine(rep.coord, r.geometry, step) < 60);
       onRoute.forEach((rep) => advisories.set(rep.id, rep));
-      return { ...r, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id), trafficSpans: tr.spans, trafficExtraS: tr.extraS };
+      // Started from a nearby main road because the user's street isn't connected in the map data.
+      const startGapM = r.geometry.length ? Math.round(haversine(origin, r.geometry[0])) : 0;
+      return { ...r, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id), trafficSpans: tr.spans, trafficExtraS: tr.extraS, startGapM };
     });
     // With traffic, an alternative may now be the fastest: list it first.
     routes.sort((a, b) => a.durationS - b.durationS);
@@ -281,7 +283,7 @@ async function valhallaRoute(body: Record<string, unknown>) {
  */
 async function routeWithSnapFallbacks(input: Parameters<typeof valhallaRouteBody>[0]) {
   let last: unknown;
-  for (const snap of ["default", "connected", "main"] as const) {
+  for (const snap of ["default", "connected", "main", "major"] as const) {
     try {
       return await valhallaRoute(valhallaRouteBody({ ...input, snap }));
     } catch (e) {

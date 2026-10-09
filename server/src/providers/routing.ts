@@ -46,7 +46,7 @@ export class ValhallaProvider implements RoutingProvider {
   /** Retries "no path" answers with stricter snapping (see ValhallaRouteInput.snap). */
   async route(r: RouteRequest): Promise<Route[]> {
     let last: unknown;
-    for (const snap of ["default", "connected", "main"] as const) {
+    for (const snap of ["default", "connected", "main", "major"] as const) {
       try {
         return await this.routeOnce(r, snap);
       } catch (e) {
@@ -57,7 +57,7 @@ export class ValhallaProvider implements RoutingProvider {
     throw last;
   }
 
-  private async routeOnce(r: RouteRequest, snap: "default" | "connected" | "main"): Promise<Route[]> {
+  private async routeOnce(r: RouteRequest, snap: "default" | "connected" | "main" | "major"): Promise<Route[]> {
     const body = valhallaRouteBody({ ...r, snap });
     const res = await fetchWithTimeout(`${this.baseUrl}/route`, {
       method: "POST",

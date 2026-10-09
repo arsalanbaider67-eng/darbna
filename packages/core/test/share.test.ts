@@ -64,5 +64,8 @@ describe("valhallaRouteBody snapping fallbacks", () => {
     expect(c.locations[1].minimum_reachability).toBe(100);
     const m: any = valhallaRouteBody({ ...base, snap: "main" });
     expect(m.locations[1].search_filter).toEqual({ min_road_class: "residential" });
+    const j: any = valhallaRouteBody({ ...base, snap: "major" });
+    expect(j.locations[0].search_filter).toEqual({ min_road_class: "tertiary" });
+    expect(j.locations[1].search_filter).toEqual({ min_road_class: "residential" });
   });
 });

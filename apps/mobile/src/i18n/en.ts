@@ -27,6 +27,7 @@ export const en: Strings = {
   },
   saved: { home: "Home", work: "Work", favorites: "Favorites", setHomeHint: "Set home", setWorkHint: "Set work", remove: "Remove" },
   preview: {
+    startFromRoad: "Your street isn't connected in the map data, so the route starts from the nearest main road ({d} away).",
     withTraffic: "Includes live traffic from Darbna drivers: +{t} for slowdowns", noTrafficData: "Estimated time — no Darbna drivers have reported traffic on this route",
     demo: "Demo", demoHint: "Simulated drive along this route — try the voice and turns without moving",
     title: "Routes", start: "Start", fastest: "Fastest", alt: "Alternative", via: "via {via}",

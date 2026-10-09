@@ -91,10 +91,12 @@ export interface ValhallaRouteInput {
    *  - "default": nearest road.
    *  - "connected": only roads that connect to a large part of the network (skips car parks,
    *    private lanes and other small islands that make Valhalla answer "no path").
-   *  - "main": like "connected", and ignore service roads entirely (last resort).
+   *  - "main": like "connected", and ignore service roads entirely.
+   *  - "major": start from the nearest tertiary-or-bigger road (last resort, for streets the map
+   *    data leaves disconnected from the network); the destination keeps "main" snapping.
    * The heading hint is dropped for the fallbacks (a wrong heading can also cause "no path").
    */
-  snap?: "default" | "connected" | "main";
+  snap?: "default" | "connected" | "main" | "major";
 }
 
 /** Request body for Valhalla's /route (used by the server and by the server-less web build). */
@@ -104,10 +106,11 @@ export function valhallaRouteBody(r: ValhallaRouteInput): Record<string, unknown
     snap === "default" ? {} :
     snap === "connected" ? { minimum_reachability: 100, radius: 0 } :
     { minimum_reachability: 100, search_filter: { min_road_class: "residential" } };
+  const originExtra = snap === "major" ? { minimum_reachability: 100, search_filter: { min_road_class: "tertiary" } } : extra;
   const heading = snap === "default" && r.originHeading !== undefined ? { heading: Math.round(r.originHeading), heading_tolerance: 45 } : {};
   const body: Record<string, unknown> = {
     locations: [
-      { lon: r.origin[0], lat: r.origin[1], ...heading, ...extra },
+      { lon: r.origin[0], lat: r.origin[1], ...heading, ...originExtra },
       { lon: r.destination[0], lat: r.destination[1], ...extra },
     ],
     costing: "auto",

@@ -33,6 +33,8 @@ export interface ApiRoute extends Route {
   /** Live traffic from Darbna drivers applied to this route (direct mode with shared data). */
   trafficSpans?: TrafficSpan[];
   trafficExtraS?: number;
+  /** Metres between the user and where the route starts (route begins on a nearby main road). */
+  startGapM?: number;
 }
 
 export interface RouteResult {
