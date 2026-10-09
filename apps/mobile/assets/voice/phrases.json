@@ -8,7 +8,7 @@
   },
   "en": {
    "provider": "elevenlabs",
-   "voice": "Aaden"
+   "voice": "Dan"
   }
  },
  "distancesM": [
@@ -214,5 +214,6 @@
    "rerouting": "Rerouting.",
    "arrive_soon": "Your destination is ahead."
   }
- }
+ },
+ "_recorded": "Recorded on the ElevenLabs website (free plan, test use only): Arabic = Sufyan, English = Dan. Re-record on a paid plan before a public release."
 }
