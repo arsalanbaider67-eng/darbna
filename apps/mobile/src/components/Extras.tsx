@@ -259,12 +259,14 @@ export function AheadChip({ report, distanceM }: { report: PublicReport; distanc
   const { theme, t, fmtCtx } = useUi();
   const st = REPORT_STYLE[report.category as ReportCategory];
   return (
-    <Row style={[s.ahead, { backgroundColor: "rgba(18,18,18,0.94)", borderColor: theme.warn }]} accessibilityLiveRegion="polite">
+    <View accessibilityLiveRegion="polite" style={{ alignSelf: "flex-start" }}>
+    <Row style={[s.ahead, { backgroundColor: "rgba(18,18,18,0.94)", borderColor: theme.warn }]}>
       <View style={[s.aheadIcon, { backgroundColor: st.color }]}><Icon name={st.icon as IconName} color="#fff" size={18} /></View>
       <Txt size={16} weight="semibold" style={{ color: theme.warn }}>
         {fmt(t.x.warn.ahead, { what: t.reports.categories[report.category], d: fmtDistance(distanceM, fmtCtx) })}
       </Txt>
     </Row>
+    </View>
   );
 }
 
