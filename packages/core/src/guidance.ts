@@ -81,6 +81,9 @@ export class GuidanceEngine {
   private segIndex = 0;
   private offCount = 0;
   private offSince: number | null = null;
+  /** Missed-turn fast path: good GPS, moving, and getting further from the route fix after fix. */
+  private awayCount = 0;
+  private prevOff = 0;
   private wrongWaySince: number | null = null;
   private lastRerouteAt = -Infinity;
   private rerouteFiredThisEpisode = false;
@@ -216,6 +219,11 @@ export class GuidanceEngine {
         this.offCount = 0;
         this.offSince = null;
       }
+      // Missed a turn: with a precise fix you're clearly leaving the route, so don't wait for
+      // the slower rule above (at 100 km/h that would be 150+ m down the wrong road).
+      if (fix.accuracyM <= 15 && speed > 4 && offDist > 25 && offDist > this.prevOff + 1) this.awayCount++;
+      else if (offDist <= 25) this.awayCount = 0;
+      this.prevOff = offDist;
       const g = this.route.geometry;
       if (heading !== null && speed > 5 && offDist < 40 && haversine(g[best.i], g[best.i + 1]) > 5) {
         const wrong = angleDiff(bearing(g[best.i], g[best.i + 1]), heading) > 150;
@@ -224,6 +232,7 @@ export class GuidanceEngine {
         this.wrongWaySince = null;
       }
       const offRoute =
+        this.awayCount >= 2 ||
         (this.offCount >= this.opt.offRouteConsecutive && this.offSince !== null && now - this.offSince >= this.opt.offRouteMinMs) ||
         (this.wrongWaySince !== null && now - this.wrongWaySince >= this.opt.wrongWayMs);
       if (offRoute) status = "off_route";

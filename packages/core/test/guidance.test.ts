@@ -151,3 +151,19 @@ describe("simulated drives with noisy GPS", () => {
     expect(r.reroutes).toBe(0);
   });
 });
+
+describe("missed turn at highway speed", () => {
+  it("reroutes within ~2 fixes of leaving the route", () => {
+    const r = lRoute();
+    const g = new GuidanceEngine(r);
+    const corner = r.geometry[12];
+    g.update(fix(destinationPoint(r.geometry[0], 0, 1100), 0, { heading: 0, speed: 28 }));
+    let firedAt: number | null = null;
+    for (let i = 1; i <= 8 && firedAt === null; i++) {
+      const s = g.update(fix(destinationPoint(corner, 0, i * 28), i * 1000, { heading: 0, speed: 28 }));
+      if (s.shouldReroute) firedAt = i * 28;
+    }
+    expect(firedAt).not.toBeNull();
+    expect(firedAt!).toBeLessThanOrEqual(90);
+  });
+});

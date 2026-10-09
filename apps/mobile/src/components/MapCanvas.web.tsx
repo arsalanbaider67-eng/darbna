@@ -5,7 +5,7 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bearing, darkenStyle, FixFilter, satelliteStyle, haversine, lightenStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { bearing, darkenStyle, FixFilter, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -31,6 +31,8 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** On a trip: the arrow rides the route line and the part already driven turns grey. */
+  traveled?: boolean;
 }
 
 let attribCss = false;
@@ -49,6 +51,12 @@ function ensureAttributionCss() {
 }
 
 const BAGHDAD: LngLat = [44.3661, 33.3152];
+const DRIVEN_COLOR = "#7D8794";
+
+interface Pose { c: LngLat; h: number | null; prog: number | null }
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+/** Turn from a to b the short way round. */
+const lerpAngle = (a: number, b: number, k: number) => (a + ((((b - a) % 360) + 540) % 360 - 180) * k + 360) % 360;
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 // Arabic/Kurdish label shaping in the browser needs MapLibre's RTL text plugin (loaded once, lazily).
@@ -184,30 +192,100 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     return { h: compassHeading() ?? prev?.heading ?? null, moving: false };
   };
 
-  /** Moves your arrow (or dot) and, when following, the camera. */
-  const moveMe = (m: MLMap, raw: LngLat, gpsHeading: number | null, speed: number | null, duration = 800, accuracyM = 10) => {
+  // ---- smooth movement ----
+  // GPS gives a position about once a second (28 m apart at 100 km/h). Instead of jumping, the
+  // arrow, the camera and the grey "already driven" line glide from the last position to the new
+  // one over the time between fixes, so they move continuously like Waze.
+  const shown = useRef<Pose | null>(null);
+  const anim = useRef<{ from: Pose; to: Pose; t0: number; dur: number; lastFix: number; raf: number | null }>({
+    from: { c: [0, 0], h: null, prog: null }, to: { c: [0, 0], h: null, prog: null }, t0: 0, dur: 0, lastFix: 0, raf: null,
+  });
+  const cam = useRef<{ zoom: number; pitch: number; pad: number } | null>(null);
+  const userCam = useRef(false); // you dragged/zoomed the map: stop steering the camera
+  const route = useRef<{ line: LngLat[]; table: number[]; seg: number } | null>(null);
+
+  const routeLine = () => {
+    const L = latest.current;
+    const line = L.traveled ? L.routes[L.selectedRouteIdx]?.geometry : undefined;
+    if (!line || line.length < 2) return (route.current = null);
+    if (route.current?.line !== line) route.current = { line, table: lineProgressTable(line), seg: 0 };
+    return route.current;
+  };
+
+  const setDriven = (m: MLMap, prog: number | null) => {
+    if (!m.getLayer("route-main")) return;
+    const blue = themeRef.current.route;
+    m.setPaintProperty("route-main", "line-gradient", prog == null || !latest.current.traveled
+      ? null as any
+      : ["step", ["line-progress"], DRIVEN_COLOR, Math.min(1, Math.max(1e-6, prog)), blue]);
+  };
+
+  /** Draws one frame: arrow, grey line, and (when following) the camera. Returns true when the camera has settled. */
+  const draw = (m: MLMap, pose: Pose): boolean => {
+    (m.getSource("me") as GeoJSONSource | undefined)?.setData(meFC(pose.c, pose.h));
+    setDriven(m, pose.prog);
+    const f = latest.current.follow;
+    if (f === "none" || userCam.current) return true;
+    const nav = f === "navigation";
+    const target = { zoom: nav ? 16.5 : 15, pitch: nav ? 50 : 0, pad: nav ? Math.round(m.getContainer().clientHeight * 0.32) : 0 };
+    const c = cam.current ?? { zoom: m.getZoom(), pitch: m.getPitch(), pad: 0 };
+    c.zoom = lerp(c.zoom, target.zoom, 0.12); c.pitch = lerp(c.pitch, target.pitch, 0.12); c.pad = lerp(c.pad, target.pad, 0.12);
+    cam.current = c;
+    // Course-up while driving; keep the map still when stopped so it doesn't spin.
+    const moving = me.current?.moving ?? false;
+    const brg = nav && moving && pose.h != null ? pose.h : m.getBearing();
+    m.jumpTo({ center: pose.c, zoom: c.zoom, pitch: c.pitch, bearing: brg, padding: { top: c.pad, bottom: 0, left: 0, right: 0 } } as any);
+    return Math.abs(c.zoom - target.zoom) < 0.01 && Math.abs(c.pitch - target.pitch) < 0.3 && Math.abs(c.pad - target.pad) < 1;
+  };
+
+  const loop = () => {
+    const m = map.current, a = anim.current;
+    a.raf = null;
+    if (!m) return;
+    const k = a.dur > 0 ? Math.min(1, (performance.now() - a.t0) / a.dur) : 1;
+    const pose: Pose = {
+      c: [lerp(a.from.c[0], a.to.c[0], k), lerp(a.from.c[1], a.to.c[1], k)],
+      h: a.to.h == null ? null : a.from.h == null ? a.to.h : lerpAngle(a.from.h, a.to.h, k),
+      prog: a.to.prog == null ? null : a.from.prog == null ? a.to.prog : lerp(a.from.prog, a.to.prog, k),
+    };
+    shown.current = pose;
+    const settled = draw(m, pose);
+    if (k < 1 || !settled) a.raf = requestAnimationFrame(loop);
+  };
+  const kick = () => { if (anim.current.raf == null) anim.current.raf = requestAnimationFrame(loop); };
+
+  /** A new position: works out where to draw the arrow, then glides there. */
+  const moveMe = (m: MLMap, raw: LngLat, gpsHeading: number | null, speed: number | null, accuracyM = 10) => {
     const pk = pickHeading(raw, gpsHeading, speed);
     const moving = pk.moving;
     let h = pk.h;
     let coord = raw;
-    // Navigating: put the arrow on the road you're driving (the route line), like Waze.
-    const L = latest.current;
-    const line = L.follow === "navigation" ? L.routes[L.selectedRouteIdx]?.geometry : undefined;
-    if (line && line.length > 1) {
-      const s = snapToLine(raw, line, Math.min(35, Math.max(15, accuracyM)));
-      if (s) {
-        coord = s.point;
-        if (moving && h != null && Math.abs(((h - s.bearing + 540) % 360) - 180) < 60) h = s.bearing;
-      }
+    let prog: number | null = null;
+    // On a trip: put the arrow on the road you're driving (the route line), like Waze.
+    const rl = routeLine();
+    if (rl) {
+      const sn = snapToLine(raw, rl.line, Math.min(35, Math.max(15, accuracyM)), rl.seg);
+      if (sn) {
+        coord = sn.point;
+        rl.seg = sn.index;
+        if (moving && h != null && Math.abs(((h - sn.bearing + 540) % 360) - 180) < 60) h = sn.bearing;
+        prog = lineProgress(rl.table, rl.line, sn.index, sn.point);
+        // GPS wobble mustn't make the grey line creep backwards.
+        const before = shown.current?.prog;
+        if (before != null && prog < before && before - prog < 0.02) prog = before;
+      } else prog = shown.current?.prog ?? null; // off the route for now: keep what's driven
     }
     me.current = { coord, raw, heading: h, at: Date.now(), moving };
-    (m.getSource("me") as GeoJSONSource | undefined)?.setData(meFC(coord, h));
-    const f = latest.current.follow;
-    if (f !== "none") {
-      // Course-up while driving; keep the map still when stopped so it doesn't spin.
-      const brg = f === "navigation" && moving && h != null ? h : m.getBearing();
-      m.easeTo({ center: coord, zoom: f === "navigation" ? 16.5 : 15, bearing: brg, pitch: f === "navigation" ? 50 : 0, duration });
-    }
+    const a = anim.current, now = performance.now();
+    const to: Pose = { c: coord, h, prog };
+    const first = !shown.current || haversine(shown.current.c, coord) > 500; // first fix or a big gap: jump
+    a.from = first ? to : shown.current!;
+    a.to = to;
+    a.t0 = now;
+    // Glide over the time the next fix is expected to take, so the arrow never stops between fixes.
+    a.dur = first || !a.lastFix ? 0 : Math.min(1500, Math.max(250, now - a.lastFix));
+    a.lastFix = now;
+    kick();
   };
 
   /** (Re)adds Darbna's own sources and layers; needed after every style load. */
@@ -215,7 +293,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const m = map.current;
     if (!m || m.getSource("routes")) return;
     const t = themeRef.current;
-    m.addSource("routes", { type: "geojson", data: routesFC(latest.current.routes, latest.current.selectedRouteIdx) });
+    m.addSource("routes", { type: "geojson", lineMetrics: true, data: routesFC(latest.current.routes, latest.current.selectedRouteIdx) });
     m.addLayer({ id: "route-alt", type: "line", source: "routes", filter: ["==", ["get", "selected"], 0], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeAlt, "line-width": 7 } });
     m.addLayer({ id: "route-casing", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.routeCasing, "line-width": 11 } });
     m.addLayer({ id: "route-main", type: "line", source: "routes", filter: ["==", ["get", "selected"], 1], layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": t.route, "line-width": 7 } });
@@ -249,6 +327,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
         "icon-allow-overlap": true, "icon-ignore-placement": true,
       },
     });
+    setDriven(m, shown.current?.prog ?? null);
   };
 
   // ---------------------------------------------------------------- create the map once
@@ -290,10 +369,24 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     }, 400);
     m.once("remove", () => clearInterval(compassTimer));
 
+    // The camera follows you every frame while driving; tell the screen about it at most once a second.
+    let lastAuto = 0;
     m.on("moveend", (e: any) => {
+      const byUser = !!e.originalEvent;
+      if (!byUser && Date.now() - lastAuto < 1000) return;
+      if (!byUser) lastAuto = Date.now();
       const b = m.getBounds();
-      handlers.current.onRegionChange([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], m.getZoom(), !!e.originalEvent);
+      handlers.current.onRegionChange([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], m.getZoom(), byUser);
     });
+    // You moved the map yourself: stop steering the camera until you tap recenter.
+    const grabbed = (e: any) => {
+      if (!e.originalEvent || latest.current.follow === "none") return;
+      userCam.current = true;
+      const b = m.getBounds();
+      handlers.current.onRegionChange([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], m.getZoom(), true);
+    };
+    m.on("dragstart", grabbed);
+    m.on("zoomstart", grabbed);
     m.on("click", "report-dot", (e: any) => {
       const id = e.features?.[0]?.properties?.id;
       if (typeof id === "string") handlers.current.onReportPress(id);
@@ -335,7 +428,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
           const coord: LngLat = [pos.coords.longitude, pos.coords.latitude];
           const acc = pos.coords.accuracy ?? 50;
           if (!filter.accept({ coord, accuracyM: acc, at: Date.now() })) return;
-          moveMe(m, coord, pos.coords.heading, pos.coords.speed, 800, acc);
+          moveMe(m, coord, pos.coords.heading, pos.coords.speed, acc);
         },
         () => {},
         { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
@@ -344,6 +437,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
     return () => {
       cancel();
+      if (anim.current.raf != null) cancelAnimationFrame(anim.current.raf);
       if (watch !== null) navigator.geolocation.clearWatch(watch);
       m.remove();
       map.current = null;
@@ -363,7 +457,12 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   useEffect(() => {
     (map.current?.getSource("routes") as GeoJSONSource | undefined)?.setData(routesFC(p.routes, p.selectedRouteIdx));
     (map.current?.getSource("traffic") as GeoJSONSource | undefined)?.setData(trafficFC(p.routes, p.selectedRouteIdx));
-  }, [p.routes, p.selectedRouteIdx]);
+    // New route (e.g. after a reroute): it starts where you are, so nothing on it is driven yet.
+    if (shown.current) shown.current = { ...shown.current, prog: null };
+    anim.current.from = { ...anim.current.from, prog: null };
+    anim.current.to = { ...anim.current.to, prog: null };
+    if (map.current) setDriven(map.current, null);
+  }, [p.routes, p.selectedRouteIdx, p.traveled]);
 
   useEffect(() => {
     (map.current?.getSource("jams") as GeoJSONSource | undefined)?.setData(jamsFC(p.jams ?? []));
@@ -379,21 +478,23 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
   useEffect(() => {
     const m = map.current;
-    if (m && p.simFix) moveMe(m, p.simFix.coord, p.simFix.headingDeg, p.simFix.speedMps, 950);
+    if (m && p.simFix) moveMe(m, p.simFix.coord, p.simFix.headingDeg ?? null, p.simFix.speedMps ?? null, 5);
   }, [p.simFix]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    if (p.follow === "none") m.easeTo({ pitch: 0, bearing: 0, duration: 500 });
-    else if (me.current) m.easeTo({ center: me.current.coord, zoom: p.follow === "navigation" ? 16.5 : 15, pitch: p.follow === "navigation" ? 45 : 0, duration: 600 });
-  }, [p.follow]);
+    userCam.current = false;
+    cam.current = null; // the camera glides from wherever it is now
+    if (p.follow === "none") m.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 500 } as any);
+    else if (shown.current) kick();
+  }, [p.follow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={el} style={{ position: "absolute", inset: 0 }} />;
 }
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
   a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
-  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams;
+  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.traveled === b.traveled;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

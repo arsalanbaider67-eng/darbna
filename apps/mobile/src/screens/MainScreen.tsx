@@ -339,6 +339,7 @@ export function MainScreen() {
         onRoutePress={onMapRoutePress}
         simFix={mode === "navigating" && demo ? demoFix : null}
         jams={mode === "browse" || mode === "place" ? jams : NO_JAMS}
+        traveled={mode === "navigating"}
       />
 
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}

@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import {
   Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import { lightenStyle, satelliteStyle, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
@@ -33,10 +33,13 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** On a trip: the part of the route already driven turns grey. */
+  traveled?: boolean;
 }
 
 const TRAFFIC_COLOR = ["match", ["get", "level"], "heavy", "#E5383B", "#F2994A"];
 const BAGHDAD: LngLat = [44.3661, 33.3152];
+const DRIVEN_COLOR = "#7D8794";
 
 // Category → colour as a GPU-side expression, so markers cost nothing per frame.
 const REPORT_COLOR: any = [
@@ -68,6 +71,24 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
     fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(satelliteStyle(lightenStyle(st))); }).catch(() => live && setMapStyle(url));
     return () => { live = false; };
   }, [p.styleUrl]);
+
+  // Grey "already driven" part of the route, from the phone's own position updates.
+  const [driven, setDriven] = useState<number | null>(null);
+  const progRoute = useRef<{ line: LngLat[]; table: number[]; seg: number } | null>(null);
+  const selLine = p.routes[p.selectedRouteIdx]?.geometry;
+  useEffect(() => { progRoute.current = null; setDriven(null); }, [selLine, p.traveled]);
+  const onUserUpdate = useCallback((loc: any) => {
+    if (!p.traveled || !selLine || selLine.length < 2) return;
+    const c = loc?.coords;
+    if (!c) return;
+    if (progRoute.current?.line !== selLine) progRoute.current = { line: selLine, table: lineProgressTable(selLine), seg: 0 };
+    const r = progRoute.current;
+    const sn = snapToLine([c.longitude, c.latitude], r.line, Math.min(35, Math.max(15, c.accuracy ?? 15)), r.seg);
+    if (!sn) return;
+    r.seg = sn.index;
+    const prog = lineProgress(r.table, r.line, sn.index, sn.point);
+    setDriven((d) => (d != null && prog < d && d - prog < 0.02 ? d : prog));
+  }, [p.traveled, selLine]);
   const handlers = useRef(p);
   handlers.current = p;
 
@@ -211,13 +232,16 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
         />
 
         {p.routes.length > 0 && (
-          <ShapeSource id="routes" shape={routeShape} onPress={onRoutePress} hitbox={{ width: 24, height: 24 }}>
+          <ShapeSource id="routes" shape={routeShape} lineMetrics onPress={onRoutePress} hitbox={{ width: 24, height: 24 }}>
             <LineLayer id="route-alt" filter={["==", ["get", "selected"], 0]}
               style={{ lineColor: theme.routeAlt, lineWidth: 7, lineCap: "round", lineJoin: "round" }} />
             <LineLayer id="route-casing" filter={["==", ["get", "selected"], 1]}
               style={{ lineColor: theme.routeCasing, lineWidth: 11, lineCap: "round", lineJoin: "round" }} />
             <LineLayer id="route-main" filter={["==", ["get", "selected"], 1]}
-              style={{ lineColor: theme.route, lineWidth: 7, lineCap: "round", lineJoin: "round" }} />
+              style={{
+                lineColor: theme.route, lineWidth: 7, lineCap: "round", lineJoin: "round",
+                ...(p.traveled && driven != null ? { lineGradient: ["step", ["line-progress"], DRIVEN_COLOR, Math.min(1, Math.max(1e-6, driven)), theme.route] as any } : {}),
+              }} />
           </ShapeSource>
         )}
 
@@ -272,6 +296,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           androidRenderMode={navigating ? "gps" : "compass"}
           showsUserHeadingIndicator
           minDisplacement={navigating ? 0 : 5}
+          onUpdate={onUserUpdate}
         />}
       </MapView>
     </View>
@@ -286,6 +311,7 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.destination === b.destination &&
   a.reports === b.reports &&
   a.simFix === b.simFix &&
-  a.jams === b.jams;
+  a.jams === b.jams &&
+  a.traveled === b.traveled;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasInner), sameExceptCallbacks);

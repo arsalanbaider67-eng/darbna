@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { FixFilter, snapToLine } from "../src/precise";
+import { FixFilter, lineProgress, lineProgressTable, snapToLine } from "../src/precise";
 
 describe("FixFilter", () => {
   test("drops a rough fix between good ones", () => {
@@ -31,5 +31,21 @@ describe("snapToLine", () => {
   });
   test("leaves a far point alone", () => {
     expect(snapToLine([44.005, 36.301], line, 20)).toBeNull();
+  });
+});
+
+
+describe("line progress", () => {
+  test("half way along a straight line is 0.5", () => {
+    const line: [number, number][] = [[44.0, 36.3], [44.01, 36.3], [44.02, 36.3]];
+    const t = lineProgressTable(line);
+    expect(lineProgress(t, line, 1, [44.01, 36.3])).toBeCloseTo(0.5, 5);
+    expect(lineProgress(t, line, 1, [44.015, 36.3])).toBeCloseTo(0.75, 5);
+  });
+  test("prefers the part of a looping route you're on", () => {
+    // Out along y=36.3 and back 30 m north of it.
+    const line: [number, number][] = [[44.0, 36.3], [44.01, 36.3], [44.01, 36.3003], [44.0, 36.3003]];
+    const s = snapToLine([44.005, 36.30014], line, 30, 2)!;
+    expect(s.index).toBe(2);
   });
 });
