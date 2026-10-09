@@ -218,6 +218,8 @@ export const directApi = {
     });
     // With traffic, an alternative may now be the fastest: list it first.
     routes.sort((a, b) => a.durationS - b.durationS);
+    // Avoided reports are included too, so the app can say what was avoided.
+    for (const r of toAvoid) if (!avoidFailed) advisories.set(r.id, r);
     return {
       routes, reports: [...advisories.values()],
       avoidance: { requested: avoided.length > 0 || avoidFailed, honoured: !avoidFailed, providerSupportsIt: true },

@@ -20,6 +20,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
   const walking = travel === "walk";
   const settings = useStore((s) => s.settings);
   const stops = useStore((s) => s.stops);
+  const allReports = useStore((s) => s.reports);
 
   // Stops on the way and (by car) what to stay off. Shown in every state so they can be changed.
   const extras = (
@@ -106,6 +107,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
 
   const route = result.routes[selectedIdx];
   const reports = result.reports.filter((r) => route.reportIdsOnRoute.includes(r.id));
+  const avoidedCats = (route.avoidedClosureIds ?? []).map((id) => allReports[id]?.category);
   const now = Date.now();
 
   return (
@@ -145,8 +147,11 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
           <Txt size={13} muted style={{ flex: 1 }}>{fmt(t.preview.startFromRoad, { d: fmtDistance(route.startGapM ?? 0, fmtCtx) })}</Txt>
         </Row>
       )}
-      {route.avoidedClosureIds && route.avoidedClosureIds.length > 0 && (
+      {avoidedCats.some((c) => c === "closure" || c === "flooding") && (
         <Chip icon="shield-check" text={t.preview.officialAvoided} color={theme.ok} textColor="#fff" />
+      )}
+      {avoidedCats.some((c) => c === "checkpoint" || c === "checkpoint_slow") && (
+        <Chip icon="shield-car" text={t.x.avoid.checkpoints} color={theme.primary} textColor={theme.onPrimary} />
       )}
       {result.avoidance.requested && !result.avoidance.honoured && <Txt size={13} style={{ color: theme.warn }}>{t.preview.avoidFailed}</Txt>}
 

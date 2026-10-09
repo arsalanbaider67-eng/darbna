@@ -101,3 +101,20 @@ budget, weekly OSM refresh pipeline, backups, monitoring/alerting, on-call for m
 a privacy policy reviewed against Iraqi and KRG requirements, trademark check on the name.
 
 **Native review** of all Arabic (Iraqi) and Sorani strings — see `docs/LOCALIZATION.md`.
+
+## October 2026 additions
+- **Look:** black & gold theme for the whole app and map (`goldStyle` in core/style.ts, `gold` theme), gold app icon.
+- **Driving:** stops on the way (Valhalla `break` locations), avoid highways / dirt roads / reported checkpoints,
+  lane hints for exits and forks (a "keep right/left" hint, not real lane data), speed limit sign from OSM
+  `maxspeed` via Valhalla `/trace_attributes` (only where mapped), chime + chip for checkpoints, cameras,
+  crashes and closures ahead (`reportsAhead`), missed-turn reroute within ~2 fixes.
+- **Walking routes** (Valhalla pedestrian).
+- **Family & safety:** live "share my trip" link (`?watch=<id>`, Supabase `darbna_share_*`, expires 30 min after the
+  last update), SOS sheet (104 police, 122 ambulance, 115 fire, send my location), parked-car spot saved at the end
+  of a car trip.
+- **Places:** quick nearby search (Overpass: fuel, mosque, hospital, pharmacy, food, ATM), fuel station status
+  reports, "map problem here?" → anonymous OpenStreetMap note.
+- **Community:** new report kinds (checkpoint, checkpoint – long wait, speed camera, fuel queue, fuel closed),
+  points & levels, "thanks" on reports (Supabase `darbna_thank`, `darbna_me`).
+- **Not done yet:** Kurdish (Sorani) voice — needs a recording session; there is no good Sorani text-to-speech voice.
+- Supabase: run `supabase/schema.sql` again after updating (safe to re-run).
