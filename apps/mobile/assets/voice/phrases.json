@@ -5,7 +5,8 @@
    "provider": "elevenlabs",
    "voice": "Sufyan",
    "voiceId": "9FHjCdVXgA4tYxIYHTcZ",
-   "model": "eleven_v3"
+   "model": "eleven_v3",
+   "pick": "generation 2"
   },
   "en": {
    "provider": "elevenlabs",
@@ -216,5 +217,5 @@
    "arrive_soon": "Your destination is ahead."
   }
  },
- "_recorded": "Recorded on the ElevenLabs website (free plan, test use only): Arabic = Sufyan, English = Dan. Re-record on a paid plan before a public release."
+ "_recorded": "Recorded on the ElevenLabs website (paid plan). Arabic: Sufyan, Eleven v3, stability Natural, language Arabic, Generation 2 of each line. English: Dan (Multilingual v2)."
 }
