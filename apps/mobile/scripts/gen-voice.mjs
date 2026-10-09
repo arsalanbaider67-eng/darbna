@@ -49,7 +49,10 @@ async function findElevenVoice(name, wantedId) {
   const h = { "xi-api-key": key };
   const lc = name.toLowerCase();
   // 1) Already in the account's voices (same id, or added under its name)?
-  const mine = await (await fetch("https://api.elevenlabs.io/v1/voices", { headers: h })).json();
+  const mineRes = await fetch("https://api.elevenlabs.io/v1/voices", { headers: h });
+  const mine = await mineRes.json().catch(() => ({}));
+  if (!mineRes.ok) note("elevenlabs", `can't list your voices (${mineRes.status}): ${JSON.stringify(mine).slice(0, 160)}`);
+  else note("elevenlabs", `your voices: ${(mine.voices ?? []).filter((v) => v.category !== "premade").map((v) => `${v.name} [${v.voice_id}]`).join(", ").slice(0, 400)}`);
   const own = (mine.voices ?? []).find((v) => v.voice_id === wantedId || v.name?.toLowerCase().startsWith(lc));
   if (own) return own.voice_id;
   // 2) Find it in the public Voice Library and add it to the account.
