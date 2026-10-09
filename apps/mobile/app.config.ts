@@ -64,6 +64,8 @@ const config: ExpoConfig = {
     ["expo-location", { locationWhenInUsePermission: LOCATION_WHY_EN }],
     ["expo-localization", { supportsRTL: true }],
     "expo-font",
+    // Recorded guidance prompts. No microphone use.
+    ["expo-audio", { microphonePermission: false }],
     // Plain http only for test builds (dev server on your LAN); store builds are https-only.
     ["expo-build-properties", { android: { usesCleartextTraffic: TEST_BUILD }, ios: { deploymentTarget: "15.1" } }],
     "./plugins/withReleaseSigning",
