@@ -55,7 +55,8 @@ jobs:
 
       - name: Align versions with Expo SDK
         working-directory: apps/mobile
-        run: npx expo install --fix
+        run: |
+          npx expo install --fix > fix.log 2>&1 || { echo "::error title=expo install --fix::$(tail -c 1500 fix.log | tr '\n' ' ')"; exit 1; }
 
       - name: Export web build
         working-directory: apps/mobile
