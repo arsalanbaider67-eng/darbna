@@ -23,4 +23,6 @@ jobs:
           pip install -q faster-whisper==1.0.3
       - name: Transcribe and compare
         working-directory: apps/mobile
-        run: python ../../scripts/check_voice_clips.py
+        run: |
+          python ../../scripts/check_voice_clips.py > out.log 2>&1 || { echo "::error title=voice check crashed::$(tail -c 1500 out.log | tr '\n' ' ')"; exit 1; }
+          grep "::" out.log
