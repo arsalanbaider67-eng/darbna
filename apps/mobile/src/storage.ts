@@ -1,3 +1,4 @@
+import type { Travel } from "@darbna/core";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import type { LngLat, ReportCategory } from "@darbna/core";
@@ -45,6 +46,8 @@ export interface Settings {
   shareTraffic: boolean;
   /** Satellite photos under the roads and names. */
   satellite?: boolean;
+  /** Last chosen way to travel (route screen). */
+  travel?: Travel;
 }
 export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: true };
 export const loadSettings = () => getJSON<Settings | null>(K.settings, null);

@@ -227,7 +227,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const f = latest.current.follow;
     if (f === "none" || userCam.current) return true;
     const nav = f === "navigation";
-    const target = { zoom: nav ? 16.5 : 15, pitch: nav ? 50 : 0, pad: nav ? Math.round(m.getContainer().clientHeight * 0.32) : 0 };
+    const walk = latest.current.routes[latest.current.selectedRouteIdx]?.travel === "walk";
+    const target = { zoom: nav ? (walk ? 17.5 : 16.5) : 15, pitch: nav ? (walk ? 35 : 50) : 0, pad: nav ? Math.round(m.getContainer().clientHeight * 0.32) : 0 };
     const c = cam.current ?? { zoom: m.getZoom(), pitch: m.getPitch(), pad: 0 };
     c.zoom = lerp(c.zoom, target.zoom, 0.12); c.pitch = lerp(c.pitch, target.pitch, 0.12); c.pad = lerp(c.pad, target.pad, 0.12);
     cam.current = c;

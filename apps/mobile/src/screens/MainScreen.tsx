@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Linking, StyleSheet, View } from "react
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { haversine, parseSharedLocation, type LngLat, type TrafficCell } from "@darbna/core";
+import { haversine, parseSharedLocation, type LngLat, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -104,7 +104,7 @@ export function MainScreen() {
 
   const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
   // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
-  useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && shareTraffic !== false && !!config?.sharedTraffic);
+  useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
 
   // ---------------------------------------------------------------- server config (style URLs, capability flags)
   const loadConfig = useCallback(async () => {
@@ -225,7 +225,7 @@ export function MainScreen() {
     setState({ mode: "preview", preview: { loading: true, error: null, result: null, selectedIdx: 0, avoidReportIds: avoidIds } });
     try {
       if (online === false) throw new ApiError("offline");
-      const res = await api.route(fix.coord, dest.coord, { avoidReportIds: avoidIds });
+      const res = await api.route(fix.coord, dest.coord, { avoidReportIds: avoidIds, travel: getState().settings.travel ?? "car" });
       mergeReports(res.reports);
       setState({ preview: { loading: false, error: null, result: res, selectedIdx: 0, avoidReportIds: avoidIds } });
       const pts = res.routes.flatMap((r) => [r.geometry[0], r.geometry[Math.floor(r.geometry.length / 2)], r.geometry[r.geometry.length - 1]]);
@@ -234,6 +234,13 @@ export function MainScreen() {
       const code = e instanceof ApiError ? (e.isNetwork ? "offline" : e.code) : "generic";
       setState({ preview: { loading: false, error: code, result: null, selectedIdx: 0, avoidReportIds: avoidIds } });
     }
+  }
+
+  function setTravel(travel: Travel) {
+    const next = { ...getState().settings, travel };
+    setState({ settings: next });
+    void saveSettings(next);
+    void requestRoutes([]);
   }
 
   function toggleAvoid(id: string) {
@@ -380,6 +387,7 @@ export function MainScreen() {
               onBack={() => setState({ mode: "place" })}
               onRetry={() => requestRoutes()}
               onToggleAvoid={toggleAvoid}
+              onTravel={setTravel}
             />
       )}
 

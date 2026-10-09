@@ -30,7 +30,7 @@ export const en: Strings = {
     startFromRoad: "Your street isn't connected in the map data, so the route starts from the nearest main road ({d} away).",
     withTraffic: "Includes live traffic from Darbna drivers: +{t} for slowdowns", noTrafficData: "Estimated time — no Darbna drivers have reported traffic on this route",
     demo: "Demo", demoHint: "Simulated drive along this route — try the voice and turns without moving",
-    title: "Routes", start: "Start", fastest: "Fastest", alt: "Alternative", via: "via {via}",
+    title: "Routes", start: "Start", fastest: "Fastest", car: "Car", walk: "Walk", walkNote: "Walking time at an easy pace, using footpaths and crossings", alt: "Alternative", via: "via {via}",
     noTraffic: "Estimated time — no live traffic data",
     reportsOnRoute: "{n} reports on the way", avoid: "Avoid", avoided: "Will avoid",
     officialAvoided: "Avoiding an official closure",

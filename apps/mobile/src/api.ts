@@ -1,4 +1,4 @@
-import type { LngLat, ReportCategory, SpeedSample, TrafficCell } from "@darbna/core";
+import type { LngLat, ReportCategory, SpeedSample, TrafficCell, Travel } from "@darbna/core";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteResult, ServerConfig } from "./types";
 import { ApiError } from "./apiError";
@@ -46,10 +46,10 @@ const serverApi = {
   reverse: (at: LngLat, lang: string) =>
     request<{ result: Place | null }>(`/v1/reverse?at=${at[0].toFixed(6)},${at[1].toFixed(6)}&lang=${lang}`, { timeoutMs: 6000 }),
 
-  route: (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[] } = {}) =>
+  route: (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[]; travel?: Travel } = {}) =>
     request<RouteResult>("/v1/route", {
       method: "POST",
-      body: { origin, destination, heading: opts.heading, alternatives: opts.alternatives ?? true, avoidReportIds: opts.avoidReportIds ?? [] },
+      body: { origin, destination, heading: opts.heading, alternatives: opts.alternatives ?? true, avoidReportIds: opts.avoidReportIds ?? [], travel: opts.travel ?? "car" },
       timeoutMs: 15_000,
     }),
 

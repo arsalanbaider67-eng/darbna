@@ -97,23 +97,27 @@ export interface ValhallaRouteInput {
    * The heading hint is dropped for the fallbacks (a wrong heading can also cause "no path").
    */
   snap?: "default" | "connected" | "main" | "major";
+  /** "walk": footpaths, pedestrian streets, crossings, both directions of one-way streets. */
+  travel?: "car" | "walk";
 }
 
 /** Request body for Valhalla's /route (used by the server and by the server-less web build). */
 export function valhallaRouteBody(r: ValhallaRouteInput): Record<string, unknown> {
-  const snap = r.snap ?? "default";
+  const walk = r.travel === "walk";
+  // Walking may start on a footpath, so the road-class filters only apply to cars.
+  const snap = walk && (r.snap === "main" || r.snap === "major") ? "connected" : r.snap ?? "default";
   const extra: Record<string, unknown> =
     snap === "default" ? {} :
     snap === "connected" ? { minimum_reachability: 100, radius: 0 } :
     { minimum_reachability: 100, search_filter: { min_road_class: "residential" } };
   const originExtra = snap === "major" ? { minimum_reachability: 100, search_filter: { min_road_class: "tertiary" } } : extra;
-  const heading = snap === "default" && r.originHeading !== undefined ? { heading: Math.round(r.originHeading), heading_tolerance: 45 } : {};
+  const heading = !walk && snap === "default" && r.originHeading !== undefined ? { heading: Math.round(r.originHeading), heading_tolerance: 45 } : {};
   const body: Record<string, unknown> = {
     locations: [
       { lon: r.origin[0], lat: r.origin[1], ...heading, ...originExtra },
       { lon: r.destination[0], lat: r.destination[1], ...extra },
     ],
-    costing: "auto",
+    costing: walk ? "pedestrian" : "auto",
     units: "kilometers",
     directions_type: "maneuvers",
     alternates: r.alternatives ? 2 : 0,

@@ -109,8 +109,8 @@ d("Darbna API", () => {
     if (!r.body.layers) throw new Error(JSON.stringify(r));
     const ids = r.body.layers.map((l: any) => l.id);
     expect(ids).toEqual(["water", "building", "poi_r1", "road_major"]);
-    expect(r.body.layers.find((l: any) => l.id === "building").minzoom).toBe(15);
-    expect(r.body.layers.find((l: any) => l.id === "poi_r1").minzoom).toBe(15);
+    expect(r.body.layers.find((l: any) => l.id === "building").minzoom).toBe(14);
+    expect(r.body.layers.find((l: any) => l.id === "poi_r1").minzoom).toBe(14);
   });
 
   it("recolours the night style when day and night share one upstream", async () => {
@@ -172,6 +172,15 @@ d("Darbna API", () => {
       expect(rt.geometry.length).toBe(GEOM.length);
       expect(lastValhallaBody.locations[0].heading).toBe(10);
       expect(lastValhallaBody.alternates).toBe(2);
+    });
+    it("routes on foot with the pedestrian profile", async () => {
+      const r = await call(app, "POST", "/v1/route", { origin: TAHRIR, destination: DEST, heading: 10, travel: "walk" });
+      expect(r.status).toBe(200);
+      expect(lastValhallaBody.costing).toBe("pedestrian");
+      expect(lastValhallaBody.locations[0].heading).toBeUndefined();
+      expect(r.body.routes[0].travel).toBe("walk");
+      await call(app, "POST", "/v1/route", { origin: TAHRIR, destination: DEST });
+      expect(lastValhallaBody.costing).toBe("auto");
     });
     it("rejects destinations outside Iraq and too-close trips", async () => {
       expect((await call(app, "POST", "/v1/route", { origin: TAHRIR, destination: [2.35, 48.85] })).body.error).toBe("outside_service_area");

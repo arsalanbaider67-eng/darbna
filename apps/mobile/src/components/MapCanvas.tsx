@@ -177,6 +177,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   } : null), [p.destination]);
 
   const navigating = p.follow === "navigation";
+  const walking = p.routes[p.selectedRouteIdx]?.travel === "walk";
   const trafficShape = useMemo(() => {
     const r = p.routes[p.selectedRouteIdx];
     return {
@@ -226,8 +227,8 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           defaultSettings={defaultSettings}
           followUserLocation={p.follow !== "none" && !sim}
           followUserMode={navigating ? "course" : "normal"}
-          followZoomLevel={navigating ? 16.5 : 15}
-          followPitch={navigating ? 45 : 0}
+          followZoomLevel={navigating ? (walking ? 17.5 : 16.5) : 15}
+          followPitch={navigating ? (walking ? 30 : 45) : 0}
           animationDuration={400}
         />
 

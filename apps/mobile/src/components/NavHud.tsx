@@ -108,10 +108,16 @@ export function NavHud(p: Props) {
       )}
 
       {/* Bottom edge of the map: speed · street · report. Physical left/right like a dashboard. */}
-      <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: theme.border }]} accessibilityLabel={`${kmh} km/h`}>
-        <Txt size={28} weight="bold" style={{ lineHeight: 32 }}>{String(kmh)}</Txt>
-        <Txt size={11} muted style={{ lineHeight: 13 }}>km/h</Txt>
-      </View>
+      {p.route.travel === "walk" ? (
+        <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: theme.border }]} accessibilityLabel={t.preview.walk}>
+          <Icon name="walk" size={34} />
+        </View>
+      ) : (
+        <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: theme.border }]} accessibilityLabel={`${kmh} km/h`}>
+          <Txt size={28} weight="bold" style={{ lineHeight: 32 }}>{String(kmh)}</Txt>
+          <Txt size={11} muted style={{ lineHeight: 13 }}>km/h</Txt>
+        </View>
+      )}
       {!!street && (
         <View style={[s.street, { bottom: barH + 22 }]} pointerEvents="none">
           <View style={[s.streetPill, { backgroundColor: "rgba(10,16,20,0.92)" }]}>

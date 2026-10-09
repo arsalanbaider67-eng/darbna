@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { decodePolyline, destinationPoint, encodePolyline } from "../src/geo";
-import { GuidanceEngine } from "../src/guidance";
+import { announcementDistances, GuidanceEngine, WALKING_GUIDANCE_OPTIONS } from "../src/guidance";
+import { valhallaRouteBody } from "../src/valhalla";
 import { fix, lRoute } from "./fixtures";
 
 describe("polyline", () => {
@@ -165,5 +166,27 @@ describe("missed turn at highway speed", () => {
     }
     expect(firedAt).not.toBeNull();
     expect(firedAt!).toBeLessThanOrEqual(90);
+  });
+});
+
+describe("walking", () => {
+  it("asks Valhalla for a pedestrian route without car-only snapping", () => {
+    const b = valhallaRouteBody({ origin: [44, 33], destination: [44.01, 33], alternatives: true, travel: "walk", snap: "major", originHeading: 90 }) as any;
+    expect(b.costing).toBe("pedestrian");
+    expect(b.locations[0].search_filter).toBeUndefined();
+    expect(b.locations[0].heading).toBeUndefined();
+    expect((valhallaRouteBody({ origin: [44, 33], destination: [44.01, 33], alternatives: true }) as any).costing).toBe("auto");
+  });
+  it("prompts close to the turn", () => {
+    expect(announcementDistances(1.4, true).near).toBeLessThanOrEqual(60);
+  });
+  it("reroutes a walker who leaves the route", () => {
+    const r = lRoute();
+    const g = new GuidanceEngine({ ...r, travel: "walk" }, WALKING_GUIDANCE_OPTIONS);
+    const corner = r.geometry[12];
+    g.update(fix(destinationPoint(r.geometry[0], 0, 1150), 0, { heading: 0, speed: 1.4 }));
+    let fired = false;
+    for (let i = 1; i <= 40 && !fired; i++) fired = g.update(fix(destinationPoint(corner, 0, i * 1.4 * 2), i * 2000, { heading: 0, speed: 1.4 })).shouldReroute;
+    expect(fired).toBe(true);
   });
 });

@@ -47,7 +47,15 @@ export interface GuidanceOptions {
   rerouteCooldownMs: number;
   arrivalRadiusM: number;
   gpsLostMs: number;
+  /** On foot: prompts much closer to the turn, tighter off-route, no wrong-way rule. */
+  walking?: boolean;
 }
+
+/** Overrides for walking trips. */
+export const WALKING_GUIDANCE_OPTIONS: Partial<GuidanceOptions> = {
+  walking: true, offRouteBaseM: 25, offRouteMaxM: 60, offRouteConsecutive: 3, offRouteMinMs: 5000,
+  wrongWayMs: Number.POSITIVE_INFINITY, arrivalRadiusM: 20,
+};
 
 export const DEFAULT_GUIDANCE_OPTIONS: GuidanceOptions = {
   maxUsableAccuracyM: 50,
@@ -62,7 +70,8 @@ export const DEFAULT_GUIDANCE_OPTIONS: GuidanceOptions = {
 };
 
 /** Distances (m) at which the far / near / now prompts fire, by speed. */
-export function announcementDistances(speedMps: number): { far: number; near: number; now: number } {
+export function announcementDistances(speedMps: number, walking = false): { far: number; near: number; now: number } {
+  if (walking) return { far: 200, near: 50, now: 12 };
   if (speedMps > 22) return { far: 1500, near: 500, now: Math.max(60, speedMps * 4) }; // > ~80 km/h
   if (speedMps > 11) return { far: 800, near: 250, now: Math.max(40, speedMps * 3.5) }; // > ~40 km/h
   return { far: 400, near: 120, now: 35 };
@@ -221,8 +230,9 @@ export class GuidanceEngine {
       }
       // Missed a turn: with a precise fix you're clearly leaving the route, so don't wait for
       // the slower rule above (at 100 km/h that would be 150+ m down the wrong road).
-      if (fix.accuracyM <= 15 && speed > 4 && offDist > 25 && offDist > this.prevOff + 1) this.awayCount++;
-      else if (offDist <= 25) this.awayCount = 0;
+      const awayM = this.opt.walking ? 18 : 25, awaySpeed = this.opt.walking ? 0.6 : 4;
+      if (fix.accuracyM <= 15 && speed > awaySpeed && offDist > awayM && offDist > this.prevOff + 1) this.awayCount++;
+      else if (offDist <= awayM) this.awayCount = 0;
       this.prevOff = offDist;
       const g = this.route.geometry;
       if (heading !== null && speed > 5 && offDist < 40 && haversine(g[best.i], g[best.i + 1]) > 5) {
@@ -232,7 +242,7 @@ export class GuidanceEngine {
         this.wrongWaySince = null;
       }
       const offRoute =
-        this.awayCount >= 2 ||
+        this.awayCount >= (this.opt.walking ? 3 : 2) ||
         (this.offCount >= this.opt.offRouteConsecutive && this.offSince !== null && now - this.offSince >= this.opt.offRouteMinMs) ||
         (this.wrongWaySince !== null && now - this.wrongWaySince >= this.opt.wrongWayMs);
       if (offRoute) status = "off_route";
@@ -261,7 +271,7 @@ export class GuidanceEngine {
 
     let announcement: Announcement | null = null;
     if (status === "on_route" && nextStep) {
-      const d = announcementDistances(speed);
+      const d = announcementDistances(speed, this.opt.walking);
       const done = this.announced.get(nextIdx) ?? new Set<AnnouncementStage>();
       let stage: AnnouncementStage | null = null;
       if (distToNext <= d.now && !done.has("now")) stage = "now";

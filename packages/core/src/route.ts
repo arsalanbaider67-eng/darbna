@@ -41,7 +41,11 @@ export interface Route {
   via: string[];
   /** Verified official closures avoided by this route. */
   avoidedClosureIds?: string[];
+  /** How you travel it; missing means by car. */
+  travel?: Travel;
 }
+
+export type Travel = "car" | "walk";
 
 export interface RouteResponse {
   routes: Route[];

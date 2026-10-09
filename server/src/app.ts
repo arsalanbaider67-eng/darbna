@@ -131,7 +131,8 @@ export function buildApp(deps: Deps) {
 
   // ------------------------------------------------------------ routing
   router.add("POST", "/v1/route", async (ctx) => {
-    const body = await ctx.json<{ origin: unknown; destination: unknown; heading?: unknown; alternatives?: unknown; avoidReportIds?: unknown }>();
+    const body = await ctx.json<{ origin: unknown; destination: unknown; heading?: unknown; alternatives?: unknown; avoidReportIds?: unknown; travel?: unknown }>();
+    const travel = body.travel === "walk" ? "walk" : "car";
     const origin = lngLat(body.origin, "origin");
     const destination = lngLat(body.destination, "destination");
     const heading = optNumber(body.heading, "heading", 0, 360);
@@ -144,18 +145,19 @@ export function buildApp(deps: Deps) {
     const nearby = await reports.inBBox(area, 800);
     const chosen = new Set(avoidIds);
     const toAvoid = nearby.filter((r) => r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display"));
-    const excludePolygons = routing.supportsExclusions
+    // Road closures, potholes etc. are about driving: walkers aren't routed around them.
+    const excludePolygons = routing.supportsExclusions && travel === "car"
       ? toAvoid.map((r) => boxAround(r.coord, r.category === "closure" || r.category === "flooding" ? 60 : 35))
       : [];
 
     let routes: Route[];
     try {
-      routes = await routing.route({ origin, destination, originHeading: heading, alternatives: body.alternatives !== false, excludePolygons });
+      routes = await routing.route({ origin, destination, originHeading: heading, alternatives: body.alternatives !== false, excludePolygons, travel });
     } catch (e) {
       if (!(e instanceof RoutingError)) throw e;
       // If exclusions made the trip impossible, fall back to an unrestricted route and say so.
       if (e.code === "no_route" && excludePolygons.length) {
-        routes = await routing.route({ origin, destination, originHeading: heading, alternatives: false, excludePolygons: [] });
+        routes = await routing.route({ origin, destination, originHeading: heading, alternatives: false, excludePolygons: [], travel });
         return json(decorate(routes, nearby, [], true));
       }
       const map = { no_route: 422, off_network: 422, unavailable: 503, timeout: 504 } as const;

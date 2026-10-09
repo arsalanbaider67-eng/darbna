@@ -4,16 +4,19 @@ import { useUi } from "../context";
 import { fmt, fmtClock, fmtDistance, fmtDuration, fmtNumber } from "../i18n";
 import { setState, useStore } from "../store";
 import { REPORT_STYLE } from "../theme";
+import type { Travel } from "@darbna/core";
 import { Btn, Chip, Icon, Panel, Row, Txt } from "./ui";
 
-export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, canStart }: {
-  onStart(): void; onDemo(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; canStart: boolean;
+export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, onTravel, canStart }: {
+  onStart(): void; onDemo(): void; onBack(): void; onRetry(): void; onToggleAvoid(id: string): void; onTravel(t: Travel): void; canStart: boolean;
 }) {
   const { theme, t, fmtCtx } = useUi();
   const preview = useStore((s) => s.preview);
   const dest = useStore((s) => s.selected);
   const config = useStore((s) => s.config);
   const { result, selectedIdx, loading, error, avoidReportIds } = preview;
+  const travel = useStore((s) => s.settings.travel ?? "car");
+  const walking = travel === "walk";
 
   const header = (
     <Row style={{ marginBottom: 8 }}>
@@ -21,6 +24,20 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
         <Icon name={fmtCtx.lang === "en" ? "arrow-left" : "arrow-right"} size={26} />
       </Pressable>
       <Txt size={18} weight="bold" numberOfLines={1} style={{ flex: 1 }}>{dest?.name}</Txt>
+      {/* Car or on foot */}
+      <View style={[s.modes, { borderColor: theme.border }]}>
+        {(["car", "walk"] as const).map((m) => {
+          const on = m === travel;
+          return (
+            <Pressable key={m} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={m === "car" ? t.preview.car : t.preview.walk}
+              onPress={() => !on && onTravel(m)} hitSlop={6}
+              style={[s.mode, { backgroundColor: on ? theme.primary : "transparent" }]}>
+              <Icon name={m === "car" ? "car" : "walk"} size={20} color={on ? theme.onPrimary : theme.textMuted} />
+              <Txt size={13} weight="semibold" style={{ color: on ? theme.onPrimary : theme.textMuted }}>{m === "car" ? t.preview.car : t.preview.walk}</Txt>
+            </Pressable>
+          );
+        })}
+      </View>
     </Row>
   );
 
@@ -74,14 +91,15 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
 
       {/* Honest ETA labeling: say exactly what the time is based on. */}
       <Row gap={6} style={{ marginTop: 8 }}>
-        <Icon name={route.trafficExtraS ? "car-clock" : "information-outline"} size={16} color={route.trafficExtraS ? theme.warn : theme.textMuted} />
+        <Icon name={walking ? "walk" : route.trafficExtraS ? "car-clock" : "information-outline"} size={16} color={route.trafficExtraS ? theme.warn : theme.textMuted} />
         <Txt size={13} muted style={{ flex: 1 }}>
-          {route.trafficExtraS
+          {walking ? t.preview.walkNote
+            : route.trafficExtraS
             ? fmt(t.preview.withTraffic, { t: fmtDuration(route.trafficExtraS, fmtCtx) })
             : config?.sharedTraffic ? t.preview.noTrafficData : t.preview.noTraffic}
         </Txt>
       </Row>
-      {(route.startGapM ?? 0) > 150 && (
+      {!walking && (route.startGapM ?? 0) > 150 && (
         <Row gap={6} style={{ marginTop: 6 }}>
           <Icon name="map-marker-distance" size={16} color={theme.warn} />
           <Txt size={13} muted style={{ flex: 1 }}>{fmt(t.preview.startFromRoad, { d: fmtDistance(route.startGapM ?? 0, fmtCtx) })}</Txt>
@@ -125,6 +143,8 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
 
 const s = StyleSheet.create({
   card: { minWidth: 160, padding: 12, borderRadius: 16, borderWidth: 2 },
+  modes: { flexDirection: "row", borderRadius: 22, borderWidth: 1, padding: 3, gap: 2 },
+  mode: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, minHeight: 36, borderRadius: 18 },
   rep: { padding: 8, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth },
   dot: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
 });

@@ -18,7 +18,7 @@ import * as Crypto from "expo-crypto";
 import {
   applyTraffic, arabicKey, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
-  type SpeedSample, type TrafficCell,
+  type SpeedSample, type TrafficCell, type Travel,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
 import { ApiError } from "./apiError";
@@ -181,8 +181,9 @@ export const directApi = {
     return { result: it && !it.error ? (mapNominatim(it, lang, 1) as Place) : null };
   },
 
-  route: async (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[] } = {}): Promise<RouteResult> => {
+  route: async (origin: LngLat, destination: LngLat, opts: { heading?: number; alternatives?: boolean; avoidReportIds?: string[]; travel?: Travel } = {}): Promise<RouteResult> => {
     if (haversine(origin, destination) < 25) throw new ApiError("too_close", 422);
+    if (opts.travel === "walk") return walkRoute(origin, destination, opts.alternatives ?? true);
     // Same policy as the server: verified closures are always avoided; others only when the driver asks.
     const [nearby, cells] = await Promise.all([reportsNear(origin, destination), trafficNear(origin, destination)]);
     const chosen = new Set(opts.avoidReportIds ?? []);
@@ -210,7 +211,7 @@ export const directApi = {
       onRoute.forEach((rep) => advisories.set(rep.id, rep));
       // Started from a nearby main road because the user's street isn't connected in the map data.
       const startGapM = r.geometry.length ? Math.round(haversine(origin, r.geometry[0])) : 0;
-      return { ...r, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id), trafficSpans: tr.spans, trafficExtraS: tr.extraS, startGapM };
+      return { ...r, travel: "car" as const, avoidedClosureIds: avoided, reportIdsOnRoute: onRoute.map((x) => x.id), trafficSpans: tr.spans, trafficExtraS: tr.extraS, startGapM };
     });
     // With traffic, an alternative may now be the fastest: list it first.
     routes.sort((a, b) => a.durationS - b.durationS);
@@ -281,9 +282,23 @@ async function valhallaRoute(body: Record<string, unknown>) {
  * lane, pedestrian zone). Try again attaching both ends to the connected network, then to
  * main streets only.
  */
+/** On foot: footpaths and pedestrian streets, walking-speed times; no traffic or road-closure detours. */
+async function walkRoute(origin: LngLat, destination: LngLat, alternatives: boolean): Promise<RouteResult> {
+  const trips = await routeWithSnapFallbacks({ origin, destination, alternatives, travel: "walk" });
+  const routes = trips
+    .map((r) => ({ ...r, travel: "walk" as const, avoidedClosureIds: [], reportIdsOnRoute: [], trafficSpans: [], trafficExtraS: 0, startGapM: r.geometry.length ? Math.round(haversine(origin, r.geometry[0])) : 0 }))
+    .sort((a, b) => a.durationS - b.durationS);
+  return {
+    routes, reports: [],
+    avoidance: { requested: false, honoured: true, providerSupportsIt: true },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
 async function routeWithSnapFallbacks(input: Parameters<typeof valhallaRouteBody>[0]) {
   let last: unknown;
-  for (const snap of ["default", "connected", "main", "major"] as const) {
+  const snaps = input.travel === "walk" ? (["default", "connected"] as const) : (["default", "connected", "main", "major"] as const);
+  for (const snap of snaps) {
     try {
       return await valhallaRoute(valhallaRouteBody({ ...input, snap }));
     } catch (e) {

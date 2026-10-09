@@ -13,6 +13,8 @@ export interface RouteRequest {
   alternatives: boolean;
   /** Closed rings to route around (verified closures, or reports the driver chose to avoid). */
   excludePolygons: LngLat[][];
+  /** "walk" = on foot (Valhalla pedestrian costing). Default car. */
+  travel?: "car" | "walk";
 }
 
 export type RoutingErrorCode = "no_route" | "off_network" | "unavailable" | "timeout";
@@ -46,7 +48,8 @@ export class ValhallaProvider implements RoutingProvider {
   /** Retries "no path" answers with stricter snapping (see ValhallaRouteInput.snap). */
   async route(r: RouteRequest): Promise<Route[]> {
     let last: unknown;
-    for (const snap of ["default", "connected", "main", "major"] as const) {
+    const snaps = r.travel === "walk" ? (["default", "connected"] as const) : (["default", "connected", "main", "major"] as const);
+    for (const snap of snaps) {
       try {
         return await this.routeOnce(r, snap);
       } catch (e) {
@@ -69,7 +72,7 @@ export class ValhallaProvider implements RoutingProvider {
       const code = valhallaErrorCode(err);
       throw new RoutingError(code, code === "unavailable" ? `valhalla ${res.status} ${err.error ?? ""}` : err.error);
     }
-    return mapValhallaResponse((await res.json()) as ValhallaResponse);
+    return mapValhallaResponse((await res.json()) as ValhallaResponse).map((rt) => ({ ...rt, travel: r.travel ?? "car" }));
   }
 }
 
@@ -86,7 +89,7 @@ export class OsrmProvider implements RoutingProvider {
   constructor(private baseUrl: string, private timeoutMs: number) {}
   async route(r: RouteRequest): Promise<Route[]> {
     const coords = `${r.origin[0]},${r.origin[1]};${r.destination[0]},${r.destination[1]}`;
-    const url = `${this.baseUrl}/route/v1/driving/${coords}?overview=full&geometries=polyline6&steps=true&alternatives=${r.alternatives}`;
+    const url = `${this.baseUrl}/route/v1/${r.travel === "walk" ? "foot" : "driving"}/${coords}?overview=full&geometries=polyline6&steps=true&alternatives=${r.alternatives}`;
     const res = await fetchWithTimeout(url, {}, this.timeoutMs);
     const data = (await res.json().catch(() => ({}))) as any;
     if (data.code === "NoRoute") throw new RoutingError("no_route");
@@ -117,6 +120,7 @@ export class OsrmProvider implements RoutingProvider {
         distanceM: Math.round(rt.distance), durationS: Math.round(rt.duration),
         durationSource: "engine_no_traffic", geometry, steps,
         via: [...new Set(steps.filter((s) => s.streetName).sort((a, b) => b.distanceM - a.distanceM).map((s) => s.streetName!))].slice(0, 2),
+        travel: r.travel ?? "car",
       } satisfies Route;
     });
   }

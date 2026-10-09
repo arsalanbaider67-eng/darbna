@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
-import { GuidanceEngine, type GuidanceState, type LocationFix } from "@darbna/core";
+import { GuidanceEngine, WALKING_GUIDANCE_OPTIONS, type GuidanceState, type LocationFix } from "@darbna/core";
 import { api, ApiError } from "../api";
 import { instructionText, strings, type FormatCtx } from "../i18n";
 import { saveTrip } from "../storage";
@@ -18,7 +18,10 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
   const trip = useStore((s) => s.trip);
   const routeId = trip?.route.id;
   // Browsers report position less regularly than native GPS, so wait longer before "GPS lost".
-  const engine = useMemo(() => (trip ? new GuidanceEngine(trip.route, Platform.OS === "web" ? { gpsLostMs: 30_000 } : {}) : null), [routeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const engine = useMemo(() => (trip ? new GuidanceEngine(trip.route, {
+    ...(trip.route.travel === "walk" ? WALKING_GUIDANCE_OPTIONS : {}),
+    ...(Platform.OS === "web" ? { gpsLostMs: 30_000 } : {}),
+  }) : null), [routeId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [g, setG] = useState<GuidanceState | null>(null);
   const [reroute, setReroute] = useState<RerouteStatus>("idle");
   const busy = useRef(false);
@@ -56,6 +59,7 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
         heading: from.headingDeg != null && from.headingDeg >= 0 && (from.speedMps ?? 0) > 2 ? from.headingDeg : undefined,
         alternatives: false,
         avoidReportIds: t.avoidReportIds,
+        travel: t.route.travel ?? "car",
       });
       const route = res.routes[0];
       const cur = getState().trip;
