@@ -6,8 +6,8 @@
    "voice": "ar-IQ-RanaNeural"
   },
   "en": {
-   "provider": "elevenlabs",
-   "voice": "Aaden"
+   "provider": "azure",
+   "voice": "en-US-AndrewNeural"
   }
  },
  "distancesM": [

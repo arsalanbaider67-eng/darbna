@@ -1,6 +1,6 @@
 // Records Darbna's guidance prompts with the chosen voices (assets/voice/phrases.json):
 //   Arabic: Azure "ar-IQ-RanaNeural" (needs AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
-//   English: ElevenLabs "Aaden" (needs ELEVENLABS_API_KEY; optional ELEVENLABS_VOICE_ID)
+//   English: Azure (see phrases.json; ElevenLabs is also supported via ELEVENLABS_API_KEY)
 // Writes assets/voice/<lang>/<key>.mp3 and src/nav/voiceClips.ts. Only phrases whose text changed
 // (or that are missing) are recorded again. Run by .github/workflows/voices.yml.
 import fs from "node:fs";
