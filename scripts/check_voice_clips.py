@@ -23,7 +23,8 @@ for lang, phrases in cfg["phrases"].items():
         rows.append((score, lang, key, text, heard))
 
 rows.sort()
-bad = [r for r in rows if r[0] < 0.5]
-print(f"::notice title=voice check::{len(rows)} clips, {len(bad)} below 0.5 similarity; average {sum(r[0] for r in rows)/len(rows):.2f}")
-for score, lang, key, text, heard in rows[:25]:
-    print(f"::notice title={lang}/{key} {score:.2f}::expected «{text}» heard «{heard}»")
+for lang in cfg["phrases"]:
+    lr = [r for r in rows if r[1] == lang]
+    avg = sum(r[0] for r in lr) / len(lr)
+    body = " | ".join(f"{k} {sc:.2f} «{h}»" for sc, _, k, t, h in lr)
+    print(f"::notice title=voice {lang} avg {avg:.2f}::{body}")
