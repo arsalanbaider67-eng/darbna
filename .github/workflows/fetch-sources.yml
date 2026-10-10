@@ -28,6 +28,12 @@ jobs:
             done
           done
           ls -la
+          # OpenStreetMap boundaries (more detailed): Iraq's governorates, the Kurdistan Region, Iraq itself.
+          ovp() { curl -sS -m 600 --data-urlencode "data=$2" https://overpass-api.de/api/interpreter -o "$1" || echo "{}" > "$1"; ls -la "$1"; }
+          ovp osm-irq-gov.json '[out:json][timeout:500];relation["boundary"="administrative"]["admin_level"="4"]["ISO3166-2"~"^IQ-"];out geom;'
+          ovp osm-kri.json '[out:json][timeout:300];relation["boundary"="administrative"]["admin_level"="3"]["ISO3166-2"="IQ-KR"];out geom;'
+          ovp osm-kri-any.json '[out:json][timeout:300];area["ISO3166-1"="IQ"]->.a;relation(area.a)["boundary"="administrative"]["admin_level"="3"];out tags;'
+          ovp osm-irq.json '[out:json][timeout:500];relation["boundary"="administrative"]["admin_level"="2"]["ISO3166-1"="IQ"];out geom;'
           cd ../pages
           get() { curl -sSL -m 60 -A "Mozilla/5.0 (Darbna reference check)" "$2" -o "$1.html" || echo "FAILED $2" > "$1.html"; }
           get krd-help-numbers "https://help.krd/?id=6&lang=en"
