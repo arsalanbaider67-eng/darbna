@@ -22,6 +22,9 @@ jobs:
       NODE_ENV: production
     steps:
       - uses: actions/checkout@v4
+
+      - name: Emergency numbers call-tested (release gate)
+        run: node scripts/check-emergency-release.mjs
       - uses: actions/setup-node@v4
         with:
           node-version: 22

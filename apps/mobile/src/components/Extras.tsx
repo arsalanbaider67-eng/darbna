@@ -53,45 +53,6 @@ export function QuickSearch({ userCoord, onResults }: { userCoord: LngLat | null
   );
 }
 
-// ---------------------------------------------------------------- SOS
-const EMERGENCY = [
-  { key: "police", num: "104", icon: "police-badge" },
-  { key: "ambulance", num: "122", icon: "ambulance" },
-  { key: "fire", num: "115", icon: "fire-truck" },
-] as const;
-
-export function SosSheet({ coord, onClose }: { coord: LngLat | null; onClose(): void }) {
-  const { theme, t, fmtCtx } = useUi();
-  async function sendLocation() {
-    if (!coord) return;
-    const url = buildShareLink(coord, "SOS", webBase());
-    const maps = `https://maps.google.com/?q=${coord[1].toFixed(6)},${coord[0].toFixed(6)}`;
-    await shareText(`${fmt(t.x.sos.message, { url })}\n${maps}`, url, t.place.linkCopied);
-  }
-  return (
-    <Panel>
-      <Row style={{ marginBottom: 8 }}>
-        <Icon name="alarm-light" color={theme.danger} />
-        <Txt size={20} weight="bold" style={{ flex: 1 }}>{t.x.sos.title}</Txt>
-        <Pressable accessibilityLabel={t.common.close} onPress={onClose} hitSlop={12}><Icon name="close" /></Pressable>
-      </Row>
-      <View style={{ gap: 10 }}>
-        {EMERGENCY.map((e) => (
-          <Pressable key={e.key} accessibilityRole="button" accessibilityLabel={`${t.x.sos[e.key]} ${e.num}`} onPress={() => void Linking.openURL(`tel:${e.num}`)}
-            style={({ pressed }) => [s.sosRow, { borderColor: theme.danger, opacity: pressed ? 0.8 : 1 }]}>
-            <Icon name={e.icon as IconName} color={theme.danger} size={28} />
-            <Txt size={18} weight="semibold" style={{ flex: 1 }}>{t.x.sos[e.key]}</Txt>
-            <Txt size={24} weight="bold" style={{ color: theme.danger }}>{fmtNumber(Number(e.num), fmtCtx)}</Txt>
-            <Icon name="phone" color={theme.danger} />
-          </Pressable>
-        ))}
-        <Btn kind="danger" icon="crosshairs-gps" label={t.x.sos.shareLoc} onPress={() => void sendLocation()} disabled={!coord} />
-        <Txt size={13} muted style={{ textAlign: "center" }}>{t.x.sos.note}</Txt>
-      </View>
-    </Panel>
-  );
-}
-
 // ---------------------------------------------------------------- driving menu
 export function NavMenuSheet({ onClose, onShare, onAddStop, onSos }: { onClose(): void; onShare(): void; onAddStop(): void; onSos(): void }) {
   const { theme, t } = useUi();
@@ -307,7 +268,6 @@ export function FuelStatus({ place, reports }: { place: Place; reports: PublicRe
 
 const s = StyleSheet.create({
   quick: { width: 52, height: 52, borderRadius: 26, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  sosRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: TOUCH + 8, paddingHorizontal: 16, borderRadius: 16, borderWidth: 1.5 },
   input: { minHeight: 90, borderWidth: 1, borderRadius: 14, padding: 12, fontSize: 16, textAlignVertical: "top", marginVertical: 10 },
   watchDot: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   points: { borderWidth: 1, borderRadius: 18, padding: 14, gap: 8 },

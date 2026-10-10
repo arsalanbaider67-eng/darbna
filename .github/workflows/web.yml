@@ -62,6 +62,7 @@ jobs:
       - name: Export web build
         working-directory: apps/mobile
         run: |
+          cp ../../packages/core/data/emergency-numbers.json public/emergency-numbers.json  # updateable SOS numbers
           node scripts/gen-web-icons.mjs
           npx expo export --platform web --output-dir dist
           ls -la dist

@@ -18,3 +18,6 @@ Darbna.apk
 *.p8
 *.p12
 *.mobileprovision
+
+# Published from packages/core/data at build time
+apps/mobile/public/emergency-numbers.json

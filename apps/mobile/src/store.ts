@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import type { LngLat, SpeedLimitSpan } from "@darbna/core";
+import type { EmergencyConfig, LngLat, RegionStatus, SpeedLimitSpan } from "@darbna/core";
+import bundledEmergency from "@darbna/core/data/emergency-numbers.json";
 import type { ApiRoute, Place, PublicReport, RouteResult, ServerConfig, SharedTrip } from "./types";
 import { DEFAULT_SETTINGS, type SavedPlaces, type Settings } from "./storage";
 
@@ -35,6 +36,14 @@ export interface AppState {
   watch: { id: string; trip: SharedTrip | null; error: string | null } | null;
   /** Your helper points (shared reports only). */
   points: { points: number; reports: number; thanks: number } | null;
+  /** SOS: emergency numbers config, region from location, saved region, manual choice. */
+  sos: {
+    config: EmergencyConfig;
+    live: RegionStatus | null;
+    cached: { region: string; at: number } | null;
+    manual: { region: string; at: number } | null;
+    permission: "granted" | "denied" | "unknown";
+  };
   toast: { text: string; kind: "info" | "error" | "ok"; at: number } | null;
 }
 
@@ -59,6 +68,7 @@ let state: AppState = {
   limits: null,
   watch: null,
   points: null,
+  sos: { config: bundledEmergency as unknown as EmergencyConfig, live: null, cached: null, manual: null, permission: "unknown" },
 };
 
 const listeners = new Set<() => void>();

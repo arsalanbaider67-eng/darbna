@@ -26,7 +26,9 @@ import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
-import { MapProblemSheet, NavMenuSheet, SosSheet, WatchCard } from "../components/Extras";
+import { MapProblemSheet, NavMenuSheet, WatchCard } from "../components/Extras";
+import { SosSheet } from "../components/SosSheet";
+import { useSosRegion } from "../sos/emergency";
 import { routeSpeedLimits } from "../external";
 import { chime } from "../nav/chime";
 import { routeAvoid } from "../nav/useGuidance";
@@ -69,6 +71,9 @@ export function MainScreen() {
   const online = useConnectivity();
   const loc = useLocation(mode === "navigating" ? "navigation" : "idle");
   const fix = loc.fix;
+  // SOS region (Kurdistan Region / rest of Iraq / abroad) follows you all the time, so the SOS
+  // screen is right the moment it's opened — even before the map has loaded.
+  useSosRegion(fix, loc.permission, online);
   const map = useRef<MapCanvasHandle>(null);
   const [following, setFollowing] = useState(true);
   const [lookingUp, setLookingUp] = useState(false);
@@ -489,6 +494,8 @@ export function MainScreen() {
         <StatusBar style={theme.dark ? "light" : "dark"} />
         <Image source={require("../../assets/icon.png")} style={{ width: 96, height: 96, borderRadius: 22 }} accessibilityIgnoresInvertColors />
         <Txt size={22} weight="bold" style={{ color: theme.primary }}>{t.appName}</Txt>
+        {/* Emergency numbers never wait for the map or the internet. */}
+        <Btn kind="danger" icon="alarm-light" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
         {configError ? (
           <>
             <Txt muted style={{ textAlign: "center", paddingHorizontal: 32 }}>{online === false ? t.status.offline : t.status.serverUnreachable}</Txt>
@@ -496,6 +503,7 @@ export function MainScreen() {
             <Btn label={t.common.retry} icon="refresh" onPress={loadConfig} />
           </>
         ) : <ActivityIndicator color={theme.primary} />}
+        {sheet === "sos" && <SosSheet coord={fix?.coord ?? null} onClose={() => setState({ sheet: null })} />}
       </View>
     );
   }

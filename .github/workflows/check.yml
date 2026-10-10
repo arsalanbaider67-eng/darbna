@@ -44,6 +44,7 @@ jobs:
         working-directory: apps/mobile
         run: |
           npx expo install --fix > fix.log 2>&1 || true
+          cp ../../packages/core/data/emergency-numbers.json public/emergency-numbers.json  # updateable SOS numbers
           NODE_ENV=production node scripts/gen-web-icons.mjs
           NODE_ENV=production npx expo export --platform web --output-dir dist
       - name: Push test build to web-preview-wip branch

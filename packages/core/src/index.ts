@@ -11,3 +11,4 @@ export * from "./style";
 export * from "./traffic";
 export * from "./precise";
 export * from "./extras";
+export * from "./sos";

@@ -26,6 +26,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Emergency numbers call-tested (release gate)
+        run: node scripts/check-emergency-release.mjs
+
       - name: Check secrets
         env:
           TEAM: ${{ secrets.APPLE_TEAM_ID }}
