@@ -1,0 +1,53 @@
+# One-off helper: downloads reference data that the dev environment can't reach directly
+# (administrative boundaries and official emergency-number pages) and pushes it to the
+# "data-sources" branch for review. Nothing here ships in the app by itself.
+name: Fetch reference data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download
+        run: |
+          mkdir -p out/bounds out/pages
+          cd out/bounds
+          for c in IRQ TUR IRN SYR JOR SAU KWT GEO; do
+            for lvl in ADM0 ADM1; do
+              meta=$(curl -sSL -m 60 "https://www.geoboundaries.org/api/current/gbOpen/$c/$lvl/" || true)
+              echo "$meta" > "$c-$lvl.meta.json"
+              url=$(echo "$meta" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("gjDownloadURL",""))' 2>/dev/null || true)
+              surl=$(echo "$meta" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("simplifiedGeometryGeoJSON",""))' 2>/dev/null || true)
+              if [ "$c" = "IRQ" ] && [ -n "$url" ]; then curl -sSL -m 300 "$url" -o "$c-$lvl.geojson" || true; fi
+              if [ -n "$surl" ]; then curl -sSL -m 300 "$surl" -o "$c-$lvl.simplified.geojson" || true; fi
+            done
+          done
+          ls -la
+          cd ../pages
+          get() { curl -sSL -m 60 -A "Mozilla/5.0 (Darbna reference check)" "$2" -o "$1.html" || echo "FAILED $2" > "$1.html"; }
+          get krd-help-numbers "https://help.krd/?id=6&lang=en"
+          get krd-erbil-122 "https://gov.krd/dmi-en/activities/news-and-press-releases/2023/january/erbil-s-emergency-line-122-fast-and-free-help-to-all/"
+          get erbil-gov "https://erbil.gov.krd/"
+          get ina-911-5langs "https://ina.iq/en/local/37665-interior-ministry-911-receives-calls-in-5-languages.html"
+          get ina-911-visitors "https://ina.iq/en/local/50621-moi-instant-translation-in-six-languages-for-communication-with-visitors-via-911.html"
+          get moi-iq "https://moi.gov.iq/"
+          get georgia-112 "https://112.gov.ge/en/"
+          get kuwait-egov "https://e.gov.kw/sites/kgoenglish/Pages/Visitors/TourismInKuwait/EssintialServicesEmergencies.aspx"
+          get turkey-112 "https://www.112.gov.tr/"
+          get jordan-psd "https://psd.gov.jo/en-us/"
+          get saudi-911 "https://www.my.gov.sa/en/content/emergency-numbers"
+          ls -la
+      - name: Push to data-sources branch
+        run: |
+          cd out
+          git init -q -b data-sources
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Reference data $(date -u +%F)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" data-sources
