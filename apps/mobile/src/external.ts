@@ -127,14 +127,21 @@ export async function nearby(kind: NearbyKind, at: LngLat, lang: string, label: 
     }
   };
 
-  let places: Place[];
-  try {
-    places = await overpass();
-    if (!places.length) places = await nominatim().catch(() => places);
-  } catch {
-    places = await nominatim();
-  }
-  cache.set(key, { at: Date.now(), places });
+  // Both at once; the first with results wins (the public OpenStreetMap servers are often busy).
+  const places = await new Promise<Place[]>((resolve, reject) => {
+    let left = 2, empty: Place[] | null = null, err: unknown = null;
+    const settle = (p: Promise<Place[]>) => p.then((r) => {
+      if (r.length) return resolve(r);
+      empty = r;
+      if (--left === 0) resolve(empty);
+    }, (e) => {
+      err = e;
+      if (--left === 0) (empty ? resolve(empty) : reject(err));
+    });
+    settle(overpass());
+    settle(nominatim());
+  });
+  if (places.length) cache.set(key, { at: Date.now(), places });
   return places;
 }
 
