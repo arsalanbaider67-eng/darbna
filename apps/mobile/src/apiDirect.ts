@@ -124,7 +124,10 @@ async function rpc<T>(fn: string, args: Record<string, unknown>, timeoutMs = 10_
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     // Database rule violations come back as { code: "P0001", message: "rate_limited" | "own_report" | … }.
-    const code = data?.code === "P0001" && typeof data.message === "string" ? data.message : res.status >= 500 ? "server" : "generic";
+    // A function the database doesn't have yet (schema.sql not re-run) → "unsupported", not a vague error.
+    const code = data?.code === "P0001" && typeof data.message === "string" ? data.message
+      : data?.code === "PGRST202" ? "unsupported"
+      : res.status >= 500 ? "server" : "generic";
     throw new ApiError(code, res.status, code === "rate_limited" ? 600 : undefined);
   }
   return data as T;

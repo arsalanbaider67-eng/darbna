@@ -124,7 +124,7 @@ export const en: Strings = {
     avoid: { title: "Route options", highways: "No highways", unpaved: "No dirt roads", checkpoints: "Avoid checkpoints" },
     warn: { ahead: "{what} in {d}" },
     speed: { limit: "Limit", over: "Slow down", alerts: "Speed & camera alerts", alertsHint: "Warns you when you go over the limit or come near a reported camera." },
-    share: { start: "Share trip", stop: "Stop sharing", started: "Copy the link and send it to your family", message: "Follow my trip to {name} live on Darbna: {url}", title: "Live trip", eta: "Arrives {time}", left: "{d} left", updated: "Updated {n} min ago", updatedNow: "Updated just now", ended: "Trip finished", notFound: "This trip link has ended", unsupported: "Sharing needs Darbna's online service", watching: "Heading to {name}" },
+    share: { start: "Share trip", stop: "Stop sharing", started: "Copy the link and send it to your family", message: "Follow my trip to {name} live on Darbna: {url}", title: "Live trip", eta: "Arrives {time}", left: "{d} left", updated: "Updated {n} min ago", updatedNow: "Updated just now", ended: "Trip finished", notFound: "This trip link has ended", unsupported: "Trip sharing isn't available yet — it's being switched on. Please try again later.", watching: "Heading to {name}" },
     sos: {
       title: "Emergency", general: "Emergency (all services)", police: "Police", ambulance: "Ambulance", civilDefense: "Civil defence / fire",
       regionKR: "Kurdistan Region", regionIQ: "Iraq", regionIQLong: "Iraq (outside the Kurdistan Region)", regionTUR: "Turkey", regionOther: "Outside Iraq (another country)", unknownRegion: "Region not known",

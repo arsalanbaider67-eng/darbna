@@ -36,32 +36,106 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-/** Places of one kind around you, nearest first (5 km, widened to 15 km if there are few). */
-export async function nearby(kind: NearbyKind, at: LngLat, lang: string, label: string): Promise<Place[]> {
-  const run = async (radius: number) => {
-    const parts = FILTERS[kind].map((f) => `nwr${f}(around:${radius},${at[1]},${at[0]});`).join("");
-    const q = `[out:json][timeout:15];(${parts});out center 60;`;
-    const res = await fetchWithTimeout(OVERPASS, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "content-type": "application/x-www-form-urlencoded" } }, 20_000);
-    if (!res.ok) throw new ApiError(res.status === 429 ? "rate_limited" : "generic", res.status);
-    const data = await res.json();
-    return (data.elements ?? []) as any[];
-  };
-  let els = await run(5000);
-  if (els.length < 5) els = await run(15000);
+const OVERPASS_MIRRORS = [
+  OVERPASS,
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+const NOMINATIM = "https://nominatim.openstreetmap.org";
+/** Search radius per kind: small where places are dense (food, ATMs), wide where they're sparse. */
+const RADIUS_M: Record<NearbyKind, number> = { fuel: 10_000, mosque: 6_000, hospital: 12_000, pharmacy: 4_000, restaurant: 2_000, atm: 3_000 };
+/** Nominatim "special phrases": the place kind in English finds e.g. every fuel station in an area. */
+const NOMINATIM_PHRASE: Record<NearbyKind, string> = {
+  fuel: "fuel", mosque: "mosque", hospital: "hospital", pharmacy: "pharmacy", restaurant: "restaurant", atm: "atm",
+};
+
+/** The first of several requests to succeed; the others are cancelled. */
+function firstOk<T>(makers: ((signal: AbortSignal) => Promise<T>)[], timeoutMs: number): Promise<T> {
+  const ctrls = makers.map(() => new AbortController());
+  return new Promise<T>((resolve, reject) => {
+    let left = makers.length, done = false;
+    const timer = setTimeout(() => { if (!done) { done = true; ctrls.forEach((c) => c.abort()); reject(new ApiError("timeout")); } }, timeoutMs);
+    makers.forEach((make, i) => {
+      make(ctrls[i].signal).then((v) => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        ctrls.forEach((c, j) => j !== i && c.abort());
+        resolve(v);
+      }, () => {
+        if (--left === 0 && !done) { done = true; clearTimeout(timer); reject(new ApiError("generic")); }
+      });
+    });
+  });
+}
+
+function toPlaces(els: any[], kind: NearbyKind, at: LngLat, lang: string, label: string): Place[] {
   const seen = new Set<string>();
   const out: Place[] = [];
   for (const e of els) {
-    const lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
-    if (lat == null || lon == null) continue;
-    const tg = e.tags ?? {};
-    const name = tg[`name:${lang}`] || tg.name || tg["name:ar"] || tg["name:en"] || tg.brand || label;
+    const lat = Number(e.lat ?? e.center?.lat), lon = Number(e.lon ?? e.center?.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const tg = e.tags ?? e.namedetails ?? {};
+    const name = tg[`name:${lang}`] || tg.name || tg["name:ar"] || tg["name:en"] || tg.brand || e.name || label;
     const key = `${name}|${Math.round(lat * 2000)}|${Math.round(lon * 2000)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const secondary = [tg.brand && tg.brand !== name ? tg.brand : "", tg["addr:street"] ?? "", tg.opening_hours === "24/7" ? "24/7" : ""].filter(Boolean).join(" · ");
-    out.push({ id: `osm:${e.type[0]}${e.id}`, name, secondary: secondary || undefined, kind: `nearby_${kind}`, coord: [lon, lat], source: "osm" });
+    const street = tg["addr:street"] ?? e.address?.road ?? "";
+    const secondary = [tg.brand && tg.brand !== name ? tg.brand : "", street, tg.opening_hours === "24/7" ? "24/7" : ""].filter(Boolean).join(" · ");
+    out.push({ id: `osm:${(e.type ?? e.osm_type ?? "x")[0]}${e.id ?? e.osm_id}`, name, secondary: secondary || undefined, kind: `nearby_${kind}`, coord: [lon, lat], source: "osm" });
   }
   return out.sort((a, b) => haversine(at, a.coord) - haversine(at, b.coord)).slice(0, 25);
+}
+
+const cache = new Map<string, { at: number; places: Place[] }>();
+
+/**
+ * Places of one kind around you (2–12 km depending on the kind), nearest first. Asks several OpenStreetMap servers at
+ * once and keeps the first answer; if none answers within a few seconds, falls back to Nominatim.
+ * Results are kept for 10 minutes per area.
+ */
+export async function nearby(kind: NearbyKind, at: LngLat, lang: string, label: string): Promise<Place[]> {
+  const key = `${kind}|${at[0].toFixed(2)}|${at[1].toFixed(2)}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.places;
+
+  const parts = FILTERS[kind].map((f) => `nwr${f}(around:${RADIUS_M[kind]},${at[1]},${at[0]});`).join("");
+  const q = `[out:json][timeout:8];(${parts});out center tags 200;`;
+  const overpass = () => firstOk(OVERPASS_MIRRORS.map((ep) => async (signal: AbortSignal) => {
+    const res = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "content-type": "application/x-www-form-urlencoded" }, signal });
+    if (!res.ok) throw new Error(String(res.status));
+    const data = await res.json();
+    return toPlaces(data.elements ?? [], kind, at, lang, label);
+  }), 8000);
+
+  const d = 0.12; // ~13 km box
+  const nominatim = async () => {
+    const qs = new URLSearchParams({
+      q: NOMINATIM_PHRASE[kind], format: "jsonv2", limit: "30", bounded: "1", namedetails: "1", addressdetails: "1",
+      viewbox: `${at[0] - d},${at[1] + d},${at[0] + d},${at[1] - d}`, "accept-language": `${lang},en`,
+    });
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const res = await fetch(`${NOMINATIM}/search?${qs}`, { headers: { accept: "application/json" }, signal: ctrl.signal });
+      if (!res.ok) throw new ApiError("generic", res.status);
+      return toPlaces((await res.json()) as any[], kind, at, lang, label);
+    } catch (e) {
+      throw e instanceof ApiError ? e : new ApiError(ctrl.signal.aborted ? "timeout" : "offline");
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  let places: Place[];
+  try {
+    places = await overpass();
+    if (!places.length) places = await nominatim().catch(() => places);
+  } catch {
+    places = await nominatim();
+  }
+  cache.set(key, { at: Date.now(), places });
+  return places;
 }
 
 /** "A road is missing / wrong here": an anonymous OpenStreetMap note mappers will see. */

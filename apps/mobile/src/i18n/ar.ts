@@ -195,7 +195,7 @@ export const ar = {
     avoid: { title: "خيارات الطريق", highways: "بدون طرق سريعة", unpaved: "بدون طرق ترابية", checkpoints: "تجنب السيطرات" },
     warn: { ahead: "{what} بعد {d}" },
     speed: { limit: "الحد", over: "خفف السرعة", alerts: "تنبيهات السرعة والكامرات", alertsHint: "ينبهك إذا عديت حد السرعة أو قربت على كامرة مبلغ عنها." },
-    share: { start: "شارك الرحلة", stop: "وقف المشاركة", started: "انسخ الرابط ودزه لأهلك", message: "تابع رحلتي إلى {name} مباشرة على دربنا: {url}", title: "رحلة مباشرة", eta: "يوصل {time}", left: "باقي {d}", updated: "آخر تحديث قبل {n} دقيقة", updatedNow: "محدث هسه", ended: "خلصت الرحلة", notFound: "رابط الرحلة انتهى", unsupported: "المشاركة تحتاج اتصال بخادم دربنا", watching: "رايح إلى {name}" },
+    share: { start: "شارك الرحلة", stop: "وقف المشاركة", started: "انسخ الرابط ودزه لأهلك", message: "تابع رحلتي إلى {name} مباشرة على دربنا: {url}", title: "رحلة مباشرة", eta: "يوصل {time}", left: "باقي {d}", updated: "آخر تحديث قبل {n} دقيقة", updatedNow: "محدث هسه", ended: "خلصت الرحلة", notFound: "رابط الرحلة انتهى", unsupported: "مشاركة الرحلة بعدها مو متوفرة — دا تنفعل. جرب بعدين.", watching: "رايح إلى {name}" },
     sos: {
       title: "طوارئ", general: "الطوارئ (كل الخدمات)", police: "الشرطة", ambulance: "الإسعاف", civilDefense: "الدفاع المدني / الحريق",
       regionKR: "إقليم كوردستان", regionIQ: "العراق", regionIQLong: "العراق (خارج إقليم كوردستان)", regionTUR: "تركيا", regionOther: "خارج العراق (دولة ثانية)", unknownRegion: "المنطقة غير معروفة",
