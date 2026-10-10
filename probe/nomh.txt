@@ -1,0 +1,18 @@
+HTTP/2 200 
+access-control-allow-origin: *
+server: gunicorn/asgi
+x-nominatim-server: vhagar.openstreetmap.org
+content-type: application/json; charset=utf-8
+accept-ranges: bytes
+age: 0
+date: Sat, 10 Oct 2026 22:08:33 GMT
+via: 1.1 varnish
+x-served-by: cache-chi-kmdw8640059-CHI, cache-chi-kmdw8640080-CHI
+x-cache: MISS, MISS
+x-cache-hits: 0, 0
+x-timer: S1791670114.576682,VS0,VE366
+vary: accept-language, Accept-Encoding
+strict-transport-security: max-age=300
+alt-svc: h3=":443";ma=86400,h3-29=":443";ma=86400,h3-27=":443";ma=86400
+content-length: 694
+
