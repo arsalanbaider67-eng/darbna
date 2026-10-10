@@ -47,12 +47,16 @@ export function PermissionPanel({ state, onAllow, onOpenSettings }: { state: Per
           <Txt muted>{servicesOff ? t.permission.servicesOff : blocked ? t.permission.deniedBody : t.permission.body}</Txt>
         </View>
       </Row>
-      <Btn
-        label={blocked || servicesOff ? t.permission.openSettings : t.permission.allow}
-        icon={blocked || servicesOff ? "cog-outline" : "crosshairs-gps"}
-        onPress={state === "unknown" ? onAllow : onOpenSettings}
-        style={{ marginTop: 12 }}
-      />
+      <Row style={{ marginTop: 12 }}>
+        <Btn
+          label={blocked || servicesOff ? t.permission.openSettings : t.permission.allow}
+          icon={blocked || servicesOff ? "cog-outline" : "crosshairs-gps"}
+          onPress={state === "unknown" ? onAllow : onOpenSettings}
+          style={{ flex: 1 }}
+        />
+        {/* Emergency numbers never depend on location permission. */}
+        <Btn kind="danger" icon="alarm-light" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
+      </Row>
     </Panel>
   );
 }
