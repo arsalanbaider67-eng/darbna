@@ -44,7 +44,7 @@ export function Btn({
   disabled?: boolean; loading?: boolean; style?: StyleProp<ViewStyle>; accessibilityHint?: string;
 }) {
   const { theme } = useUi();
-  const bg = { primary: theme.primary, secondary: theme.surfaceAlt, ghost: "transparent", danger: theme.danger, accent: theme.accent }[kind];
+  const bg = { primary: theme.primary, secondary: theme.surfaceAlt, ghost: "transparent", danger: "#D92D20", accent: theme.accent }[kind]; // solid red keeps white text readable
   const fg = { primary: theme.onPrimary, secondary: theme.text, ghost: theme.primary, danger: "#FFFFFF", accent: theme.onAccent }[kind];
   return (
     <Pressable
