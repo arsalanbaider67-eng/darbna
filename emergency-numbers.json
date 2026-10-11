@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "version": 1,
+  "published": "2026-10-11",
+  "staleAfterDays": 180,
+  "regions": {
+    "IQ-KR": {
+      "lastVerified": "2026-10-11",
+      "contacts": [
+        {
+          "service": "police",
+          "number": "104",
+          "sources": [
+            { "title": "Help.KRD — Emergency & Useful Numbers in Kurdistan Region (lists 104 as Emergency Police; cites erbil.gov.krd; call last verified 2026-06-20)", "url": "https://help.krd/?id=6&lang=en", "official": false }
+          ],
+          "callTested": null
+        },
+        {
+          "service": "ambulance",
+          "number": "122",
+          "sources": [
+            { "title": "Kurdistan Regional Government, Dept. of Media & Information — Erbil's emergency line 122", "url": "https://gov.krd/dmi-en/activities/news-and-press-releases/2023/january/erbil-s-emergency-line-122-fast-and-free-help-to-all/", "official": true },
+            { "title": "Help.KRD — lists 122 as Ambulance / Health Emergency (cites erbil.gov.krd)", "url": "https://help.krd/?id=6&lang=en", "official": false }
+          ],
+          "callTested": null
+        },
+        {
+          "service": "civil_defense",
+          "number": "115",
+          "sources": [
+            { "title": "Help.KRD — lists 115 as Fire / Civil Defense (cites erbil.gov.krd; call last verified 2026-06-20)", "url": "https://help.krd/?id=6&lang=en", "official": false }
+          ],
+          "callTested": null
+        }
+      ],
+      "note": "Sources confirm these for Erbil; coverage in Sulaymaniyah, Duhok and Halabja must be confirmed by a call test before release."
+    },
+    "IQ": {
+      "lastVerified": "2026-10-11",
+      "contacts": [
+        {
+          "service": "general",
+          "number": "911",
+          "primary": true,
+          "sources": [
+            { "title": "Iraqi News Agency (INA) — Ministry of Interior: 911 center, 24/7, free; previous emergency hotlines merged into 911 (12 Jan 2025)", "url": "https://ina.iq/en/local/37665-interior-ministry-911-receives-calls-in-5-languages.html", "official": true },
+            { "title": "INA — Ministry of Interior: 911 for visitors via roaming, instant translation (22 Jul 2026)", "url": "https://ina.iq/en/local/50621-moi-instant-translation-in-six-languages-for-communication-with-visitors-via-911.html", "official": true },
+            { "title": "U.S. Embassy Baghdad: \"The emergency number in Iraq is 911.\"", "url": "https://x.com/USEmbBaghdad/status/2029241725500154291", "official": true }
+          ],
+          "callTested": null
+        }
+      ]
+    },
+    "TUR": {
+      "lastVerified": "2026-10-11",
+      "contacts": [
+        {
+          "service": "general",
+          "number": "112",
+          "primary": true,
+          "sources": [
+            { "title": "Republic of Türkiye Ministry of Interior — 112 Emergency Call Center: \"Tek Numara 112\" (police, gendarmerie, fire, coast guard on 112)", "url": "https://www.112.gov.tr/", "official": true }
+          ],
+          "callTested": null
+        }
+      ]
+    }
+  }
+}
