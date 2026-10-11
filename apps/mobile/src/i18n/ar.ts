@@ -121,6 +121,8 @@ export const ar = {
     sent: "شكراً! وصل بلاغك.",
     merged: "هذا البلاغ موجود، تم تأكيده.",
     rateLimited: "بلغت الحد المسموح. حاول بعد شوية.",
+    outsideIraq: "البلاغات تشتغل داخل العراق بس — إنت هسه برّا العراق.",
+    notReady: "هذا النوع من البلاغات بعده ما مفعّل. جرّب نوع ثاني.",
     failedQueued: "ما في إنترنت — سيُرسل البلاغ تلقائياً.",
     categories: {
       congestion: "زحام", crash: "حادث", closure: "طريق مقطوع", roadworks: "أعمال طريق", pothole: "طسة / حفرة", flooding: "غرق / مياه", checkpoint: "سيطرة", checkpoint_slow: "سيطرة – انتظار طويل", camera: "كامرة سرعة", fuel_queue: "بانزينخانة – سرة طويلة", fuel_closed: "بانزينخانة مسدودة",

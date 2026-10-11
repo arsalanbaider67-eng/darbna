@@ -73,7 +73,7 @@ export const en: Strings = {
     onlyWhenStopped: "Only report when stopped or if you're a passenger.",
     imPassenger: "I'm a passenger",
     sent: "Thanks! Report sent.", merged: "Already reported — counted as a confirmation.",
-    rateLimited: "Report limit reached. Try again later.", failedQueued: "Offline — the report will be sent automatically.",
+    rateLimited: "Report limit reached. Try again later.", outsideIraq: "Reports only work inside Iraq — you're outside Iraq right now.", notReady: "This kind of report isn't switched on yet. Try another kind.", failedQueued: "Offline — the report will be sent automatically.",
     categories: { congestion: "Traffic", crash: "Crash", closure: "Road closed", roadworks: "Roadworks", pothole: "Pothole", flooding: "Flooding", checkpoint: "Checkpoint", checkpoint_slow: "Checkpoint – long wait", camera: "Speed camera", fuel_queue: "Fuel – long queue", fuel_closed: "Fuel station closed" },
     stillThere: "Still there", notThere: "Not there", flag: "Wrong or abusive report",
     community: "Driver report", official: "Verified official information", sample: "Sample data",
