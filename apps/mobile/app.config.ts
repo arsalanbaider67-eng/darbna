@@ -25,9 +25,9 @@ const config: ExpoConfig = {
     name: "دربنا",
     shortName: "دربنا",
     lang: "ar",
-    themeColor: "#070707",
-    backgroundColor: "#070707",
-    favicon: "./public/favicon-gold.png",
+    themeColor: "#FFF5EF",
+    backgroundColor: "#FFF5EF",
+    favicon: "./public/favicon-v3.png",
   },
   // GitHub Pages serves the web build from /<repo>/ — set by the web workflow.
   experiments: process.env.EXPO_BASE_URL ? { baseUrl: process.env.EXPO_BASE_URL } : undefined,
@@ -55,6 +55,8 @@ const config: ExpoConfig = {
     },
   },
   android: {
+    // Brand guide v1.0: adaptive icon = symbol on Darbna Purple, plus a monochrome layer.
+    adaptiveIcon: { foregroundImage: "./assets/adaptive-foreground.png", monochromeImage: "./assets/adaptive-monochrome.png", backgroundColor: "#21194A" },
     package: "iq.darbna.app",
     versionCode: Number(process.env.APP_BUILD_NUMBER ?? 1),
     permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],

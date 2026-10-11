@@ -152,8 +152,8 @@ function rescore(r: PublicReport): PublicReport {
 // ---------------------------------------------------------------- the API, same shape as the server client
 export const directApi = {
   config: async (): Promise<ServerConfig> => ({
-    // "#gold": the map is recoloured black & gold in the app (goldStyle), day and night.
-    map: { styleDay: `${STYLE}#gold`, styleNight: `${STYLE}#gold`, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
+    // "#light": the normal map, lightened, day and night (brand guide v1.0: white app, purple route).
+    map: { styleDay: `${STYLE}#light`, styleNight: `${STYLE}#light`, attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" },
     routing: { provider: "valhalla", traffic: false, avoidsVerifiedClosures: false },
     features: { offlineMapDisplay: false, offlineRouting: false, liveTraffic: false },
     sampleData: false,

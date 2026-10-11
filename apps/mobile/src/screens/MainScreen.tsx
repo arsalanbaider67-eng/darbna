@@ -492,8 +492,8 @@ export function MainScreen() {
     return (
       <View style={[s.center, { backgroundColor: theme.bg }]}>
         <StatusBar style={theme.dark ? "light" : "dark"} />
-        <Image source={require("../../assets/icon.png")} style={{ width: 96, height: 96, borderRadius: 22 }} accessibilityIgnoresInvertColors />
-        <Txt size={22} weight="bold" style={{ color: theme.primary }}>{t.appName}</Txt>
+        {/* Brand guide v1.0: the supplied lockup artwork, never retyped. */}
+        <Image source={require("../../assets/lockup.png")} style={{ width: 190, height: 111 }} resizeMode="contain" accessibilityLabel={t.appName} accessibilityIgnoresInvertColors />
         {/* Emergency numbers never wait for the map or the internet. */}
         <Btn kind="danger" icon="alarm-light" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
         {configError ? (
@@ -525,7 +525,7 @@ export function MainScreen() {
   return (
     <UiOverride dark={mode === "navigating"}>
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <StatusBar style={theme.dark || mode === "navigating" ? "light" : "dark"} />
+      <StatusBar style={theme.dark ? "light" : "dark"} />
       <MapCanvas
         ref={map}
         styleUrl={styleUrl}

@@ -8,7 +8,7 @@
  *    being added to OpenStreetMap); the stored tile is used when offline or the network is slow.
  *  - Routes, search, reports and traffic are never cached here (they must be live).
  */
-const SHELL = "darbna-shell-v2"; // v2: black & gold icons
+const SHELL = "darbna-shell-v3"; // v3: brand guide v1.0 icons
 const MAP = "darbna-map-v1";
 const MAP_HOST = "tiles.openfreemap.org";
 // Arabic/Kurdish label shaping for the map, loaded from a CDN.
@@ -20,7 +20,7 @@ const NET_WAIT_MS = 2500;
 self.addEventListener("install", (e) => {
   self.skipWaiting();
   e.waitUntil(caches.open(SHELL).then(async (c) => {
-    await c.addAll(["./", "./manifest.json", "./apple-touch-icon-gold.png"]).catch(() => {});
+    await c.addAll(["./", "./manifest.json", "./apple-touch-icon-v3.png"]).catch(() => {});
     await c.add(RTL_PLUGIN).catch(() => {}); // separate: a CDN hiccup mustn't block the rest
   }));
 });

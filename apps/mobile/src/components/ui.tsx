@@ -6,9 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUi } from "../context";
 import { font, TOUCH } from "../theme";
 
-/** Black frosted glass (the blur shows on the web; phones get the solid black). */
-const GLASS = "rgba(18,18,18,0.86)";
-const GLASS_PANEL = "rgba(12,12,12,0.94)";
+/** Warm-white frosted glass (the blur shows on the web; phones get the solid colour). */
 const BLUR: any = Platform.OS === "web" ? { backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" } : null;
 
 export type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
@@ -59,7 +57,7 @@ export function Btn({
       style={({ pressed }) => [
         s.btn,
         { backgroundColor: bg, opacity: disabled ? 0.45 : pressed ? 0.85 : 1, borderColor: kind === "secondary" ? theme.border : "transparent" },
-        kind === "primary" && Platform.OS === "web" ? ({ boxShadow: "0 0 18px rgba(212,175,55,0.35)" } as any) : null,
+        kind === "primary" && Platform.OS === "web" ? ({ boxShadow: "0 4px 14px rgba(33,25,74,0.22)" } as any) : null,
         style,
       ]}
     >
@@ -79,7 +77,7 @@ export function RoundBtn({ icon, onPress, label, active, size = TOUCH }: { icon:
       hitSlop={8}
       style={({ pressed }) => [
         s.round,
-        { width: size, height: size, borderRadius: size / 2, backgroundColor: active ? theme.primary : GLASS, borderColor: active ? theme.primary : theme.border, opacity: pressed ? 0.85 : 1, shadowColor: theme.shadow },
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: active ? theme.primary : theme.glass, borderColor: active ? theme.primary : theme.border, opacity: pressed ? 0.85 : 1, shadowColor: theme.shadow },
         BLUR,
       ]}
     >
@@ -93,7 +91,7 @@ export function Panel({ children, style }: { children: React.ReactNode; style?: 
   const { theme } = useUi();
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.panel, BLUR, { backgroundColor: GLASS_PANEL, paddingBottom: Math.max(insets.bottom, 12) + 4, shadowColor: theme.shadow, borderColor: theme.border }, style]}>
+    <View style={[s.panel, BLUR, { backgroundColor: theme.glassPanel, paddingBottom: Math.max(insets.bottom, 12) + 4, shadowColor: theme.shadow, borderColor: theme.border }, style]}>
       <View style={[s.grabber, { backgroundColor: theme.border }]} />
       {children}
     </View>

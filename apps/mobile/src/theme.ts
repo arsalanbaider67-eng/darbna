@@ -2,8 +2,11 @@ import { Platform } from "react-native";
 import type { ReportCategory } from "@darbna/core";
 
 /**
- * Darbna identity: black and gold. A black map, metallic-gold route and arrow, black glass
- * panels with thin gold edges. Danger stays red and warnings amber so they never blend into the gold.
+ * Darbna identity (brand guide v1.0, 11 Oct 2026): Darbna Purple #21194A, Darbna Yellow #FFD25E,
+ * Darbna White #FFF5EF. Inside the app: warm-white panels and map, purple text and controls, your
+ * arrow and route in purple. Yellow only ever sits on purple (never on white: 1.34:1).
+ * Safety colours (danger red, warning amber, traffic, report categories, the grey driven route)
+ * stay as they are: they carry meaning, not branding.
  */
 export interface Theme {
   dark: boolean;
@@ -30,36 +33,48 @@ export interface Theme {
   puck: string;
   /** Part of the route already driven. */
   driven: string;
+  /** Floating buttons and pills over the map. */
+  glass: string;
+  /** Bottom panels. */
+  glassPanel: string;
+  /** Selected row / lane highlight. */
+  highlight: string;
 }
 
-export const gold: Theme = {
-  dark: true,
-  bg: "#070707",
-  surface: "#121212",
-  surfaceAlt: "#1B1A17",
-  text: "#F6F0E1",
-  textMuted: "#A99F88",
-  border: "#3A3220",
-  primary: "#D4AF37",
-  onPrimary: "#0A0907",
-  accent: "#E6C35C",
-  onAccent: "#0A0907",
-  danger: "#FF5A4E",
-  warn: "#F2A23A",
-  ok: "#5BD39A",
-  route: "#E2B53E",
-  routeCasing: "#2E2408",
-  routeAlt: "#5E5643",
-  banner: "#121212",
-  onBanner: "#F6F0E1",
-  shadow: "#000000",
-  puck: "#F1C94B",
-  driven: "#4A4740",
+export const BRAND = { purple: "#21194A", yellow: "#FFD25E", white: "#FFF5EF" } as const;
+
+export const brand: Theme = {
+  dark: false,
+  bg: BRAND.white,
+  surface: BRAND.white,
+  surfaceAlt: "#F5E9E1",
+  text: BRAND.purple,
+  textMuted: "#5B5478",
+  border: "#E4D6CC",
+  primary: BRAND.purple,
+  onPrimary: BRAND.white,
+  accent: BRAND.yellow,
+  onAccent: BRAND.purple,
+  danger: "#D92D20",
+  warn: "#B54708",
+  ok: "#1E7A4C",
+  route: BRAND.purple,
+  routeCasing: BRAND.white,
+  routeAlt: "#9A93B5",
+  banner: BRAND.white,
+  onBanner: BRAND.purple,
+  shadow: BRAND.purple,
+  puck: BRAND.purple,
+  driven: "#B7B0AB",
+  glass: "rgba(255,245,239,0.94)",
+  glassPanel: "rgba(255,245,239,0.98)",
+  highlight: "rgba(33,25,74,0.08)",
 };
 
-// The app has one look now (black & gold); both names kept for older imports.
-export const day = gold;
-export const night = gold;
+// One look (brand guide v1.0) day and night; names kept for older imports.
+export const gold = brand;
+export const day = brand;
+export const night = brand;
 
 // On the web, fall back to the phone's own font if the downloaded one is blocked or slow
 // (Lockdown Mode, in-app browsers), instead of the browser's default serif.

@@ -44,7 +44,7 @@ Darbna is a navigation app made for Iraq.
 • Share your trip live with family, and an SOS button (104 police, 122 ambulance, 115 fire)
 • Remembers where you parked
 • Quick search for fuel, mosques, hospitals, pharmacies, food and ATMs near you
-• Offline maps, satellite view, and an easy-on-the-eyes black & gold design
+• Offline maps, satellite view, and a clean, easy-to-read design
 • No account, no ads. Your trip path is never stored.
 Map data © OpenStreetMap contributors.
 

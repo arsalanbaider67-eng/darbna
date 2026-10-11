@@ -57,7 +57,7 @@ export function SosSheet({ coord, onClose }: { coord: LngLat | null; onClose(): 
       accessibilityLabel={`${serviceName(c.service)} ${c.number}. ${L.tapHint}`}
       // One tap opens the dialer with the number filled in; the person presses call themselves.
       onPress={() => void Linking.openURL(`tel:${c.number}`)}
-      style={({ pressed }) => [s.call, { minHeight: big ? TOUCH + 24 : TOUCH + 8, borderColor: theme.danger, backgroundColor: big ? "rgba(255,90,78,0.12)" : "transparent", opacity: pressed ? 0.8 : 1 }]}
+      style={({ pressed }) => [s.call, { minHeight: big ? TOUCH + 24 : TOUCH + 8, borderColor: theme.danger, backgroundColor: big ? "rgba(217,45,32,0.08)" : "transparent", opacity: pressed ? 0.8 : 1 }]}
     >
       <Icon name={SERVICE_ICON[c.service]} color={theme.danger} size={big ? 34 : 28} />
       <Txt size={big ? 20 : 18} weight="semibold" style={{ flex: 1 }}>{serviceName(c.service)}</Txt>
@@ -74,7 +74,7 @@ export function SosSheet({ coord, onClose }: { coord: LngLat | null; onClose(): 
         return (
           <Pressable key={r} accessibilityRole="radio" accessibilityState={{ selected: on }}
             onPress={() => { chooseSosRegion(r); setChoosing(false); }}
-            style={[s.choice, { borderColor: on ? theme.primary : theme.border, backgroundColor: on ? "rgba(212,175,55,0.12)" : "transparent" }]}>
+            style={[s.choice, { borderColor: on ? theme.primary : theme.border, backgroundColor: on ? theme.highlight : "transparent" }]}>
             <Icon name={r === OTHER ? "earth" : r === "TUR" ? "flag-outline" : "map-marker-radius-outline"} color={theme.primary} />
             <Txt size={16} style={{ flex: 1 }}>{r === IRAQ ? L.regionIQLong : regionName(r)}</Txt>
           </Pressable>

@@ -69,8 +69,8 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   useEffect(() => {
     const [url, tag] = p.styleUrl.split("#");
     if (!tag) { setMapStyle(url); return; }
-    // "#gold" black & gold map, "#night" dark map, "#sat" satellite: built from the normal style.
-    const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st)) : tag === "night" ? darkenStyle(lightenStyle(st)) : goldStyle(lightenStyle(st));
+    // "#light" brand map (lightened), "#gold" black & gold map, "#night" dark map, "#sat" satellite: built from the normal style.
+    const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st)) : tag === "night" ? darkenStyle(lightenStyle(st)) : tag === "gold" ? goldStyle(lightenStyle(st)) : lightenStyle(st);
     let live = true;
     fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(make(st)); }).catch(() => live && setMapStyle(url));
     return () => { live = false; };
@@ -285,27 +285,27 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
         {destShape && (
           <ShapeSource id="destination" shape={destShape}>
             <CircleLayer id="dest-halo" style={{ circleRadius: 16, circleColor: theme.accent, circleOpacity: 0.25 }} />
-            <CircleLayer id="dest-dot" style={{ circleRadius: 8, circleColor: theme.accent, circleStrokeWidth: 3, circleStrokeColor: "#FFFFFF" }} />
+            <CircleLayer id="dest-dot" style={{ circleRadius: 8, circleColor: theme.accent, circleStrokeWidth: 3, circleStrokeColor: theme.primary }} />
           </ShapeSource>
         )}
 
         {p.parked && (
           <ShapeSource id="parked" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.parked } }}>
-            <CircleLayer id="parked-ring" style={{ circleRadius: 13, circleColor: "#0A0907", circleStrokeWidth: 3, circleStrokeColor: theme.primary }} />
+            <CircleLayer id="parked-ring" style={{ circleRadius: 13, circleColor: theme.surface, circleStrokeWidth: 3, circleStrokeColor: theme.primary }} />
             <CircleLayer id="parked-dot" style={{ circleRadius: 4.5, circleColor: theme.primary }} />
           </ShapeSource>
         )}
         {p.friend && (
           <ShapeSource id="friend" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.friend.coord } }}>
             <CircleLayer id="friend-halo" style={{ circleRadius: 24, circleColor: theme.primary, circleOpacity: 0.2 }} />
-            <CircleLayer id="friend-dot" style={{ circleRadius: 9, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: "#0A0907" }} />
+            <CircleLayer id="friend-dot" style={{ circleRadius: 9, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.surface }} />
           </ShapeSource>
         )}
 
         {simShape && (
           <ShapeSource id="sim-me" shape={simShape}>
             <CircleLayer id="sim-halo" style={{ circleRadius: 18, circleColor: theme.puck, circleOpacity: 0.18 }} />
-            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: "#0A0907" }} />
+            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.surface }} />
           </ShapeSource>
         )}
 

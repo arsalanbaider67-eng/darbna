@@ -149,8 +149,8 @@ export function NavHud(p: Props) {
       )}
       {!!street && (
         <View style={[s.street, { bottom: barH + 22 }]} pointerEvents="none">
-          <View style={[s.streetPill, { backgroundColor: "rgba(8,8,8,0.92)", borderColor: theme.border, borderWidth: 1 }]}>
-            <Txt size={16} weight="semibold" numberOfLines={2} style={{ color: "#FFFFFF", textAlign: "center" }}>{street}</Txt>
+          <View style={[s.streetPill, { backgroundColor: theme.glassPanel, borderColor: theme.border, borderWidth: 1 }]}>
+            <Txt size={16} weight="semibold" numberOfLines={2} style={{ color: theme.text, textAlign: "center" }}>{street}</Txt>
           </View>
         </View>
       )}
@@ -158,7 +158,7 @@ export function NavHud(p: Props) {
         accessibilityRole="button"
         accessibilityLabel={t.reports.title}
         onPress={p.onReport}
-        style={({ pressed }) => [s.report, { bottom: barH + 14, backgroundColor: pressed ? "#7A5A12" : "#5C4511", borderColor: theme.accent }]}
+        style={({ pressed }) => [s.report, { bottom: barH + 14, backgroundColor: pressed ? "#352A6E" : theme.primary, borderColor: theme.primary }]}
       >
         <Icon name="alert-plus" size={36} color={theme.accent} />
       </Pressable>

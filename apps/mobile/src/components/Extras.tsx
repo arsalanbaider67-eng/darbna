@@ -190,14 +190,14 @@ export async function refreshPoints(): Promise<number | null> {
 }
 
 // ---------------------------------------------------------------- driving bits
-/** Three lanes; the ones to use are gold. A hint for exits and forks. */
+/** Three lanes; the ones to use are highlighted. A hint for exits and forks. */
 export function LaneHintView({ hint }: { hint: LaneHint }) {
   const { theme } = useUi();
   const icon = (i: number): IconName => (i === 0 ? "arrow-top-left" : i === hint.lanes - 1 ? "arrow-top-right" : "arrow-up");
   return (
     <Row gap={0} style={[s.lanes, { borderColor: theme.border }]}>
       {hint.use.map((on, i) => (
-        <View key={i} style={[s.lane, { borderColor: theme.border, borderLeftWidth: i ? 1 : 0, backgroundColor: on ? "rgba(212,175,55,0.14)" : "transparent" }]}>
+        <View key={i} style={[s.lane, { borderColor: theme.border, borderLeftWidth: i ? 1 : 0, backgroundColor: on ? theme.highlight : "transparent" }]}>
           <Icon name={icon(i)} size={26} color={on ? theme.primary : theme.textMuted} />
         </View>
       ))}
@@ -221,7 +221,7 @@ export function AheadChip({ report, distanceM }: { report: PublicReport; distanc
   const st = REPORT_STYLE[report.category as ReportCategory];
   return (
     <View accessibilityLiveRegion="polite" style={{ alignSelf: "flex-start" }}>
-    <Row style={[s.ahead, { backgroundColor: "rgba(18,18,18,0.94)", borderColor: theme.warn }]}>
+    <Row style={[s.ahead, { backgroundColor: theme.glassPanel, borderColor: theme.warn }]}>
       <View style={[s.aheadIcon, { backgroundColor: st.color }]}><Icon name={st.icon as IconName} color="#fff" size={18} /></View>
       <Txt size={16} weight="semibold" style={{ color: theme.warn }}>
         {fmt(t.x.warn.ahead, { what: t.reports.categories[report.category], d: fmtDistance(distanceM, fmtCtx) })}
