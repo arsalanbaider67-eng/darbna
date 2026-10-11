@@ -25,8 +25,8 @@ const config: ExpoConfig = {
     name: "دربنا",
     shortName: "دربنا",
     lang: "ar",
-    themeColor: "#FFF5EF",
-    backgroundColor: "#FFF5EF",
+    themeColor: "#21194A",
+    backgroundColor: "#21194A",
     favicon: "./public/favicon-v3.png",
   },
   // GitHub Pages serves the web build from /<repo>/ — set by the web workflow.

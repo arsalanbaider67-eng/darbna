@@ -328,13 +328,13 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     m.addLayer({ id: "dest-halo", type: "circle", source: "dest", paint: { "circle-radius": 16, "circle-color": t.accent, "circle-opacity": 0.25 } });
     m.addLayer({ id: "dest-dot", type: "circle", source: "dest", paint: { "circle-radius": 8, "circle-color": t.accent, "circle-stroke-width": 3, "circle-stroke-color": t.primary } });
     m.addSource("parked", { type: "geojson", data: pointFC(latest.current.parked ?? null) });
-    m.addLayer({ id: "parked-ring", type: "circle", source: "parked", paint: { "circle-radius": 13, "circle-color": t.surface, "circle-stroke-width": 3, "circle-stroke-color": t.primary } });
+    m.addLayer({ id: "parked-ring", type: "circle", source: "parked", paint: { "circle-radius": 13, "circle-color": t.puck, "circle-stroke-width": 3, "circle-stroke-color": t.accent } });
     m.addLayer({ id: "parked-dot", type: "circle", source: "parked", paint: { "circle-radius": 4.5, "circle-color": t.primary } });
     m.addSource("friend", { type: "geojson", data: pointFC(latest.current.friend?.coord ?? null, { heading: latest.current.friend?.heading ?? 0 }) });
     m.addLayer({ id: "friend-halo", type: "circle", source: "friend", paint: { "circle-radius": 26, "circle-color": t.primary, "circle-opacity": 0.2 } });
     m.addSource("me", { type: "geojson", data: meFC(me.current?.coord ?? null, me.current?.heading ?? null) });
     m.addLayer({ id: "me-halo", type: "circle", source: "me", paint: { "circle-radius": 26, "circle-color": t.puck, "circle-opacity": 0.18, "circle-pitch-alignment": "map" } });
-    m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "hasHeading"], 0], paint: { "circle-radius": 8, "circle-color": t.puck, "circle-stroke-width": 3, "circle-stroke-color": t.surface } });
+    m.addLayer({ id: "me-dot", type: "circle", source: "me", filter: ["==", ["get", "hasHeading"], 0], paint: { "circle-radius": 8, "circle-color": t.puck, "circle-stroke-width": 3, "circle-stroke-color": t.routeCasing } });
     if (!m.hasImage("darbna-puck")) { const img = puckImage(t.puck); if (img) m.addImage("darbna-puck", img, { pixelRatio: 2 }); }
     m.addLayer({
       id: "me-arrow", type: "symbol", source: "me", filter: ["==", ["get", "hasHeading"], 1],

@@ -291,21 +291,21 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
         {p.parked && (
           <ShapeSource id="parked" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.parked } }}>
-            <CircleLayer id="parked-ring" style={{ circleRadius: 13, circleColor: theme.surface, circleStrokeWidth: 3, circleStrokeColor: theme.primary }} />
+            <CircleLayer id="parked-ring" style={{ circleRadius: 13, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.accent }} />
             <CircleLayer id="parked-dot" style={{ circleRadius: 4.5, circleColor: theme.primary }} />
           </ShapeSource>
         )}
         {p.friend && (
           <ShapeSource id="friend" shape={{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: p.friend.coord } }}>
             <CircleLayer id="friend-halo" style={{ circleRadius: 24, circleColor: theme.primary, circleOpacity: 0.2 }} />
-            <CircleLayer id="friend-dot" style={{ circleRadius: 9, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.surface }} />
+            <CircleLayer id="friend-dot" style={{ circleRadius: 9, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.routeCasing }} />
           </ShapeSource>
         )}
 
         {simShape && (
           <ShapeSource id="sim-me" shape={simShape}>
             <CircleLayer id="sim-halo" style={{ circleRadius: 18, circleColor: theme.puck, circleOpacity: 0.18 }} />
-            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.surface }} />
+            <CircleLayer id="sim-dot" style={{ circleRadius: 8, circleColor: theme.puck, circleStrokeWidth: 3, circleStrokeColor: theme.routeCasing }} />
           </ShapeSource>
         )}
 

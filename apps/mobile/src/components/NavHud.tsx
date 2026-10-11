@@ -158,7 +158,7 @@ export function NavHud(p: Props) {
         accessibilityRole="button"
         accessibilityLabel={t.reports.title}
         onPress={p.onReport}
-        style={({ pressed }) => [s.report, { bottom: barH + 14, backgroundColor: pressed ? "#352A6E" : theme.primary, borderColor: theme.primary }]}
+        style={({ pressed }) => [s.report, { bottom: barH + 14, backgroundColor: theme.glassPanel, borderColor: theme.accent, opacity: pressed ? 0.85 : 1 }]}
       >
         <Icon name="alert-plus" size={36} color={theme.accent} />
       </Pressable>

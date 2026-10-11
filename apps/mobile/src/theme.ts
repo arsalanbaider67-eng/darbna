@@ -3,8 +3,8 @@ import type { ReportCategory } from "@darbna/core";
 
 /**
  * Darbna identity (brand guide v1.0, 11 Oct 2026): Darbna Purple #21194A, Darbna Yellow #FFD25E,
- * Darbna White #FFF5EF. Inside the app: warm-white panels and map, purple text and controls, your
- * arrow and route in purple. Yellow only ever sits on purple (never on white: 1.34:1).
+ * Darbna White #FFF5EF. Inside the app: purple panels, white text, yellow buttons and highlights
+ * (yellow only ever on purple); the map stays light with your arrow and route in purple.
  * Safety colours (danger red, warning amber, traffic, report categories, the grey driven route)
  * stay as they are: they carry meaning, not branding.
  */
@@ -44,31 +44,32 @@ export interface Theme {
 export const BRAND = { purple: "#21194A", yellow: "#FFD25E", white: "#FFF5EF" } as const;
 
 export const brand: Theme = {
-  dark: false,
-  bg: BRAND.white,
-  surface: BRAND.white,
-  surfaceAlt: "#F5E9E1",
-  text: BRAND.purple,
-  textMuted: "#5B5478",
-  border: "#E4D6CC",
-  primary: BRAND.purple,
-  onPrimary: BRAND.white,
+  dark: true,
+  bg: BRAND.purple,
+  surface: BRAND.purple,
+  surfaceAlt: "#2D2463",
+  text: BRAND.white,
+  textMuted: "#CBC4E3",
+  border: "#3D3478",
+  primary: BRAND.yellow,
+  onPrimary: BRAND.purple,
   accent: BRAND.yellow,
   onAccent: BRAND.purple,
-  danger: "#D92D20",
-  warn: "#B54708",
-  ok: "#1E7A4C",
+  danger: "#FF6B5E",
+  warn: "#F5A524",
+  ok: "#5BD39A",
+  // On the map (light): your arrow and route stay purple with a white edge.
   route: BRAND.purple,
   routeCasing: BRAND.white,
   routeAlt: "#9A93B5",
-  banner: BRAND.white,
-  onBanner: BRAND.purple,
-  shadow: BRAND.purple,
+  banner: BRAND.purple,
+  onBanner: BRAND.white,
+  shadow: "#0B0820",
   puck: BRAND.purple,
-  driven: "#B7B0AB",
-  glass: "rgba(255,245,239,0.94)",
-  glassPanel: "rgba(255,245,239,0.98)",
-  highlight: "rgba(33,25,74,0.08)",
+  driven: "#9C9590",
+  glass: "rgba(33,25,74,0.94)",
+  glassPanel: "rgba(33,25,74,0.98)",
+  highlight: "rgba(255,210,94,0.16)",
 };
 
 // One look (brand guide v1.0) day and night; names kept for older imports.

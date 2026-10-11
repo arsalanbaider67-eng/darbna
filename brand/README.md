@@ -6,9 +6,9 @@ nothing was redrawn or retyped. Regenerate the PNGs from those outlines only.
 
 | Colour | Hex | Use |
 |---|---|---|
-| Darbna Purple | `#21194A` | backgrounds, text on light colours, icon tile, **your arrow and route in the app** |
+| Darbna Purple | `#21194A` | backgrounds (**app panels and screens**), icon tile, **your arrow and route on the map** |
 | Darbna Yellow | `#FFD25E` | symbol accent, highlights, CTAs — only on purple, never on white |
-| Darbna White | `#FFF5EF` | wordmark and text on purple, light backgrounds (**app panels and screens**) |
+| Darbna White | `#FFF5EF` | wordmark and **app text** on purple, light backgrounds |
 
 Files: `ios-app-store-1024.png` (opaque), `google-play-512.png`, Android adaptive foreground and
 monochrome (432 px, symbol inside the 66 dp safe zone, background `#21194A`), favicons 16–512,
