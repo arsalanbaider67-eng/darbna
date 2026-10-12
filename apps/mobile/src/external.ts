@@ -10,7 +10,8 @@ import type { Place } from "./types";
 
 const OVERPASS = "https://overpass-api.de/api/interpreter";
 const OSM_API = "https://api.openstreetmap.org/api/0.6";
-const VALHALLA = "https://valhalla1.openstreetmap.de";
+// Your own server (routing.darbna.com) when EXPO_PUBLIC_VALHALLA_URL is set at build time; else the public FOSSGIS one.
+const VALHALLA = (process.env.EXPO_PUBLIC_VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/$/, "");
 
 export const NEARBY_KINDS = ["fuel", "mosque", "hospital", "pharmacy", "restaurant", "atm"] as const;
 export type NearbyKind = (typeof NEARBY_KINDS)[number];
@@ -42,7 +43,8 @@ const OVERPASS_MIRRORS = [
   "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
 ];
-const NOMINATIM = "https://nominatim.openstreetmap.org";
+// Your own server (search.darbna.com) when EXPO_PUBLIC_NOMINATIM_URL is set at build time; else the public one.
+const NOMINATIM = (process.env.EXPO_PUBLIC_NOMINATIM_URL || "https://nominatim.openstreetmap.org").replace(/\/$/, "");
 /** Search radius per kind: small where places are dense (food, ATMs), wide where they're sparse. */
 const RADIUS_M: Record<NearbyKind, number> = { fuel: 10_000, mosque: 6_000, hospital: 12_000, pharmacy: 4_000, restaurant: 2_000, atm: 3_000 };
 /** Nominatim "special phrases": the place kind in English finds e.g. every fuel station in an area. */

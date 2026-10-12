@@ -1,0 +1,45 @@
+# Darbna's own routing + search server for darbna.com (used by the app in "direct" mode).
+#   routing.darbna.com → Valhalla (car + walking routes, speed limits)
+#   search.darbna.com  → Nominatim (address / place search, "nearby fuel" etc.)
+# Map tiles stay on OpenFreeMap and shared reports on Supabase, so this is all the app needs.
+# Deployed by .github/workflows/server-deploy.yml into /opt/darbna on the VPS:
+#   docker compose -f docker-compose.darbna.yml --env-file .env up -d
+# First start downloads the Iraq map (Geofabrik) and builds both indexes: about 30–90 minutes.
+name: darbna
+
+services:
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    environment:
+      tile_urls: https://download.geofabrik.de/asia/iraq-latest.osm.pbf
+      serve_tiles: "True"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "True"
+      use_tiles_ignore_pbf: "True"
+      # Set REBUILD_ROUTING=True in .env (the deploy workflow's "refresh map data" option) to pick up new OSM edits.
+      force_rebuild: ${REBUILD_ROUTING:-False}
+      server_threads: "4"
+    volumes: [valhalla:/custom_files]
+    restart: unless-stopped
+
+  nominatim:
+    image: mediagis/nominatim:4.5
+    environment:
+      PBF_URL: https://download.geofabrik.de/asia/iraq-latest.osm.pbf
+      REPLICATION_URL: https://download.geofabrik.de/asia/iraq-updates/
+      UPDATE_MODE: continuous          # keeps search up to date with OpenStreetMap edits
+      IMPORT_STYLE: full
+      NOMINATIM_PASSWORD: ${NOMINATIM_DB_PASSWORD:?set NOMINATIM_DB_PASSWORD}
+    shm_size: 1gb
+    volumes: [nominatim:/var/lib/postgresql/16/main]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile.darbna:/etc/caddy/Caddyfile:ro", "caddy:/data"]
+    depends_on: [valhalla, nominatim]
+    restart: unless-stopped
+
+volumes: { valhalla: {}, nominatim: {}, caddy: {} }

@@ -1,0 +1,30 @@
+# HTTPS certificates are fetched automatically once both names point at this server (DNS A records).
+(private_logs) {
+	# Never log query strings or bodies: they contain coordinates and search text.
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>uri delete
+				request>headers delete
+			}
+		}
+	}
+}
+
+routing.darbna.com {
+	encode zstd gzip
+	import private_logs
+	reverse_proxy valhalla:8002 {
+		# The web app calls this from github.io / darbna.com.
+		header_down Access-Control-Allow-Origin "*"
+	}
+}
+
+search.darbna.com {
+	encode zstd gzip
+	import private_logs
+	reverse_proxy nominatim:8080 {
+		header_down Access-Control-Allow-Origin "*"
+	}
+}

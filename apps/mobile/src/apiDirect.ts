@@ -25,8 +25,10 @@ import { ApiError } from "./apiError";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
 
-const VALHALLA = "https://valhalla1.openstreetmap.de";
-const NOMINATIM = "https://nominatim.openstreetmap.org";
+// Your own server (routing.darbna.com) when EXPO_PUBLIC_VALHALLA_URL is set at build time; else the public FOSSGIS one.
+const VALHALLA = (process.env.EXPO_PUBLIC_VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/$/, "");
+// Your own server (search.darbna.com) when EXPO_PUBLIC_NOMINATIM_URL is set at build time; else the public one.
+const NOMINATIM = (process.env.EXPO_PUBLIC_NOMINATIM_URL || "https://nominatim.openstreetmap.org").replace(/\/$/, "");
 const STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 async function getJson(url: string, timeoutMs: number): Promise<any> {
