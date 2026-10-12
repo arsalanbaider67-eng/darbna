@@ -4,10 +4,11 @@ import type { ExpoConfig } from "expo/config";
 export const LOCATION_WHY_AR = "يستخدم دربنا موقعك لعرضه على الخريطة وحساب المسار وإرشادك أثناء القيادة. لا يُحفظ مسار رحلتك على خوادمنا.";
 const LOCATION_WHY_EN = "Darbna uses your location to show you on the map, calculate routes and guide you while driving. Your trip path is not stored on our servers.";
 
-// Test builds talk to a dev server over plain http on your Wi-Fi. Store builds must use https;
-// the http exceptions below are only switched on when the API URL isn't https.
+// Test builds that talk to a dev server over plain http on your Wi-Fi (EXPO_PUBLIC_API_URL=http://…)
+// get the http exceptions below. Everything else, including "direct" mode (store builds: all
+// services are https), gets none: no ATS exceptions and no local-network text in the App Store build.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
-const TEST_BUILD = !API_URL.startsWith("https://");
+const TEST_BUILD = API_URL.startsWith("http://");
 
 const config: ExpoConfig = {
   // ASCII project name keeps generated Xcode/Gradle project paths simple; the home-screen

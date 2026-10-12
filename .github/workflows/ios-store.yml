@@ -60,6 +60,16 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform ios --clean
 
+      - name: No test settings in the store build
+        working-directory: apps/mobile/ios
+        run: |
+          PL=$(ls */Info.plist | grep -v Pods | head -1); echo "$PL"
+          if /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity:NSAllowsArbitraryLoads" "$PL" 2>/dev/null | grep -q true; then
+            echo "::error title=test setting in store build::NSAllowsArbitraryLoads is on"; exit 1; fi
+          if /usr/libexec/PlistBuddy -c "Print :NSLocalNetworkUsageDescription" "$PL" >/dev/null 2>&1; then
+            echo "::error title=test setting in store build::NSLocalNetworkUsageDescription is present"; exit 1; fi
+          echo "OK: https only, no local-network permission"
+
       - name: App Store Connect key
         env:
           P8: ${{ secrets.ASC_KEY_P8 }}
