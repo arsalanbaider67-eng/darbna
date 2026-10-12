@@ -1,7 +1,7 @@
 # Builds an UNSIGNED iPhone app (.ipa) on GitHub's free macOS runners.
 # Install it on your iPhone from Windows with Sideloadly (signs it with your Apple ID).
 # Runs on every push that touches the app, or manually: Actions → "iOS test build" → Run workflow.
-# Download the "Darbna-ios" artifact from the finished run.
+# Download the "Darbna-ios" artifact from the finished run, or the latest main build from the ios-build branch.
 name: iOS test build
 
 on:
@@ -14,6 +14,9 @@ on:
         description: "'direct' = works anywhere with public map services + shared reports (default); or your PC's Darbna server, e.g. http://192.168.100.100:8080"
         required: true
         default: "direct"
+
+permissions:
+  contents: write   # also saves the .ipa to the ios-build branch
 
 jobs:
   ios:
@@ -79,6 +82,17 @@ jobs:
           name: Darbna-ios
           path: Darbna-unsigned.ipa
           retention-days: 14
+
+      # Same file on the "ios-build" branch (one commit, replaced each time): a fixed download link
+      # (github.com/<repo>/raw/ios-build/Darbna-unsigned.ipa) that doesn't expire after 14 days.
+      - name: Save .ipa to the ios-build branch
+        if: github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p /tmp/ib && cd /tmp/ib && git init -q -b ios-build
+          cp "$GITHUB_WORKSPACE/Darbna-unsigned.ipa" .
+          printf 'Darbna iPhone test build\ncommit: %s\nbuilt: %s\n' "${{ github.sha }}" "$(date -u +%FT%TZ)" > BUILD.txt
+          git add . && git -c user.name=github-actions -c user.email=actions@github.com commit -qm "iOS build ${{ github.sha }}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ios-build
 
       - name: Upload build log on failure
         if: failure()
