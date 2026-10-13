@@ -1,3 +1,5 @@
+import os from "node:os";
+import { execFileSync } from "node:child_process";
 // Records Darbna's guidance prompts with the chosen voices (assets/voice/phrases.json):
 //   Voices per language are set in phrases.json: Azure (AZURE_SPEECH_KEY + AZURE_SPEECH_REGION)
 //   or ElevenLabs (ELEVENLABS_API_KEY).
@@ -72,15 +74,29 @@ async function findElevenVoice(name, wantedId) {
   throw new Error(`voice "${name}" not found — open it in the ElevenLabs Voice Library and tap "Add to my voices"`);
 }
 
-async function eleven(text, name, wantedId) {
+async function eleven(text, name, wantedId, v = {}) {
   const id = await elevenVoice(name, wantedId);
   const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${id}?output_format=mp3_44100_64`, {
     method: "POST",
     headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-    body: JSON.stringify({ text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.6, similarity_boost: 0.75 } }),
+    body: JSON.stringify({ text, model_id: v.model ?? "eleven_multilingual_v2", voice_settings: v.settings ?? { stability: 0.6, similarity_boost: 0.75 } }),
   });
   if (!res.ok) throw new Error(`ElevenLabs ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return Buffer.from(await res.arrayBuffer());
+}
+
+/**
+ * "clean": natural speed (no time-stretching), silence trimmed, 0.15 s of lead-in so the first word
+ * isn't clipped when audio starts, and every clip at the same loudness (-16 LUFS). No fades.
+ */
+function clean(mp3) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "v-"));
+  const a = path.join(tmp, "a.mp3"), b = path.join(tmp, "b.mp3");
+  fs.writeFileSync(a, mp3);
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-i", a, "-af",
+    "silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.02,areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05,areverse,adelay=150:all=1,apad=pad_dur=0.12,loudnorm=I=-16:TP=-1.5:LRA=11",
+    "-ar", "44100", "-ac", "1", "-b:a", "96k", b]);
+  return fs.readFileSync(b);
 }
 
 const done = {};
@@ -92,9 +108,10 @@ for (const [lang, phrases] of Object.entries(cfg.phrases)) {
   try {
     for (const [key, text] of Object.entries(phrases)) {
       const file = path.join(dir, `${key}.mp3`);
-      const sig = hash(`${v.provider}|${v.voiceId ?? v.voice}|${text}`);
+      const sig = hash(`${v.provider}|${v.voiceId ?? v.voice}|${text}` + (v.take ? `|${v.model}|${JSON.stringify(v.settings)}|${v.post}|${v.take}` : ""));
       if (fs.existsSync(file) && manifest[`${lang}/${key}`] === sig) { kept++; continue; }
-      const audio = v.provider === "azure" ? await azure(text, v.voice) : await eleven(text, v.voice, v.voiceId);
+      let audio = v.provider === "azure" ? await azure(text, v.voice) : await eleven(text, v.voice, v.voiceId, v);
+      if (v.post === "clean") audio = clean(audio);
       fs.writeFileSync(file, audio);
       manifest[`${lang}/${key}`] = sig;
       made++;
