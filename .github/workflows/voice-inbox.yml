@@ -2,6 +2,8 @@ name: Transcribe voice inbox
 on:
   push:
     branches: [voice-inbox]
+permissions:
+  contents: write
 jobs:
   t:
     runs-on: ubuntu-latest
@@ -10,4 +12,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null && pip install -q faster-whisper==1.0.3 requests
-      - run: python voice-inbox/t.py
+      - run: python voice-inbox/splice.py
+      - name: Commit spliced clips
+        run: |
+          git config user.name github-actions; git config user.email actions@github.com
+          git add apps/mobile/assets/voice/ar
+          git diff --cached --quiet || { git commit -qm "Arabic: owner's pronunciation of لوف and فلكة spliced into clips" && git push; }
