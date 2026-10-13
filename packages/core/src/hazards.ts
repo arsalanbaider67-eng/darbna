@@ -5,7 +5,7 @@
  */
 import { projectOnSegment, type LngLat } from "./geo";
 
-export type HazardKind = "bump" | "camera";
+export type HazardKind = "bump" | "camera" | "signals";
 export interface RoadHazard {
   id: string;
   kind: HazardKind;
@@ -23,7 +23,7 @@ export interface RoadHazardsDoc {
 export function parseHazards(doc: RoadHazardsDoc | null | undefined): RoadHazard[] {
   if (!doc?.items) return [];
   return doc.items
-    .filter((r) => (r[0] === "bump" || r[0] === "camera") && Number.isFinite(r[1]) && Number.isFinite(r[2]))
+    .filter((r) => (r[0] === "bump" || r[0] === "camera" || r[0] === "signals") && Number.isFinite(r[1]) && Number.isFinite(r[2]))
     .map((r, i) => ({ id: `osm-${r[0]}-${i}-${r[1].toFixed(5)},${r[2].toFixed(5)}`, kind: r[0], coord: [r[1], r[2]] as LngLat, maxspeedKmh: r[3] }));
 }
 

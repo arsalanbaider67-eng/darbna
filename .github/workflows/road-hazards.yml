@@ -1,4 +1,4 @@
-# Speed bumps and speed cameras in Iraq from OpenStreetMap (ODbL), saved as
+# Speed bumps, speed cameras and traffic lights in Iraq from OpenStreetMap (ODbL), saved as
 # packages/core/data/road-hazards.json for the app's map and "ahead" warnings.
 # Runs monthly and manually (Actions → "Road hazards" → Run workflow).
 name: Road hazards
@@ -22,6 +22,7 @@ jobs:
           # Iraq's bounding box (fast); points outside Iraq are dropped in the next step.
           Q='[out:json][timeout:600][bbox:29.0,38.7,37.5,48.9];
           (node["traffic_calming"];
+           node["highway"="traffic_signals"];
            node["highway"="speed_camera"];
            node["enforcement"="maxspeed"];
            relation["enforcement"="maxspeed"];);
@@ -57,6 +58,7 @@ jobs:
               if lat is None or lon is None or not inside(lon, lat): continue
               if t.get("highway") == "speed_camera" or t.get("enforcement") == "maxspeed": kind = "camera"
               elif t.get("traffic_calming") in ("bump", "hump", "table", "cushion", "yes", "rumble_strip", "dip"): kind = "bump"
+              elif t.get("highway") == "traffic_signals": kind = "signals"
               else: continue
               key = (kind, round(lat, 5), round(lon, 5))
               if key in seen: continue
