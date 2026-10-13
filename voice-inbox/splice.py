@@ -14,7 +14,7 @@ JOBS = {
 MATCH = {"lwf": re.compile(r"ل[وُ]?ف|love|lof", re.I), "flk": re.compile(r"فلك|فلق|فلج")}
 m = WhisperModel("small", device="cpu", compute_type="int8")
 
-def ff(*a): subprocess.run(["ffmpeg", "-v", "error", "-y", *a], check=True)
+def ff(*a): subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", *a], check=True, stdin=subprocess.DEVNULL, timeout=60)
 def dur(f): return float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", f]))
 def strip_ar(s): return re.sub(r"[ً-ْـ]", "", s)
 
