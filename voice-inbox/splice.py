@@ -6,11 +6,7 @@ from faster_whisper import WhisperModel
 V = "apps/mobile/assets/voice/ar"
 TAKES = {"lwf": "voice-inbox/a1.mp3", "flk": "voice-inbox/a2.mp3"}
 # key -> (which take, letters of the prefix glued to the word that must be kept from the old audio)
-JOBS = {
-    "mv_right": ("lwf", ""), "mv_left": ("lwf", ""), "mv_sharp_right": ("lwf", ""), "mv_sharp_left": ("lwf", ""),
-    "mv_roundabout_plain": ("flk", "ال"), "mv_roundabout_exit": ("flk", "ال"),
-    **{f"mv_roundabout_{i}": ("flk", "بال") for i in range(1, 7)},
-}
+JOBS = {"mv_right": ("lwf", ""), "mv_left": ("lwf", ""), "mv_sharp_right": ("lwf", ""), "mv_sharp_left": ("lwf", "")}  # roundabout ones done
 MATCH = {"lwf": re.compile(r"ل[وُ]?ف|love|lof", re.I), "flk": re.compile(r"فلك|فلق|فلج")}
 m = WhisperModel("small", device="cpu", compute_type="int8")
 
@@ -31,6 +27,11 @@ for key, (take, prefix) in JOBS.items():
         segs, _ = m.transcribe("/tmp/src.wav", language="ar", word_timestamps=True, beam_size=5)
         words = [w for s in segs for w in s.words]
         hit = next((w for w in words if MATCH[take].search(strip_ar(w.word))), None)
+        if take == "lwf" and words:
+            # لوف is always the first word; Whisper sometimes splits it ("لو" + "في").
+            hit = words[0]
+            if len(words) > 1 and strip_ar(words[1].word).strip() in ("في", "ف", "فی"):
+                hit = type("W", (), {"word": hit.word + words[1].word, "start": hit.start, "end": words[1].end})()
         if not hit:
             report.append(f"{key}: word not found in «{' '.join(w.word for w in words)}» — left as is"); continue
         start, end = hit.start, hit.end
@@ -38,11 +39,17 @@ for key, (take, prefix) in JOBS.items():
             letters = len(strip_ar(hit.word).strip(" ،,."))
             start = start + (end - start) * len(prefix) / max(letters, len(prefix) + 1)
         # pieces: before | new word | after, joined with short crossfades
-        ff("-i", "/tmp/src.wav", "-t", f"{start:.3f}", "/tmp/p1.wav")
+        if start >= 0.06: ff("-i", "/tmp/src.wav", "-t", f"{start:.3f}", "/tmp/p1.wav")
         ff("-i", "/tmp/src.wav", "-ss", f"{end:.3f}", "/tmp/p3.wav")
-        ff("-i", "/tmp/p1.wav", "-i", f"/tmp/take_{take}.wav", "-i", "/tmp/p3.wav", "-filter_complex",
-           "[0][1]acrossfade=d=0.015:c1=tri:c2=tri[a];[a][2]acrossfade=d=0.015:c1=tri:c2=tri,loudnorm=I=-17:TP=-1.5:LRA=11",
-           "-ar", "44100", "-ac", "1", "-b:a", "64k", src)
+        if start < 0.06:
+            # Word at the very start: keep the clip's short lead-in silence, then the new word.
+            ff("-f", "lavfi", "-t", "0.12", "-i", "anullsrc=r=44100:cl=mono", "-i", f"/tmp/take_{take}.wav", "-i", "/tmp/p3.wav", "-filter_complex",
+               "[0][1]concat=n=2:v=0:a=1[a];[a][2]acrossfade=d=0.015:c1=tri:c2=tri,loudnorm=I=-17:TP=-1.5:LRA=11",
+               "-ar", "44100", "-ac", "1", "-b:a", "64k", src)
+        else:
+            ff("-i", "/tmp/p1.wav", "-i", f"/tmp/take_{take}.wav", "-i", "/tmp/p3.wav", "-filter_complex",
+               "[0][1]acrossfade=d=0.015:c1=tri:c2=tri[a];[a][2]acrossfade=d=0.015:c1=tri:c2=tri,loudnorm=I=-17:TP=-1.5:LRA=11",
+               "-ar", "44100", "-ac", "1", "-b:a", "64k", src)
         segs2, _ = m.transcribe(src, language="ar", beam_size=5)
         report.append(f"{key}: replaced {start:.2f}-{end:.2f}s; now heard «{' '.join(s.text for s in segs2).strip()}»")
     except Exception:
