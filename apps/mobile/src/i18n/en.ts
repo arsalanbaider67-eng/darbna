@@ -119,6 +119,7 @@ export const en: Strings = {
     deleted: "Deleted", attribution: "Map data", version: "Version", restartNeeded: "The app restarts to change layout direction",
   },
   x: {
+    tour: { offer: "Outside Iraq? Explore Darbna from Erbil", active: "Exploring from Erbil · tap to exit", exit: "Exit Erbil tour", hint: "Puts you in Erbil so you can try search, routes, reports and the demo drive" },
     quick: { fuel: "Fuel", mosque: "Mosque", hospital: "Hospital", pharmacy: "Pharmacy", restaurant: "Food", atm: "ATM", searching: "Looking nearby…", none: "Nothing found nearby", failed: "Couldn't search right now, try again later" },
     stops: { add: "Add stop", addHint: "Search for a place to stop on the way", remove: "Remove stop", stop: "Stop {n}", reached: "Stop reached", picking: "Choose a stop" },
     avoid: { title: "Route options", highways: "No highways", unpaved: "No dirt roads", checkpoints: "Avoid checkpoints" },

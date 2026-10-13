@@ -71,6 +71,18 @@ export function LocatingPill({ top }: { top: number }) {
   );
 }
 
+/** "Explore from Erbil" offer (outside Iraq / no location) and, when on, the way back out. */
+export function TourPill({ top, active, onPress }: { top: number; active: boolean; onPress: () => void }) {
+  const { theme, t } = useUi();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={active ? t.x.tour.exit : t.x.tour.offer} accessibilityHint={t.x.tour.hint} onPress={onPress}
+      style={({ pressed }) => [s.pill, { top, backgroundColor: active ? theme.accent : theme.surface, borderColor: active ? theme.accent : theme.border, borderWidth: 1, opacity: pressed ? 0.85 : 1, minHeight: 40 }]}>
+      <Icon name={active ? "close-circle-outline" : "map-marker-radius"} size={18} color={active ? theme.onAccent : theme.accent} />
+      <Txt size={13} weight="semibold" style={{ color: active ? theme.onAccent : theme.text }}>{active ? t.x.tour.active : t.x.tour.offer}</Txt>
+    </Pressable>
+  );
+}
+
 export function Toast() {
   const { theme } = useUi();
   const insets = useSafeAreaInsets();

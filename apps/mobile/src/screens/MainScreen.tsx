@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, type LngLat, type TrafficCell, type Travel } from "@darbna/core";
+import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, type LngLat, type LocationFix, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -14,7 +14,7 @@ import { flushReportQueue, ReportDetails, ReportSheet } from "../components/Repo
 import { RoutePreview } from "../components/RoutePreview";
 import { SearchBar, SearchPanel } from "../components/SearchPanel";
 import { SettingsSheet } from "../components/SettingsSheet";
-import { ConnectionPill, LocatingPill, PermissionPanel, Toast } from "../components/States";
+import { ConnectionPill, LocatingPill, PermissionPanel, Toast, TourPill } from "../components/States";
 import { Btn, Icon, RoundBtn, Txt } from "../components/ui";
 import { UiOverride, useUi } from "../context";
 import { enableCompass } from "../compass";
@@ -69,7 +69,12 @@ export function MainScreen() {
   const [jams, setJams] = useState<TrafficCell[]>([]);
 
   const online = useConnectivity();
-  const loc = useLocation(mode === "navigating" ? "navigation" : "idle");
+  const realLoc = useLocation(mode === "navigating" ? "navigation" : "idle");
+  // "Explore from Erbil": for anyone outside Iraq (including App Review), the app acts as if you
+  // were standing in central Erbil, so search, routes, reports and the demo drive all work.
+  const [tour, setTour] = useState(false);
+  const loc = useMemo(() => (tour ? { ...realLoc, permission: "granted" as const, fix: TOUR_FIX } : realLoc), [tour, realLoc]);
+  const outsideIraq = !tour && ((realLoc.fix && !inIraq(realLoc.fix.coord)) || realLoc.permission === "denied" || realLoc.permission === "blocked" || realLoc.permission === "services_off");
   const fix = loc.fix;
   // SOS region (Kurdistan Region / rest of Iraq / abroad) follows you all the time, so the SOS
   // screen is right the moment it's opened — even before the map has loaded.
@@ -549,6 +554,10 @@ export function MainScreen() {
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}
       {mode !== "navigating" && <ConnectionPill online={online} top={pillTop} />}
       {mode === "browse" && loc.permission === "granted" && !fix && online !== false && <LocatingPill top={pillTop} />}
+      {mode === "browse" && !watch && (tour || outsideIraq) && (
+        <TourPill top={pillTop + (online === false ? 44 : 0)} active={tour}
+          onPress={() => { const next = !tour; setTour(next); if (next) setTimeout(() => map.current?.flyTo(TOUR_FIX.coord, 14), 50); }} />
+      )}
 
       {(mode === "browse" || mode === "place") && !watch && (
         <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 300 : 28) }]}>
@@ -562,7 +571,7 @@ export function MainScreen() {
         </View>
       )}
 
-      {mode === "browse" && !sheet && !openReportId && !watch && (
+      {mode === "browse" && !sheet && !openReportId && !watch && !tour && (
         <PermissionPanel state={loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
       )}
 
@@ -680,3 +689,10 @@ const s = StyleSheet.create({
   fab: { position: "absolute", end: 14, gap: 12 },
   sample: { position: "absolute", start: 14, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
 });
+
+/** Central Erbil (near the Citadel), used by "Explore from Erbil". */
+const TOUR_FIX: LocationFix = { coord: [44.0092, 36.1911], accuracyM: 5, speedMps: 0, headingDeg: null, timestamp: Date.now() };
+/** Same box the shared-reports database accepts. */
+function inIraq([lng, lat]: LngLat): boolean {
+  return lat >= 28.9 && lat <= 37.5 && lng >= 38.7 && lng <= 48.9;
+}
