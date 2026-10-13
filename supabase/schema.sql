@@ -38,6 +38,7 @@ insert into darbna_private.categories values
   ('checkpoint',      120,    480, 200),
   ('checkpoint_slow',  60,    240, 200),
   ('camera',        43200, 525600,  80),
+  ('speed_bump',    43200, 525600,  30),
   ('fuel_queue',       90,    360,  80),
   ('fuel_closed',     360,   1440,  80)
 on conflict (category) do update set

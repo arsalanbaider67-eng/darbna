@@ -99,6 +99,7 @@ export const REPORT_STYLE: Record<ReportCategory, { icon: string; color: string 
   checkpoint: { icon: "shield-car", color: "#2E7D5B" },
   checkpoint_slow: { icon: "shield-alert", color: "#B4442C" },
   camera: { icon: "cctv", color: "#5B4BB7" },
+  speed_bump: { icon: "car-brake-alert", color: "#B8860B" },
   fuel_queue: { icon: "gas-station", color: "#C27A12" },
   fuel_closed: { icon: "gas-station-off", color: "#6B6B6B" },
 };

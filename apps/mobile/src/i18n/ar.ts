@@ -124,7 +124,7 @@ export const ar = {
     outsideIraq: "البلاغات تشتغل داخل العراق بس — إنت هسه برّا العراق.",
     notReady: "هذا النوع من البلاغات بعده ما مفعّل. جرّب نوع ثاني.",
     failedQueued: "ما في إنترنت — سيُرسل البلاغ تلقائياً.",
-    categories: {
+    categories: { speed_bump: "مطب",
       congestion: "زحام", crash: "حادث", closure: "طريق مقطوع", roadworks: "أعمال طريق", pothole: "طسة / حفرة", flooding: "غرق / مياه", checkpoint: "سيطرة", checkpoint_slow: "سيطرة – انتظار طويل", camera: "كامرة سرعة", fuel_queue: "بانزينخانة – سرة طويلة", fuel_closed: "بانزينخانة مسدودة",
     },
     stillThere: "بعده موجود",

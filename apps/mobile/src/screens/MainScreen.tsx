@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, type LngLat, type LocationFix, type TrafficCell, type Travel } from "@darbna/core";
+import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -34,7 +34,8 @@ import { chime } from "../nav/chime";
 import { routeAvoid } from "../nav/useGuidance";
 import { shareText, tripLink } from "../share";
 import { getState, mergeReports, setState, toast, useStore } from "../store";
-import type { Place } from "../types";
+import hazardsDoc from "@darbna/core/data/road-hazards.json";
+import type { Place, PublicReport } from "../types";
 
 const REPORT_MIN_ZOOM = 11;
 const NO_ROUTES: never[] = [];
@@ -89,12 +90,18 @@ export function MainScreen() {
   const lastArea = useRef<[number, number, number, number] | null>(null);
 
   const onMapLongPress = useStableCallback((c: LngLat) => { void dropPin(c); });
-  const onMapReportPress = useStableCallback((id: string) => setState({ openReportId: id, sheet: null }));
+  const onMapReportPress = useStableCallback((id: string) => {
+    // Mapped speed bumps / cameras (OpenStreetMap) have no votes or details: just say what it is.
+    if (id.startsWith("osm-")) return toast(`${t.reports.categories[id.startsWith("osm-camera") ? "camera" : "speed_bump"]} · OpenStreetMap`, "info");
+    setState({ openReportId: id, sheet: null });
+  });
   const onMapRegionChange = useStableCallback((b: [number, number, number, number], z: number, u: boolean) => onRegionChange(b, z, u));
   const onMapRoutePress = useStableCallback((i: number) => {
     if (getState().mode === "preview") setState((st) => ({ preview: { ...st.preview, selectedIdx: i } }));
   });
   const reportList = useMemo(() => Object.values(reports), [reports]);
+  // Drivers' reports plus mapped speed bumps and cameras (cameras hidden when speed alerts are off).
+  const mapReports = useMemo(() => [...reportList, ...HAZARD_REPORTS.filter((h) => h.category !== "camera" || speedAlerts)], [reportList, speedAlerts]);
   const tripRoute = trip?.route;
   const mapRoutes = useMemo(
     () => (mode === "navigating" && tripRoute ? [tripRoute] : mode === "preview" && preview.result ? preview.result.routes : NO_ROUTES),
@@ -162,9 +169,11 @@ export function MainScreen() {
 
   // ---------------------------------------------------------------- checkpoints, cameras, crashes ahead
   const tripCum = useMemo(() => (tripRoute ? cumulativeDistances(tripRoute.geometry) : null), [tripRoute]);
+  // Mapped speed bumps and cameras on this route (worked out once per route).
+  const routeHazards = useMemo(() => (tripRoute && tripRoute.travel !== "walk" ? hazardsOnRoute(tripRoute.geometry, HAZARDS).map(hazardReport) : []), [tripRoute]);
   const warnItems = useMemo(
-    () => reportList.filter((r) => WARN_AHEAD[r.category] && (r.category !== "camera" || speedAlerts)),
-    [reportList, speedAlerts],
+    () => [...reportList, ...routeHazards].filter((r) => WARN_AHEAD[r.category] && (r.category !== "camera" || speedAlerts)),
+    [reportList, routeHazards, speedAlerts],
   );
   const ahead = mode === "navigating" && tripRoute && tripCum && guidance && guidance.status !== "arrived"
     ? reportsAhead(tripRoute.geometry, guidance.distanceAlongM, warnItems, tripCum)[0] ?? null
@@ -538,7 +547,7 @@ export function MainScreen() {
         routes={mapRoutes}
         selectedRouteIdx={selectedIdx}
         destination={mapDestination}
-        reports={reportList}
+        reports={mapReports}
         initialCenter={initialCenter.current}
         onLongPress={onMapLongPress}
         onReportPress={onMapReportPress}
@@ -696,3 +705,14 @@ const TOUR_FIX: LocationFix = { coord: [44.0092, 36.1911], accuracyM: 5, speedMp
 function inIraq([lng, lat]: LngLat): boolean {
   return lat >= 28.9 && lat <= 37.5 && lng >= 38.7 && lng <= 48.9;
 }
+
+/** Speed bumps and speed cameras across Iraq from OpenStreetMap (bundled, refreshed monthly). */
+const HAZARDS: RoadHazard[] = parseHazards(hazardsDoc as unknown as RoadHazardsDoc);
+function hazardReport(h: RoadHazard): PublicReport {
+  return {
+    id: h.id, category: h.kind === "camera" ? "camera" : "speed_bump", source: "official", verified: true, coord: h.coord,
+    heading: null, createdAt: (hazardsDoc as any).fetched ?? "", expiresAt: "2100-01-01T00:00:00Z", confirms: 0, gone: 0,
+    confidence: 1, treatment: "display", isSample: false, officialRef: "OpenStreetMap",
+  };
+}
+const HAZARD_REPORTS = HAZARDS.map(hazardReport);

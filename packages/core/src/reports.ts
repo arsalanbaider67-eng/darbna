@@ -2,6 +2,8 @@ export const REPORT_CATEGORIES = [
   "congestion", "crash", "closure", "roadworks", "pothole", "flooding",
   // Iraq specifics: security checkpoints (moving / long wait), speed cameras, fuel stations.
   "checkpoint", "checkpoint_slow", "camera", "fuel_queue", "fuel_closed",
+  // Speed bumps / humps (Iraq has many, often unmarked).
+  "speed_bump",
 ] as const;
 export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 
@@ -20,6 +22,7 @@ export const REPORT_TTL_MIN: Record<ReportCategory, { initial: number; max: numb
   camera: { initial: 43200, max: 525600 },
   fuel_queue: { initial: 90, max: 360 },
   fuel_closed: { initial: 360, max: 1440 },
+  speed_bump: { initial: 43200, max: 525600 },
 };
 
 /** Two reports of the same category closer than this are treated as the same event. */
@@ -35,11 +38,12 @@ export const DUPLICATE_RADIUS_M: Record<ReportCategory, number> = {
   camera: 80,
   fuel_queue: 80,
   fuel_closed: 80,
+  speed_bump: 30,
 };
 
 /** Things a driver should be warned about ahead on the route (banner + chime). */
 export const WARN_AHEAD: Partial<Record<ReportCategory, number>> = {
-  checkpoint: 800, checkpoint_slow: 1500, camera: 600, crash: 800, closure: 1000, flooding: 800,
+  checkpoint: 800, checkpoint_slow: 1500, camera: 600, crash: 800, closure: 1000, flooding: 800, speed_bump: 250,
 };
 /** Fuel-station status reports: shown on the map and on the station, never on routes. */
 export const FUEL_CATEGORIES: ReportCategory[] = ["fuel_queue", "fuel_closed"];

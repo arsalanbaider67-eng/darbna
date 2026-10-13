@@ -12,3 +12,4 @@ export * from "./traffic";
 export * from "./precise";
 export * from "./extras";
 export * from "./sos";
+export * from "./hazards";
