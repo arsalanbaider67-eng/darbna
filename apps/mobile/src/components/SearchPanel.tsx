@@ -92,7 +92,8 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
       }
       setStatus("loading");
       try {
-        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 });
+        // Online results as you type (after a short pause), not only after pressing search.
+        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 || query.length >= 3 });
         if (id !== seq.current) return;
         setResults(r.results);
         setStatus(r.partial ? "partial" : "idle");
@@ -101,7 +102,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
         setStatus(e instanceof ApiError && e.isNetwork ? "offline" : "error");
         setResults(localMatch(query, [...saved.favorites, ...recents]));
       }
-    }, submitted > 0 ? 0 : 300);
+    }, submitted > 0 ? 0 : query.length >= 3 ? 700 : 250);
     return () => clearTimeout(timer);
   }, [q, online, lang, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 

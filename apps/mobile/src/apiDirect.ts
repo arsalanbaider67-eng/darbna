@@ -5,7 +5,7 @@
  *
  * TESTING ONLY. These services allow light personal use, not a public app:
  *  - routing: FOSSGIS Valhalla (valhalla1.openstreetmap.de)
- *  - search:  nominatim.openstreetmap.org — max 1 request/second, no search-as-you-type
+ *  - search:  Nominatim — results as you type after a 0.7 s pause, max 1 request/second
  *             (so Nominatim is queried only when the user presses Search; typing searches
  *             the built-in gazetteer)
  *  - map:     OpenFreeMap tiles
