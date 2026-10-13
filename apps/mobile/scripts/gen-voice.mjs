@@ -110,10 +110,13 @@ for (const [lang, phrases] of Object.entries(cfg.phrases)) {
   try {
     for (const [key, text] of Object.entries(phrases)) {
       const file = path.join(dir, `${key}.mp3`);
-      const sig = hash(`${v.provider}|${v.voiceId ?? v.voice}|${text}` + (v.take ? `|${v.model}|${JSON.stringify(v.settings)}|${v.post}|${v.take}` : ""));
+      // "take": re-record every phrase of this voice with its model/settings; "redo": only the listed phrases.
+      const redo = (v.redo ?? []).includes(key);
+      const sig = hash(`${v.provider}|${v.voiceId ?? v.voice}|${text}` + (v.take ? `|${v.model}|${JSON.stringify(v.settings)}|${v.post}|${v.take}` : "")
+        + (redo ? `|redo|${v.model}|${JSON.stringify(v.settings)}|${v.post}|${v.redoTake}` : ""));
       if (fs.existsSync(file) && manifest[`${lang}/${key}`] === sig) { kept++; continue; }
       let audio = v.provider === "azure" ? await azure(text, v.voice) : await eleven(text, v.voice, v.voiceId, v);
-      if (v.post === "clean") audio = clean(audio);
+      if (v.post === "clean" && (v.take || redo)) audio = clean(audio);
       fs.writeFileSync(file, audio);
       manifest[`${lang}/${key}`] = sig;
       made++;

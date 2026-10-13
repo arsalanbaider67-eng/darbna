@@ -6,7 +6,28 @@
    "voice": "Sufyan",
    "voiceId": "9FHjCdVXgA4tYxIYHTcZ",
    "model": "eleven_v3",
-   "pick": "generation 2"
+   "pick": "generation 2",
+   "settings": {
+    "stability": 0.75,
+    "similarity_boost": 0.75,
+    "speed": 0.91
+   },
+   "post": "clean",
+   "redo": [
+    "mv_right",
+    "mv_left",
+    "mv_sharp_right",
+    "mv_sharp_left",
+    "mv_roundabout_plain",
+    "mv_roundabout_exit",
+    "mv_roundabout_1",
+    "mv_roundabout_2",
+    "mv_roundabout_3",
+    "mv_roundabout_4",
+    "mv_roundabout_5",
+    "mv_roundabout_6"
+   ],
+   "redoTake": 1
   },
   "en": {
    "provider": "elevenlabs",
