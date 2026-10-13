@@ -1,0 +1,64 @@
+# Speed bumps and speed cameras in Iraq from OpenStreetMap (ODbL), saved as
+# packages/core/data/road-hazards.json for the app's map and "ahead" warnings.
+# Runs monthly and manually (Actions → "Road hazards" → Run workflow).
+name: Road hazards
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 1 * *"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch from OpenStreetMap
+        run: |
+          Q='[out:json][timeout:600];area["ISO3166-1"="IQ"][admin_level=2]->.iq;
+          (node(area.iq)["traffic_calming"];
+           node(area.iq)["highway"="speed_camera"];
+           node(area.iq)["enforcement"="maxspeed"];
+           relation(area.iq)["enforcement"="maxspeed"];);
+          out center tags;'
+          for ep in https://overpass-api.de/api/interpreter https://overpass.kumi.systems/api/interpreter https://maps.mail.ru/osm/tools/overpass/api/interpreter https://overpass.private.coffee/api/interpreter; do
+            curl -sS -m 900 -A "Darbna/1.0 (+https://github.com/arsalanbaider67-eng/darbna)" -H "Accept: application/json" \
+              --data-urlencode "data=$Q" "$ep" -o raw.json && head -c 1 raw.json | grep -q "{" && break
+          done
+          ls -la raw.json
+      - name: Build road-hazards.json
+        run: |
+          python3 - <<'EOF'
+          import json, datetime
+          d = json.load(open("raw.json"))
+          out, seen, counts = [], set(), {}
+          for e in d.get("elements", []):
+              t = e.get("tags", {})
+              lat = e.get("lat", (e.get("center") or {}).get("lat")); lon = e.get("lon", (e.get("center") or {}).get("lon"))
+              if lat is None or lon is None: continue
+              if t.get("highway") == "speed_camera" or t.get("enforcement") == "maxspeed": kind = "camera"
+              elif t.get("traffic_calming") in ("bump", "hump", "table", "cushion", "yes", "rumble_strip", "dip"): kind = "bump"
+              else: continue
+              key = (kind, round(lat, 5), round(lon, 5))
+              if key in seen: continue
+              seen.add(key); counts[kind] = counts.get(kind, 0) + 1
+              ms = t.get("maxspeed", "")
+              row = [kind, round(lon, 6), round(lat, 6)]
+              if kind == "camera" and ms.isdigit(): row.append(int(ms))
+              out.append(row)
+          out.sort()
+          doc = {"source": "© OpenStreetMap contributors, ODbL", "fetched": datetime.date.today().isoformat(), "counts": counts, "items": out}
+          json.dump(doc, open("packages/core/data/road-hazards.json", "w"), separators=(",", ":"))
+          print(counts)
+          print(f"::notice title=road hazards::{counts}")
+          EOF
+      - name: Commit
+        run: |
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add packages/core/data/road-hazards.json
+          git diff --cached --quiet && { echo "no change"; exit 0; }
+          git commit -qm "Road hazards from OpenStreetMap (speed bumps, cameras)" && git push
