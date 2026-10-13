@@ -60,6 +60,22 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform ios --clean
 
+      - name: App Store checks (privacy manifest, translated permission text)
+        working-directory: apps/mobile/ios
+        run: |
+          set -e
+          PM=$(find . -name PrivacyInfo.xcprivacy -not -path "./Pods/*" | head -1)
+          [ -n "$PM" ] || { echo "::error::no PrivacyInfo.xcprivacy"; exit 1; }
+          grep -q NSPrivacyCollectedDataTypePreciseLocation "$PM" && grep -q CA92.1 "$PM" || { echo "::error::privacy manifest incomplete"; cat "$PM"; exit 1; }
+          echo "✓ $PM"
+          for l in ar ckb en; do
+            f=$(find . -path "*/$l.lproj/InfoPlist.strings" -not -path "./Pods/*" | head -1)
+            [ -n "$f" ] && grep -q NSLocationWhenInUseUsageDescription "$f" || { echo "::error::missing $l.lproj/InfoPlist.strings"; exit 1; }
+            echo "✓ $f"; grep NSLocationWhenInUseUsageDescription "$f" | cut -c1-120
+          done
+          PL=$(ls */Info.plist | head -1)
+          if /usr/libexec/PlistBuddy -c "Print :NSAppTransportSecurity:NSAllowsArbitraryLoads" "$PL" 2>/dev/null | grep -q true; then echo "::warning::ATS exceptions on (test server build)"; else echo "✓ https only"; fi
+
       - name: No test settings in the store build
         working-directory: apps/mobile/ios
         run: |

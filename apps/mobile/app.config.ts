@@ -1,8 +1,9 @@
 import type { ExpoConfig } from "expo/config";
 
-// Arabic location-permission text for iOS (wire up via locales/*.json when building iOS).
-export const LOCATION_WHY_AR = "يستخدم دربنا موقعك لعرضه على الخريطة وحساب المسار وإرشادك أثناء القيادة. لا يُحفظ مسار رحلتك على خوادمنا.";
-const LOCATION_WHY_EN = "Darbna uses your location to show you on the map, calculate routes and guide you while driving. Your trip path is not stored on our servers.";
+// Location permission text. The localized versions (Arabic, Sorani, English) live in locales/*.json
+// and are what iPhone users see; this English one is the fallback. It names every use, including
+// sharing a report's or a shared trip's location, as App Review requires (guideline 5.1.1).
+const LOCATION_WHY_EN = "Darbna uses your location to show you on the map, plan routes and guide you while you drive or walk. If you send a road report or share a trip, that location is shared with other drivers or with the person you share it with. Your trip path is not stored on our servers.";
 
 // Test builds that talk to a dev server over plain http on your Wi-Fi (EXPO_PUBLIC_API_URL=http://…)
 // get the http exceptions below. Everything else, including "direct" mode (store builds: all
@@ -34,8 +35,37 @@ const config: ExpoConfig = {
   experiments: process.env.EXPO_BASE_URL ? { baseUrl: process.env.EXPO_BASE_URL } : undefined,
   // Old architecture for now: fewer native-module surprises with MapLibre on Expo SDK 54.
   newArchEnabled: false,
+  // Per-language app name and permission text (ar = default language, ckb = Sorani Kurdish).
+  locales: { ar: "./locales/ar.json", ckb: "./locales/ckb.json", en: "./locales/en.json" },
   ios: {
     bundleIdentifier: "iq.darbna.app",
+    // Privacy manifest (PrivacyInfo.xcprivacy), required for App Store uploads: no tracking; precise
+    // location and a random per-install id are used only to make the app work; the "required reason"
+    // system APIs used by React Native, AsyncStorage and the map with Apple's approved reasons.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      NSPrivacyTrackingDomains: [],
+      NSPrivacyCollectedDataTypes: [
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePreciseLocation",
+          NSPrivacyCollectedDataTypeLinked: false,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeDeviceID",
+          NSPrivacyCollectedDataTypeLinked: false,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+        },
+      ],
+      NSPrivacyAccessedAPITypes: [
+        { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryUserDefaults", NSPrivacyAccessedAPITypeReasons: ["CA92.1"] },
+        { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryFileTimestamp", NSPrivacyAccessedAPITypeReasons: ["C617.1"] },
+        { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategorySystemBootTime", NSPrivacyAccessedAPITypeReasons: ["35F9.1"] },
+        { NSPrivacyAccessedAPIType: "NSPrivacyAccessedAPICategoryDiskSpace", NSPrivacyAccessedAPITypeReasons: ["E174.1"] },
+      ],
+    },
     // Store builds: GitHub's run number, so every upload has a higher build number.
     buildNumber: process.env.APP_BUILD_NUMBER ?? "1",
     supportsTablet: false,

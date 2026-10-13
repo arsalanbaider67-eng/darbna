@@ -1,0 +1,6 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Darbna",
+    "NSLocationWhenInUseUsageDescription": "Darbna uses your location to show you on the map, plan routes and guide you while you drive or walk. If you send a road report or share a trip, that location is shared with other drivers or with the person you share it with. Your trip path is not stored on our servers."
+  }
+}
