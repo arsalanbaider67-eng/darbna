@@ -10,7 +10,7 @@
   },
   "en": {
    "provider": "elevenlabs",
-   "voice": "Dan",
+   "voice": "Daniel",
    "model": "eleven_multilingual_v2",
    "settings": {
     "stability": 0.75,
@@ -20,7 +20,8 @@
     "speed": 1.0
    },
    "post": "clean",
-   "take": 2
+   "take": 2,
+   "voiceId": "onwK4e9ZLuTAKqWW03F9"
   }
  },
  "distancesM": [

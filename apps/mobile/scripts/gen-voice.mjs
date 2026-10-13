@@ -48,6 +48,8 @@ async function elevenVoice(name, wantedId) {
 async function findElevenVoice(name, wantedId) {
   const key = process.env.ELEVENLABS_API_KEY;
   if (!key) throw new Error("ELEVENLABS_API_KEY secret is missing");
+  // A fixed voice id (e.g. an ElevenLabs default voice) needs no lookup: works with keys that can't list voices.
+  if (wantedId && /^[A-Za-z0-9]{20}$/.test(wantedId) && process.env.VOICE_ID_DIRECT !== "0") return wantedId;
   const h = { "xi-api-key": key };
   const lc = name.toLowerCase();
   // 1) Already in the account's voices (same id, or added under its name)?
