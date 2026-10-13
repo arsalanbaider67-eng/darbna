@@ -1,9 +1,10 @@
 import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
-  Camera, CircleLayer, LineLayer, MapView, ShapeSource, UserLocation, type CameraRef,
+  Camera, CircleLayer, Images, LineLayer, MapView, ShapeSource, SymbolLayer, UserLocation, type CameraRef,
 } from "@maplibre/maplibre-react-native";
-import { darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import hazardsDoc from "@darbna/core/data/road-hazards.json";
+import { parseHazards, type RoadHazardsDoc, darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
@@ -265,23 +266,23 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           }} />
         </ShapeSource>
 
+        <Images images={MARKERS} />
+        {/* Traffic lights (OpenStreetMap), from street level only. */}
+        <ShapeSource id="signals" shape={SIGNALS_FC}>
+          <SymbolLayer id="signals" minZoomLevel={14.5} style={{ iconImage: "signals", iconSize: ["interpolate", ["linear"], ["zoom"], 14.5, 0.15, 18, 0.25], iconAllowOverlap: true, iconIgnorePlacement: true }} />
+        </ShapeSource>
         <ShapeSource id="reports" shape={reportShape} onPress={onReportPress} hitbox={{ width: 36, height: 36 }}>
-          <CircleLayer
+          <SymbolLayer
             id="report-dot"
             minZoomLevel={10}
             style={{
-              circleRadius: ["interpolate", ["linear"], ["zoom"], 10, 6, 15, 13],
-              circleColor: REPORT_COLOR,
-              circleOpacity: ["get", "opacity"],
-              circleStrokeWidth: ["case", ["==", ["get", "verified"], 1], 3, 2],
-              circleStrokeColor: ["case", ["==", ["get", "verified"], 1], theme.accent, "#FFFFFF"],
-              circlePitchAlignment: "map",
+              iconImage: ["get", "category"],
+              // The PNGs are 96 px (drawn for 3x screens), so a third of the web size.
+              iconSize: ["interpolate", ["linear"], ["zoom"], 10, 0.17, 15, 0.28, 18, 0.33],
+              iconAllowOverlap: true,
+              iconIgnorePlacement: true,
+              iconOpacity: ["get", "opacity"],
             }}
-          />
-          <CircleLayer
-            id="report-core"
-            minZoomLevel={13}
-            style={{ circleRadius: 3.5, circleColor: "#FFFFFF", circleOpacity: ["get", "opacity"] }}
           />
         </ShapeSource>
 
@@ -338,3 +339,25 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.friend === b.friend;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasInner), sameExceptCallbacks);
+
+/** Report icons (assets/markers/<category>.png, 96 px = 3x) and the traffic-light icon. */
+const MARKERS = {
+  congestion: require("../../assets/markers/congestion.png"),
+  crash: require("../../assets/markers/crash.png"),
+  closure: require("../../assets/markers/closure.png"),
+  roadworks: require("../../assets/markers/roadworks.png"),
+  pothole: require("../../assets/markers/pothole.png"),
+  flooding: require("../../assets/markers/flooding.png"),
+  checkpoint: require("../../assets/markers/checkpoint.png"),
+  checkpoint_slow: require("../../assets/markers/checkpoint_slow.png"),
+  camera: require("../../assets/markers/camera.png"),
+  fuel_queue: require("../../assets/markers/fuel_queue.png"),
+  fuel_closed: require("../../assets/markers/fuel_closed.png"),
+  speed_bump: require("../../assets/markers/speed_bump.png"),
+  signals: require("../../assets/markers/signals.png"),
+};
+const SIGNALS_FC = {
+  type: "FeatureCollection" as const,
+  features: parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
+    .map((h) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: h.coord } })),
+};

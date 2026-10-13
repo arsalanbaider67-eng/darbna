@@ -5,7 +5,9 @@
 import React, { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { bearing, darkenStyle, FixFilter, goldStyle, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import hazardsDoc from "@darbna/core/data/road-hazards.json";
+import { webBase } from "../share";
+import { parseHazards, type RoadHazardsDoc, bearing, darkenStyle, FixFilter, goldStyle, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
@@ -90,6 +92,12 @@ function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next
   return [clean, { transformStyle: (_prev, next) => t(next) }];
 }
 
+const MARKER_NAMES = [...Object.keys(REPORT_STYLE), "signals"];
+const SIGNALS_FC: GeoJSON.FeatureCollection = {
+  type: "FeatureCollection",
+  features: parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
+    .map((h) => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: h.coord } })),
+};
 const REPORT_COLOR: any = ["match", ["get", "category"], ...Object.entries(REPORT_STYLE).flatMap(([k, v]) => [k, v.color]), "#666666"];
 
 function routesFC(routes: ApiRoute[], sel: number): GeoJSON.FeatureCollection {
@@ -317,15 +325,25 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     m.addLayer({ id: "jam-dot", type: "circle", source: "jams", minzoom: 11, paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 3, 16, 9], "circle-color": TRAFFIC_COLOR as any, "circle-opacity": 0.75, "circle-blur": 0.4,
     } });
+    // Icons: one picture per report type (public/markers/<category>.png, 96 px drawn at 3x).
+    for (const name of MARKER_NAMES) {
+      if (m.hasImage(name)) continue;
+      m.loadImage(`${webBase()}markers/${name}.png`).then((img) => { if (!m.hasImage(name)) m.addImage(name, img.data, { pixelRatio: 3 }); }).catch(() => {});
+    }
+    // Traffic lights (OpenStreetMap), from street level only.
+    m.addSource("signals", { type: "geojson", data: SIGNALS_FC });
+    m.addLayer({ id: "signals", type: "symbol", source: "signals", minzoom: 14.5, layout: {
+      "icon-image": "signals", "icon-size": ["interpolate", ["linear"], ["zoom"], 14.5, 0.45, 18, 0.75], "icon-allow-overlap": true, "icon-ignore-placement": true,
+    } });
     m.addSource("reports", { type: "geojson", data: reportsFC(latest.current.reports) });
     m.addLayer({
-      id: "report-dot", type: "circle", source: "reports", minzoom: 10,
-      paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 6, 15, 13],
-        "circle-color": REPORT_COLOR, "circle-opacity": ["get", "opacity"],
-        "circle-stroke-width": ["case", ["==", ["get", "verified"], 1], 3, 2],
-        "circle-stroke-color": ["case", ["==", ["get", "verified"], 1], t.accent, "#FFFFFF"],
+      id: "report-dot", type: "symbol", source: "reports", minzoom: 10,
+      layout: {
+        "icon-image": ["get", "category"],
+        "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 15, 0.85, 18, 1],
+        "icon-allow-overlap": true, "icon-ignore-placement": true,
       },
+      paint: { "icon-opacity": ["get", "opacity"] },
     });
     m.addSource("dest", { type: "geojson", data: pointFC(latest.current.destination?.coord ?? null) });
     m.addLayer({ id: "dest-halo", type: "circle", source: "dest", paint: { "circle-radius": 16, "circle-color": t.accent, "circle-opacity": 0.25 } });
