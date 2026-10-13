@@ -6,7 +6,7 @@ from faster_whisper import WhisperModel
 V = "apps/mobile/assets/voice/ar"
 TAKES = {"lwf": "voice-inbox/a1.mp3", "flk": "voice-inbox/a2.mp3"}
 # key -> (which take, letters of the prefix glued to the word that must be kept from the old audio)
-JOBS = {"mv_right": ("lwf", ""), "mv_left": ("lwf", ""), "mv_sharp_right": ("lwf", ""), "mv_sharp_left": ("lwf", "")}  # roundabout ones done
+JOBS = {"mv_right": ("lwf", ""), "mv_left": ("lwf", ""), "mv_sharp_left": ("lwf", "")}  # others done
 MATCH = {"lwf": re.compile(r"ل[وُ]?ف|love|lof", re.I), "flk": re.compile(r"فلك|فلق|فلج")}
 m = WhisperModel("small", device="cpu", compute_type="int8")
 
