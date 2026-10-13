@@ -40,6 +40,9 @@ interface Props {
 }
 
 let attribCss = false;
+/** Esri key for licensed satellite imagery (GitHub variable ESRI_KEY at build time). */
+const ESRI_KEY = process.env.EXPO_PUBLIC_ESRI_KEY || undefined;
+
 function ensureAttributionCss() {
   if (attribCss || typeof document === "undefined") return;
   attribCss = true;
@@ -83,7 +86,7 @@ function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next
   const t = (next: any) => (
     tag === "gold" ? goldStyle(lightenStyle(next)) :
     tag === "night" ? darkenStyle(lightenStyle(next)) :
-    tag === "sat" ? satelliteStyle(lightenStyle(next)) : lightenStyle(next));
+    tag === "sat" ? satelliteStyle(lightenStyle(next), ESRI_KEY) : lightenStyle(next));
   return [clean, { transformStyle: (_prev, next) => t(next) }];
 }
 

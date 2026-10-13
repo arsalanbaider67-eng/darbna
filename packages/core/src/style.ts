@@ -34,18 +34,23 @@ export function lightenStyle(style: MapStyle): MapStyle {
 
 
 // ---------------------------------------------------------------- satellite map
-/** Esri World Imagery: free satellite photos, used with credit shown on the map. */
+/** Esri World Imagery. Without a key: the public tile address (fine for testing only). With an
+ *  ArcGIS Location Platform API key: Esri's licensed basemap service, allowed in published apps. */
 export const SATELLITE_TILES = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-export const SATELLITE_CREDIT = "Imagery © Esri, Maxar, Earthstar Geographics";
+export const SATELLITE_TILES_LICENSED = "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+export const SATELLITE_CREDIT = "Powered by Esri | Imagery © Esri, Maxar, Earthstar Geographics";
+export function satelliteTiles(esriKey?: string): string {
+  return esriKey ? `${SATELLITE_TILES_LICENSED}?token=${encodeURIComponent(esriKey)}` : SATELLITE_TILES;
+}
 
 /**
  * Satellite photos with the map's roads and names drawn on top ("hybrid"), so roads that aren't
  * on the map yet can still be seen. Land, water and building colours are dropped (the photo
  * shows them), and labels turn white with a dark outline so they read on any photo.
  */
-export function satelliteStyle(style: MapStyle): MapStyle {
+export function satelliteStyle(style: MapStyle, esriKey?: string): MapStyle {
   const sources = { ...((style.sources as Record<string, unknown>) ?? {}) };
-  sources["darbna-sat"] = { type: "raster", tiles: [SATELLITE_TILES], tileSize: 256, maxzoom: 19, attribution: SATELLITE_CREDIT };
+  sources["darbna-sat"] = { type: "raster", tiles: [satelliteTiles(esriKey)], tileSize: 256, maxzoom: 19, attribution: SATELLITE_CREDIT };
   const layers: StyleLayer[] = [{ id: "darbna-sat", type: "raster", source: "darbna-sat" }];
   for (const l of style.layers) {
     if (l.type === "background" || l.type === "fill" || l.type === "fill-extrusion" || l.type === "hillshade") continue;

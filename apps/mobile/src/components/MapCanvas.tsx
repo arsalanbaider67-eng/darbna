@@ -59,6 +59,9 @@ const REPORT_COLOR: any = [
  *  - Callbacks are routed through a ref and the component is memoised, so location updates and
  *    unrelated state changes in the screen don't re-render the map.
  */
+/** Esri key for licensed satellite imagery (GitHub variable ESRI_KEY at build time). */
+const ESRI_KEY = process.env.EXPO_PUBLIC_ESRI_KEY || undefined;
+
 function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
   const { theme } = useUi();
   const camera = useRef<CameraRef>(null);
@@ -70,7 +73,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
     const [url, tag] = p.styleUrl.split("#");
     if (!tag) { setMapStyle(url); return; }
     // "#light" brand map (lightened), "#gold" black & gold map, "#night" dark map, "#sat" satellite: built from the normal style.
-    const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st)) : tag === "night" ? darkenStyle(lightenStyle(st)) : tag === "gold" ? goldStyle(lightenStyle(st)) : lightenStyle(st);
+    const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st), ESRI_KEY) : tag === "night" ? darkenStyle(lightenStyle(st)) : tag === "gold" ? goldStyle(lightenStyle(st)) : lightenStyle(st);
     let live = true;
     fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(make(st)); }).catch(() => live && setMapStyle(url));
     return () => { live = false; };
