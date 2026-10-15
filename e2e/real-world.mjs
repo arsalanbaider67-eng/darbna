@@ -51,7 +51,8 @@ await sleep(500); const afterDrag = await cam(); await sleep(4000); const later 
 check("Map: drag moves the map", km(before.c, afterDrag.c) > 0.1, `${Math.round(km(before.c, afterDrag.c) * 1000)} m`);
 check("Map: stays where you dragged it (no snapping back to GPS)", km(afterDrag.c, later.c) < 0.01);
 await page.evaluate(() => { const m = window.__darbnaMap; window.__calls = []; for (const fn of ["jumpTo", "easeTo", "flyTo", "stop"]) { const o = m[fn].bind(m); m[fn] = (...a) => { window.__calls.push(fn); return o(...a); }; } window.__ev = []; for (const e of ["rotatestart", "rotate", "pitchstart", "contextmenu"]) m.on(e, () => window.__ev.push(e)); });
-await page.mouse.move(cx, cy); await page.mouse.down({ button: "right" }); await page.mouse.move(cx + 140, cy, { steps: 12 });
+// Rotation turns around the map's centre, so start off-centre like a real hand does.
+await page.mouse.move(cx - 120, cy - 60); await page.mouse.down({ button: "right" }); await page.mouse.move(cx - 120, cy + 160, { steps: 14 });
 const during = await cam();
 await page.mouse.up({ button: "right" });
 await sleep(600); const rot = await cam();
