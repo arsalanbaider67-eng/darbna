@@ -33,6 +33,8 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** Traffic lights learned from Darbna drivers (on top of OpenStreetMap's). */
+  learnedSignals?: LngLat[];
   /** Where you parked. */
   parked?: LngLat | null;
   /** Someone's shared trip you're watching. */
@@ -93,11 +95,12 @@ function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next
 }
 
 const MARKER_NAMES = [...Object.keys(REPORT_STYLE), "signals"];
-const SIGNALS_FC: GeoJSON.FeatureCollection = {
-  type: "FeatureCollection",
-  features: parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
-    .map((h) => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: h.coord } })),
-};
+const OSM_SIGNAL_FEATURES: GeoJSON.Feature[] = parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
+  .map((h) => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: h.coord } }));
+function signalsFC(learned: LngLat[] = []): GeoJSON.FeatureCollection {
+  return { type: "FeatureCollection", features: [...OSM_SIGNAL_FEATURES,
+    ...learned.map((c) => ({ type: "Feature" as const, properties: { learned: true }, geometry: { type: "Point" as const, coordinates: c } }))] };
+}
 const REPORT_COLOR: any = ["match", ["get", "category"], ...Object.entries(REPORT_STYLE).flatMap(([k, v]) => [k, v.color]), "#666666"];
 
 function routesFC(routes: ApiRoute[], sel: number): GeoJSON.FeatureCollection {
@@ -337,7 +340,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       m.loadImage(`${webBase()}markers/${name}.png`).then((img) => { if (!m.hasImage(name)) m.addImage(name, img.data, { pixelRatio: 3 }); }).catch(() => {});
     }
     // Traffic lights (OpenStreetMap), from street level only.
-    m.addSource("signals", { type: "geojson", data: SIGNALS_FC });
+    m.addSource("signals", { type: "geojson", data: signalsFC(latest.current.learnedSignals) });
     m.addLayer({ id: "signals", type: "symbol", source: "signals", minzoom: 14.5, layout: {
       "icon-image": "signals", "icon-size": ["interpolate", ["linear"], ["zoom"], 14.5, 0.45, 18, 0.75], "icon-allow-overlap": true, "icon-ignore-placement": true,
     } });
@@ -531,6 +534,10 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   }, [p.jams]);
 
   useEffect(() => {
+    (map.current?.getSource("signals") as GeoJSONSource | undefined)?.setData(signalsFC(p.learnedSignals));
+  }, [p.learnedSignals]);
+
+  useEffect(() => {
     (map.current?.getSource("reports") as GeoJSONSource | undefined)?.setData(reportsFC(p.reports));
   }, [p.reports]);
 
@@ -568,6 +575,6 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
   a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
-  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.traveled === b.traveled && a.parked === b.parked && a.friend === b.friend;
+  a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.learnedSignals === b.learnedSignals && a.traveled === b.traveled && a.parked === b.parked && a.friend === b.friend;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

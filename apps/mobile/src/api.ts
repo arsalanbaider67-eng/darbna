@@ -1,4 +1,4 @@
-import type { LngLat, ReportCategory, SpeedSample, TrafficCell } from "@darbna/core";
+import type { LngLat, ReportCategory, SpeedSample, TrafficCell, LearnedSignal, StopEvent } from "@darbna/core";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
 import { ApiError } from "./apiError";
@@ -67,6 +67,8 @@ const serverApi = {
   // Live traffic is only implemented for direct mode (Supabase) so far.
   traffic: async (_bbox: [number, number, number, number]): Promise<TrafficCell[]> => [],
   trafficSubmit: async (_trip: string, _samples: SpeedSample[]): Promise<void> => {},
+  signals: async (_bbox: [number, number, number, number]): Promise<LearnedSignal[]> => [],
+  stopSubmit: async (_trip: string, _stops: StopEvent[]): Promise<void> => {},
 
   // Points, thanks and trip sharing are only implemented for direct mode (Supabase) so far.
   thank: async (_id: string): Promise<{ report: PublicReport }> => { throw new ApiError("unsupported"); },
