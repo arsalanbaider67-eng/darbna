@@ -16,7 +16,7 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import {
-  applyTraffic, arabicKey, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
+  applyTraffic, arabicKey, searchIraq, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
   type SpeedSample, type TrafficCell,
 } from "@darbna/core";
@@ -29,6 +29,13 @@ import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedT
 const VALHALLA = (process.env.EXPO_PUBLIC_VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/$/, "");
 // Your own server (search.darbna.com) when EXPO_PUBLIC_NOMINATIM_URL is set at build time; else the public one.
 const NOMINATIM = (process.env.EXPO_PUBLIC_NOMINATIM_URL || "https://nominatim.openstreetmap.org").replace(/\/$/, "");
+/** Own search server: no one-request-per-second limit. */
+const NOMINATIM_OWN = !!process.env.EXPO_PUBLIC_NOMINATIM_URL;
+/** Self-hosted Photon (search-as-you-type), when set up. */
+const PHOTON = (process.env.EXPO_PUBLIC_PHOTON_URL || "").replace(/\/$/, "") || undefined;
+/** Esri place search alongside OpenStreetMap (finds businesses and misspellings OSM misses).
+ *  On whenever the Esri key is set; GitHub variable ESRI_GEOCODE=0 turns it off. */
+const ESRI_GEOCODE_KEY = process.env.EXPO_PUBLIC_ESRI_GEOCODE === "0" ? undefined : process.env.EXPO_PUBLIC_ESRI_KEY || undefined;
 const STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 async function getJson(url: string, timeoutMs: number): Promise<any> {
@@ -167,16 +174,22 @@ export const directApi = {
 
   search: async (q: string, lang: string, near?: LngLat, opts: { remote?: boolean } = {}) => {
     const local = searchGazetteer(q, lang, near);
-    if (!opts.remote || q.trim().length < 3) return { results: local, partial: false };
+    if (!opts.remote || q.trim().length < 2) return { results: local, partial: false };
     try {
-      const params: Record<string, string> = { q, countrycodes: "iq", limit: "8", "accept-language": `${lang},ar,en` };
-      if (near) params.viewbox = `${near[0] - 0.35},${near[1] + 0.35},${near[0] + 0.35},${near[1] - 0.35}`;
-      const items = (await nominatim("/search", params)) as any[];
-      const remote = items.map((it, i) => mapNominatim(it, lang, 0.6 - i * 0.03 + (it.importance ?? 0) * 0.2))
-        .filter((r) => !local.some((g) => haversine(g.coord, r.coord) < 300));
-      return { results: [...local, ...remote].sort((x, y) => y.score - x.score).slice(0, 10), partial: false };
+      // Several services at once (packages/core/src/search.ts); Nominatim only when its
+      // one-request-per-second limit allows, the others every time.
+      const skipNominatim = !NOMINATIM_OWN && Date.now() < nextNominatim;
+      if (!skipNominatim) nextNominatim = Date.now() + 1100;
+      const hits = await searchIraq(q, {
+        lang, near, esriKey: ESRI_GEOCODE_KEY, skipNominatim, nominatimUrl: NOMINATIM, photonUrl: PHOTON,
+        fetchJson: (url) => getJson(url, 8000),
+      });
+      const remote = hits
+        .filter((r) => !local.some((g) => haversine(g.coord, r.coord) < 300))
+        .map((h) => ({ id: h.id, name: h.name, secondary: h.secondary, kind: h.kind, coord: h.coord, source: h.source as Place["source"], score: h.score }));
+      return { results: [...local, ...remote].sort((x, y) => y.score - x.score).slice(0, 12), partial: (hits as any).failed?.length > 0 };
     } catch (e) {
-      if (e instanceof ApiError && e.isNetwork && !local.length) throw e;
+      if (!local.length) throw e instanceof ApiError ? e : new ApiError("offline");
       return { results: local, partial: true };
     }
   },

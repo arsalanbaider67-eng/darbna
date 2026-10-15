@@ -27,7 +27,7 @@ jobs:
         if: inputs.engine
         run: npx -y esbuild@0.24.0 packages/core/src/search.ts --bundle --format=esm --platform=node --outfile=packages/core/dist-search/search.mjs
       - name: Audit
-        run: node scripts/search-audit.mjs ${{ inputs.engine && '--engine' || '' }}
+        run: node scripts/search-audit.mjs ${{ inputs.engine && '--engine-only' || '' }}
       - name: Save report
         run: |
           git config user.name github-actions; git config user.email actions@github.com

@@ -12,7 +12,8 @@ import type { ApiRoute, Place, PublicReport } from "../types";
 
 export interface MapCanvasHandle {
   fitTo(points: LngLat[], bottomPadding?: number): void;
-  flyTo(p: LngLat, zoom?: number): void;
+  /** upright: also turn back to north-up and flat (the "my location" button). */
+  flyTo(p: LngLat, zoom?: number, upright?: boolean): void;
   /** Save the area on screen for offline use. */
   downloadVisible(onProgress: (pct: number) => void): Promise<OfflineResult>;
 }
@@ -116,8 +117,8 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
       }
       camera.current?.fitBounds([maxX, maxY], [minX, minY], [120, 48, bottomPadding, 48], 600);
     },
-    flyTo(pt, zoom = 15) {
-      camera.current?.setCamera({ centerCoordinate: pt, zoomLevel: zoom, animationDuration: 500, animationMode: "easeTo" });
+    flyTo(pt, zoom = 15, upright = false) {
+      camera.current?.setCamera({ centerCoordinate: pt, zoomLevel: zoom, animationDuration: 500, animationMode: "easeTo", ...(upright ? { heading: 0, pitch: 0 } : {}) });
     },
     async downloadVisible(onProgress) {
       try {
@@ -136,6 +137,14 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
     if (Array.isArray(c)) handlers.current.onLongPress([c[0], c[1]]);
   }, []);
 
+  // A gesture just started: stop the camera following you right away (not after the 600 ms
+  // debounce), so it never fights your finger. Recenter turns following back on.
+  const onRegionWillChange = useCallback((f: any) => {
+    if (!f?.properties?.isUserInteraction) return;
+    const b = f.properties.visibleBounds;
+    if (!b) return;
+    handlers.current.onRegionChange([b[1][0], b[1][1], b[0][0], b[0][1]], f.properties.zoomLevel ?? 12, true);
+  }, []);
   const onRegionDidChange = useCallback((f: any) => {
     const vb = f?.properties?.visibleBounds as [[number, number], [number, number]] | undefined;
     if (!vb) return;
@@ -223,9 +232,13 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
         logoEnabled={false}
         attributionEnabled
         attributionPosition={{ top: 8, left: 8 }}
-        compassEnabled={!navigating}
-        pitchEnabled={navigating}
+        compassEnabled
+        // Full control at all times (also while navigating): drag, zoom, rotate, tilt.
+        pitchEnabled
         rotateEnabled
+        scrollEnabled
+        zoomEnabled
+        onRegionWillChange={onRegionWillChange}
         regionDidChangeDebounceTime={600}
         onLongPress={onLongPress}
         onRegionDidChange={onRegionDidChange}
