@@ -222,6 +222,10 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   });
   const cam = useRef<{ zoom: number; pitch: number; pad: number } | null>(null);
   const userCam = useRef(false); // you dragged/zoomed the map: stop steering the camera
+  // A finger (or mouse button) is on the map. While it is, the camera never moves by itself:
+  // MapLibre cancels any gesture in progress when the camera is moved, so steering it every frame
+  // made the map impossible to drag, rotate or tilt while navigating.
+  const pressing = useRef(false);
   const route = useRef<{ line: LngLat[]; table: number[]; seg: number } | null>(null);
 
   const routeLine = () => {
@@ -246,6 +250,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     setDriven(m, pose.prog);
     const f = latest.current.follow;
     if (f === "none" || userCam.current) return true;
+    if (pressing.current || (m as any).handlers?.isActive?.()) return false; // keep looping, don't fight the finger
     const nav = f === "navigation";
     const walk = latest.current.routes[latest.current.selectedRouteIdx]?.travel === "walk";
     const target = { zoom: nav ? (walk ? 17.5 : 16.5) : 15, pitch: nav ? (walk ? 35 : 50) : 0, pad: nav ? Math.round(m.getContainer().clientHeight * 0.32) : 0 };
@@ -431,6 +436,15 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       const b = m.getBounds();
       handlers.current.onRegionChange([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], m.getZoom(), true);
     };
+    const press = () => { pressing.current = true; };
+    const release = () => { pressing.current = false; kick(); };
+    const cv = m.getCanvasContainer();
+    cv.addEventListener("mousedown", press);
+    cv.addEventListener("touchstart", press, { passive: true });
+    window.addEventListener("mouseup", release);
+    cv.addEventListener("touchend", release);
+    cv.addEventListener("touchcancel", release);
+    m.once("remove", () => { window.removeEventListener("mouseup", release); });
     m.on("dragstart", grabbed);
     m.on("zoomstart", grabbed);
     m.on("rotatestart", grabbed);

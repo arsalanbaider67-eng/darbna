@@ -83,6 +83,10 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
       return;
     }
     const id = ++seq.current;
+    // A new query: never leave the previous query's results on screen (tapping one would open the
+    // wrong place). Show "searching" until this query's own results arrive.
+    setResults(null);
+    setStatus("loading");
     const timer = setTimeout(async () => {
       // The web preview's place list is built in, so it can search with no connection at all.
       if (online === false && !DIRECT_MODE) {
@@ -215,7 +219,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
           ) : (
             <Pressable
               accessibilityRole="button"
-              testID="search-result"
+              testID={results ? "search-result" : "saved-place"}
               onPress={() => item.place && onPick(item.place)}
               style={({ pressed }) => [s.item, { borderColor: theme.border, backgroundColor: pressed ? theme.surfaceAlt : "transparent" }]}
             >

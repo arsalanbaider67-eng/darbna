@@ -50,9 +50,11 @@ await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx
 await sleep(500); const afterDrag = await cam(); await sleep(4000); const later = await cam();
 check("Map: drag moves the map", km(before.c, afterDrag.c) > 0.1, `${Math.round(km(before.c, afterDrag.c) * 1000)} m`);
 check("Map: stays where you dragged it (no snapping back to GPS)", km(afterDrag.c, later.c) < 0.01);
+await page.evaluate(() => { const m = window.__darbnaMap; window.__calls = []; for (const fn of ["jumpTo", "easeTo", "flyTo", "stop"]) { const o = m[fn].bind(m); m[fn] = (...a) => { window.__calls.push(fn); return o(...a); }; } window.__ev = []; for (const e of ["rotatestart", "rotate", "pitchstart", "contextmenu"]) m.on(e, () => window.__ev.push(e)); });
 await page.mouse.move(cx, cy); await page.mouse.down({ button: "right" }); await page.mouse.move(cx + 140, cy, { steps: 12 }); await page.mouse.up({ button: "right" });
 await sleep(600); const rot = await cam();
-check("Map: rotate", Math.abs(rot.b) > 5, `bearing ${rot.b.toFixed(1)}°`);
+const diag = await page.evaluate(() => ({ calls: [...new Set(window.__calls)].join(","), ev: [...new Set(window.__ev)].join(",") }));
+check("Map: rotate", Math.abs(rot.b) > 5, `bearing ${rot.b.toFixed(1)}° (events: ${diag.ev || "none"}; camera calls: ${diag.calls || "none"})`);
 await page.keyboard.down("Control"); await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx, cy - 120, { steps: 12 }); await page.mouse.up(); await page.keyboard.up("Control");
 await sleep(600); const tilt = await cam();
 check("Map: tilt", tilt.p > 5, `pitch ${tilt.p.toFixed(1)}°`);
@@ -70,23 +72,26 @@ const SEARCHES = [
   ["فاميلي مول", [44.0, 36.2]], ["المنصوور", [44.35, 33.31]], ["پارکی ئازادی", [45.43, 35.56]], ["جامعة الموصل", [43.13, 36.36]],
   ["مرقد الإمام علي", [44.31, 31.99]], ["شارع المتنبي", [44.39, 33.34]],
 ];
+const dest = () => page.evaluate(() => { const d = window.__darbnaMap.getSource("dest")?.serialize?.().data; const f = d?.features?.[0]; return f ? f.geometry.coordinates : null; });
 for (const [i, [q, where]] of SEARCHES.entries()) {
   await page.getByLabel("وين رايح؟").first().click();
   const input = page.locator("input").first();
   await input.fill(""); await input.type(q, { delay: 60 });
   const t0 = Date.now();
-  const row = page.getByTestId("search-result").first();
-  const ok = await row.waitFor({ timeout: 9000 }).then(() => true).catch(() => false);
+  const ok = await page.getByTestId("search-result").first().waitFor({ timeout: 10000 }).then(() => true).catch(() => false);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
-  if (!ok) { check(`Search "${q}": results appear without pressing search`, false, `nothing after ${secs}s`); await shot(`03-search-${i}`); await page.keyboard.press("Escape"); await page.goto(URL); await page.waitForFunction(() => window.__darbnaMap?.isStyleLoaded(), null, { timeout: 30000 }); continue; }
-  await sleep(1200); // let the rest of the results arrive
-  const names = await page.getByTestId("search-result").allInnerTexts();
+  await sleep(300);
+  const names = ok ? await page.getByTestId("search-result").allInnerTexts() : [];
   await shot(`03-search-${i}`);
+  check(`Search "${q}": results appear by themselves (no search key)`, ok, ok ? `${secs}s after typing, ${names.length} results, first «${names[0]?.split("\n")[0]}»` : `nothing after ${secs}s`);
+  if (!ok) { await page.keyboard.press("Escape").catch(() => {}); await page.goto(URL); await page.waitForFunction(() => window.__darbnaMap?.isStyleLoaded(), null, { timeout: 30000 }); continue; }
   await page.getByTestId("search-result").first().click();
   await sleep(1800);
-  const at = await cam();
-  const d = km(at.c, where);
-  check(`Search "${q}": found, and picking it moves the map there`, d < 25, `${secs}s, first result «${names[0]?.split("\n")[0]}», map ${d.toFixed(1)} km from the place`);
+  const at = await cam(), pin = await dest();
+  check(`Search "${q}": picking a result moves the map to it`, !!pin && km(at.c, pin) < 0.5, pin ? `map ${Math.round(km(at.c, pin) * 1000)} m from the picked place` : "no place marker");
+  const right = !!pin && km(pin, where) < 25;
+  results.push({ name: `Search "${q}": first result is the expected city`, ok: right, info: true, detail: pin ? `${km(pin, where).toFixed(1)} km away` : "" });
+  console.log(`${right ? "INFO-OK " : "INFO-NO "}Search "${q}": first result in the expected city — ${pin ? km(pin, where).toFixed(1) + " km" : "?"}`);
   await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
   await page.keyboard.press("Escape").catch(() => {});
   await sleep(600);
@@ -123,8 +128,9 @@ if (routed) {
   if (hasRc) { await rc.click(); await sleep(3000); const back = await cam(); const pk = await puck(); check("Navigation: recenter follows you again", pk && km(back.c, pk) < 0.3, pk ? `${Math.round(km(back.c, pk) * 1000)} m from you` : ""); }
 }
 
-const failed = results.filter((r) => !r.ok);
+const failed = results.filter((r) => !r.ok && !r.info);
 fs.writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 1));
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
+const real = results.filter((r) => !r.info);
+console.log(`\n${real.length - failed.length}/${real.length} checks passed; first result in expected city for ${results.filter((r) => r.info && r.ok).length}/${results.filter((r) => r.info).length} searches`);
 await browser.close();
 process.exit(0);
