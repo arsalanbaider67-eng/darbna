@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
+import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, placeLearnedSignals, type LearnedSignal, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -24,6 +24,7 @@ import { fmt, fmtClock } from "../i18n";
 import { primeVoice, stopSpeaking } from "../nav/prompt";
 import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
+import { useStopSampler } from "../hooks/useStopSampler";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
 import { MapProblemSheet, NavMenuSheet, WatchCard } from "../components/Extras";
@@ -68,6 +69,10 @@ export function MainScreen() {
   const limits = useStore((s) => s.limits);
   const watch = useStore((s) => s.watch);
   const [jams, setJams] = useState<TrafficCell[]>([]);
+  // Traffic lights learned from Darbna drivers, per ~1 km area already fetched (they change slowly).
+  const [learned, setLearned] = useState<Record<string, LearnedSignal>>({});
+  const signalAreas = useRef(new Set<string>());
+  const learnedSignals = useMemo(() => placeLearnedSignals(Object.values(learned), OSM_SIGNALS).map((s) => s.coord), [learned]);
 
   const online = useConnectivity();
   const realLoc = useLocation(mode === "navigating" ? "navigation" : "idle");
@@ -132,6 +137,8 @@ export function MainScreen() {
   const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
   // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
   useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
+  // Traffic lights learned from drivers: same rules (real car trips, sharing on).
+  useStopSampler(fix, trip?.startedAt ?? null, mode === "navigating" && !demo && !tour && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
 
   // ---------------------------------------------------------------- stops passed on the way
   const passed = useRef<{ routeId: string; n: number }>({ routeId: "", n: 0 });
@@ -491,6 +498,13 @@ export function MainScreen() {
   function refreshArea(area: [number, number, number, number]) {
     api.reports(area).then((r) => mergeReports(r.reports)).catch(() => {});
     if (getState().config?.sharedTraffic) api.traffic(area).then(setJams).catch(() => {});
+    const key = area.join(",");
+    if (getState().config?.sharedTraffic && !signalAreas.current.has(key)) {
+      signalAreas.current.add(key);
+      api.signals(area).then((list) => {
+        if (list.length) setLearned((prev) => { const next = { ...prev }; for (const s of list) next[`${s.coord.join(",")},${s.dir}`] = s; return next; });
+      }).catch(() => signalAreas.current.delete(key));
+    }
   }
 
   // Reports and traffic change while the map sits still: refresh the visible area every 2 minutes.
@@ -555,6 +569,7 @@ export function MainScreen() {
         onRoutePress={onMapRoutePress}
         simFix={mode === "navigating" && demo ? demoFix : null}
         jams={mode === "browse" || mode === "place" ? jams : NO_JAMS}
+        learnedSignals={learnedSignals}
         traveled={mode === "navigating"}
         parked={mode === "navigating" ? null : parked?.coord ?? null}
         friend={friend}
@@ -707,7 +722,10 @@ function inIraq([lng, lat]: LngLat): boolean {
 }
 
 /** Speed bumps and speed cameras across Iraq from OpenStreetMap (bundled, refreshed monthly). */
-const HAZARDS: RoadHazard[] = parseHazards(hazardsDoc as unknown as RoadHazardsDoc);
+const ALL_HAZARDS: RoadHazard[] = parseHazards(hazardsDoc as unknown as RoadHazardsDoc);
+// Traffic lights are drawn by the map itself (signals layer), not as speed-bump reports.
+const HAZARDS = ALL_HAZARDS.filter((h) => h.kind !== "signals");
+const OSM_SIGNALS: LngLat[] = ALL_HAZARDS.filter((h) => h.kind === "signals").map((h) => h.coord);
 function hazardReport(h: RoadHazard): PublicReport {
   return {
     id: h.id, category: h.kind === "camera" ? "camera" : "speed_bump", source: "official", verified: true, coord: h.coord,

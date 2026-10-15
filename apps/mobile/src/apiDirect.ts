@@ -18,7 +18,7 @@ import * as Crypto from "expo-crypto";
 import {
   applyTraffic, arabicKey, searchIraq, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
-  type SpeedSample, type TrafficCell,
+  type SpeedSample, type TrafficCell, type LearnedSignal, type StopEvent,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
 import { ApiError } from "./apiError";
@@ -280,6 +280,21 @@ export const directApi = {
   trafficSubmit: async (trip: string, samples: SpeedSample[]): Promise<void> => {
     if (!SHARED_REPORTS || !samples.length) return;
     await rpc("darbna_traffic_submit", { trip, samples });
+  },
+
+  /** Traffic lights learned from Darbna drivers (see core/signals.ts and darbna_signals). */
+  signals: async (bbox: [number, number, number, number]): Promise<LearnedSignal[]> => {
+    if (!SHARED_REPORTS) return [];
+    const r = await rpc<{ signals: [number, number, number, number, number][] }>("darbna_signals", {
+      min_lng: bbox[0], min_lat: bbox[1], max_lng: bbox[2], max_lat: bbox[3],
+    });
+    return r.signals.map(([lng, lat, dir, trips, waitS]) => ({ coord: [lng, lat] as LngLat, dir, trips, waitS }));
+  },
+
+  /** Anonymous red-light stops from a trip (see core/signals.ts for what is and isn't sent). */
+  stopSubmit: async (trip: string, stops: StopEvent[]): Promise<void> => {
+    if (!SHARED_REPORTS || !stops.length) return;
+    await rpc("darbna_stop_submit", { trip, stops });
   },
 
   /** "Thanks" for a report: +2 points to whoever reported it. */

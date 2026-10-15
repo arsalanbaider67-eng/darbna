@@ -35,6 +35,8 @@ interface Props {
   simFix?: LocationFix | null;
   /** Live traffic slow spots (browse mode). */
   jams?: TrafficCell[];
+  /** Traffic lights learned from Darbna drivers (on top of OpenStreetMap's). */
+  learnedSignals?: LngLat[];
   /** Where you parked. */
   parked?: LngLat | null;
   /** Someone's shared trip you're watching. */
@@ -212,6 +214,10 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
       geometry: { type: "Point" as const, coordinates: j.coord },
     })),
   }), [p.jams]);
+  const signalShape = useMemo(() => ({
+    type: "FeatureCollection" as const,
+    features: [...OSM_SIGNAL_FEATURES, ...(p.learnedSignals ?? []).map((c) => ({ type: "Feature" as const, properties: { learned: true }, geometry: { type: "Point" as const, coordinates: c } }))],
+  }), [p.learnedSignals]);
   const sim = p.simFix ?? null;
   useEffect(() => {
     if (!sim || p.follow === "none") return;
@@ -280,8 +286,8 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
         </ShapeSource>
 
         <Images images={MARKERS} />
-        {/* Traffic lights (OpenStreetMap), from street level only. */}
-        <ShapeSource id="signals" shape={SIGNALS_FC}>
+        {/* Traffic lights (OpenStreetMap + learned from drivers), from street level only. */}
+        <ShapeSource id="signals" shape={signalShape}>
           <SymbolLayer id="signals" minZoomLevel={14.5} style={{ iconImage: "signals", iconSize: ["interpolate", ["linear"], ["zoom"], 14.5, 0.15, 18, 0.25], iconAllowOverlap: true, iconIgnorePlacement: true }} />
         </ShapeSource>
         <ShapeSource id="reports" shape={reportShape} onPress={onReportPress} hitbox={{ width: 36, height: 36 }}>
@@ -347,6 +353,7 @@ const sameExceptCallbacks = (a: Props, b: Props) =>
   a.reports === b.reports &&
   a.simFix === b.simFix &&
   a.jams === b.jams &&
+  a.learnedSignals === b.learnedSignals &&
   a.traveled === b.traveled &&
   a.parked === b.parked &&
   a.friend === b.friend;
@@ -369,8 +376,5 @@ const MARKERS = {
   speed_bump: require("../../assets/markers/speed_bump.png"),
   signals: require("../../assets/markers/signals.png"),
 };
-const SIGNALS_FC = {
-  type: "FeatureCollection" as const,
-  features: parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
-    .map((h) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: h.coord } })),
-};
+const OSM_SIGNAL_FEATURES = parseHazards(hazardsDoc as unknown as RoadHazardsDoc).filter((h) => h.kind === "signals")
+  .map((h) => ({ type: "Feature" as const, properties: {}, geometry: { type: "Point" as const, coordinates: h.coord } }));

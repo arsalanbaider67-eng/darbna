@@ -372,6 +372,94 @@ begin
     'serverTime', to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
 end $$;
 
+-- ------------------------------------------------------------------ traffic lights learned from drivers
+-- Where navigating cars stand still for 10 s – 3 min and then drive on (core/signals.ts). No
+-- account or device id: only a hashed random per-trip id; never the first/last 300 m of a trip
+-- (app side). Kept 90 days. A spot is shown as a traffic light only when at least 4 different
+-- trips on at least 2 different days stopped there in the same direction with a typical red-light
+-- wait, and nobody reported a checkpoint or fuel queue nearby.
+create table if not exists darbna_private.signal_stops (
+  cell bigint not null,
+  dir smallint not null check (dir between 0 and 7),
+  lat real not null,
+  lng real not null,
+  wait_s smallint not null,
+  trip_hash text not null,
+  ip_hash text,
+  created_at timestamptz not null default now()
+);
+create index if not exists signal_stops_area on darbna_private.signal_stops (lat, lng);
+create index if not exists signal_stops_ip on darbna_private.signal_stops (ip_hash, created_at);
+create index if not exists signal_stops_trip on darbna_private.signal_stops (trip_hash);
+alter table darbna_private.signal_stops enable row level security;
+
+-- ~25 m cells. Must match signalCell() in packages/core/src/signals.ts.
+create or replace function darbna_private.signal_cell(lat float8, lng float8) returns bigint
+language sql immutable as $$ select floor(lat / 0.00025)::bigint * 1000000 + floor(lng / 0.0003)::bigint $$;
+
+create or replace function public.darbna_stop_submit(trip text, stops json)
+returns json language plpgsql volatile security definer set search_path = darbna_private, extensions, public as $$
+declare
+  th text; ip text := darbna_private.client_ip_hash(); n int; s json; added int := 0;
+  la float8; lo float8; hd float8; w float8;
+begin
+  if trip is null or length(trip) < 16 or length(trip) > 100 then raise exception 'bad_trip' using errcode = 'P0001'; end if;
+  if stops is null or json_typeof(stops) <> 'array' or json_array_length(stops) > 30 then
+    raise exception 'bad_stops' using errcode = 'P0001';
+  end if;
+  th := darbna_private.hash('trip:' || trip);
+  if ip is not null then
+    select count(*) into n from darbna_private.signal_stops where ip_hash = ip and created_at > now() - interval '1 hour';
+    if n >= 600 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  end if;
+  -- A real trip has a few dozen red lights at most.
+  select count(*) into n from darbna_private.signal_stops where trip_hash = th;
+  if n >= 120 then raise exception 'rate_limited' using errcode = 'P0001'; end if;
+  for s in select * from json_array_elements(stops) loop
+    begin
+      la := (s->>'lat')::float8; lo := (s->>'lng')::float8; hd := (s->>'heading')::float8; w := (s->>'waitS')::float8;
+    exception when others then continue;
+    end;
+    if la is null or lo is null or hd is null or w is null
+       or la not between 28.9 and 37.5 or lo not between 38.7 and 48.9
+       or hd < 0 or hd >= 360 or w < 10 or w > 180 then continue; end if;
+    -- One stop per spot per trip (a second one is the same red light, still queueing).
+    if exists (select 1 from darbna_private.signal_stops where trip_hash = th and cell = darbna_private.signal_cell(la, lo)) then continue; end if;
+    insert into darbna_private.signal_stops (cell, dir, lat, lng, wait_s, trip_hash, ip_hash)
+      values (darbna_private.signal_cell(la, lo), ((round(hd / 45)::int % 8) + 8) % 8, la, lo, round(w), th, ip);
+    added := added + 1;
+  end loop;
+  delete from darbna_private.signal_stops where created_at < now() - interval '90 days';
+  return json_build_object('accepted', added);
+end $$;
+
+-- Learned traffic-light spots in an area: [lng, lat, dir, trips, median wait s].
+create or replace function public.darbna_signals(min_lng float8, min_lat float8, max_lng float8, max_lat float8)
+returns json language plpgsql stable security definer set search_path = darbna_private, extensions, public as $$
+begin
+  if max_lng - min_lng > 2.05 or max_lat - min_lat > 2.05 or max_lng < min_lng or max_lat < min_lat then
+    raise exception 'area_too_large' using errcode = 'P0001';
+  end if;
+  return json_build_object('signals', coalesce((
+    select json_agg(json_build_array(round(lng::numeric, 5), round(lat::numeric, 5), dir, trips, wait))
+    from (
+      select dir, avg(lat) as lat, avg(lng) as lng, count(distinct trip_hash)::int as trips,
+             count(distinct (created_at at time zone 'Asia/Baghdad')::date) as days,
+             percentile_cont(0.5) within group (order by wait_s)::int as wait
+      from darbna_private.signal_stops
+      where lat between min_lat and max_lat and lng between min_lng and max_lng
+      group by cell, dir
+      limit 20000
+    ) c
+    where trips >= 4 and days >= 2 and wait between 15 and 150
+      and not exists (
+        select 1 from darbna_private.reports r
+        where r.category in ('checkpoint', 'checkpoint_slow', 'fuel_queue')
+          and r.status <> 'removed' and r.created_at > now() - interval '180 days'
+          and r.lat between c.lat - 0.001 and c.lat + 0.001 and r.lng between c.lng - 0.0012 and c.lng + 0.0012)
+  ), '[]'::json));
+end $$;
+
 -- ------------------------------------------------------------------ thanks & points
 -- "Thanks" for a report: +2 points to whoever reported it, +1 to you. Once per report.
 create or replace function public.darbna_thank(install text, report_id uuid)
@@ -486,6 +574,10 @@ revoke all on function public.darbna_traffic_submit(text, json) from public;
 revoke all on function public.darbna_traffic(float8, float8, float8, float8) from public;
 grant execute on function public.darbna_traffic_submit(text, json) to anon, authenticated;
 grant execute on function public.darbna_traffic(float8, float8, float8, float8) to anon, authenticated;
+revoke all on function public.darbna_stop_submit(text, json) from public;
+revoke all on function public.darbna_signals(float8, float8, float8, float8) from public;
+grant execute on function public.darbna_stop_submit(text, json) to anon, authenticated;
+grant execute on function public.darbna_signals(float8, float8, float8, float8) to anon, authenticated;
 revoke all on function public.darbna_thank(text, uuid) from public;
 revoke all on function public.darbna_me(text) from public;
 revoke all on function public.darbna_share_start(text, text, float8, float8, text) from public;

@@ -1,0 +1,31 @@
+# Counts traffic lights per map provider in Iraq's cities. Writes docs/signals-count.md.
+# Uses the MAPBOX_TOKEN and HERE_KEY repository variables when they exist; OpenStreetMap always.
+name: Count traffic lights
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "feat/**"]
+    paths: [scripts/count-signals.mjs, .github/workflows/count-signals.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MAPBOX_TOKEN: ${{ vars.MAPBOX_TOKEN }}
+      HERE_KEY: ${{ vars.HERE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Count
+        run: node scripts/count-signals.mjs
+      - name: Save report
+        run: |
+          git config user.name github-actions; git config user.email actions@github.com
+          git add docs/signals-count.md
+          git diff --cached --quiet || { git commit -qm "Traffic-light count report" && git pull -q --rebase && git push; }
