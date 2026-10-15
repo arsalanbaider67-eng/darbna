@@ -192,8 +192,9 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       for (const pt of points) b.extend(pt);
       map.current.fitBounds(b, { padding: { top: 120, right: 40, bottom: Math.min(bottomPadding, window.innerHeight * 0.5), left: 40 }, duration: 600 });
     },
-    flyTo(pt, zoom = 15) {
-      map.current?.easeTo({ center: pt, zoom, duration: 500 });
+    flyTo(pt, zoom = 15, upright = false) {
+      // upright (the "my location" button): also turn back to north-up and flat.
+      map.current?.easeTo({ center: pt, zoom, duration: 500, ...(upright ? { bearing: 0, pitch: 0 } : {}) });
     },
     downloadVisible(onProgress) {
       return map.current ? downloadArea(map.current, onProgress) : Promise.resolve("failed" as const);
@@ -382,15 +383,17 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       center: start,
       zoom: latest.current.initialCenter ? 14 : 11,
       attributionControl: { compact: true },
-      pitchWithRotate: false,
-      dragRotate: false,
-      maxPitch: 50,
+      // Full control at all times: drag, zoom, rotate (two fingers / right-drag) and tilt
+      // (two-finger swipe up/down / ctrl-drag), on the normal map and while navigating.
+      pitchWithRotate: true,
+      dragRotate: true,
+      touchPitch: true,
+      maxPitch: 60,
       fadeDuration: 0,
     } as any);
     // Same lightening as the server does: no 3D buildings, later POIs.
     (m as any).setStyle(...styleArgs(latest.current.styleUrl));
     styleLoaded.current = latest.current.styleUrl;
-    m.touchZoomRotate.disableRotation();
     map.current = m;
     // Map credit: required by the OpenStreetMap licence, so it stays reachable behind the small
     // faded (i), but it's folded away a few seconds after the map opens.
@@ -428,6 +431,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     };
     m.on("dragstart", grabbed);
     m.on("zoomstart", grabbed);
+    m.on("rotatestart", grabbed);
+    m.on("pitchstart", grabbed);
     m.on("click", "report-dot", (e: any) => {
       const id = e.features?.[0]?.properties?.id;
       if (typeof id === "string") handlers.current.onReportPress(id);
@@ -533,9 +538,12 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   useEffect(() => {
     const m = map.current;
     if (!m) return;
+    const userMoved = userCam.current;
     userCam.current = false;
     cam.current = null; // the camera glides from wherever it is now
-    if (p.follow === "none") m.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 500 } as any);
+    // Following stopped because you moved the map yourself: leave the view exactly as you set it.
+    // Only when a trip ends does the map go back to flat, north-up.
+    if (p.follow === "none" && !userMoved) m.easeTo({ pitch: 0, bearing: 0, padding: { top: 0, bottom: 0, left: 0, right: 0 }, duration: 500 } as any);
     else if (shown.current) kick();
   }, [p.follow]); // eslint-disable-line react-hooks/exhaustive-deps
 

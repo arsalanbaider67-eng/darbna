@@ -10,23 +10,38 @@ export interface RawFix { coord: LngLat; accuracyM: number; at: number }
 
 export class FixFilter {
   private good: RawFix | null = null;
-  private rejected = 0;
+  private lastRejected: RawFix | null = null;
+  private rejectedSince = 0;
 
-  /** True when this fix should be used. */
+  /**
+   * True when this fix should be used. A fix is dropped only when it is clearly worse than the last
+   * good one AND not confirmed: a jump faster than a car can drive, or a much rougher reading that
+   * arrives right after a precise one. A position that two readings agree on is always accepted
+   * (you really are there: e.g. the first fix was a stale cached one), and nothing is held back
+   * for more than ~3 s, so the dot can never get stuck on an old position.
+   */
   accept(f: RawFix): boolean {
     const g = this.good;
-    if (!g || f.at - g.at > 15_000 || this.rejected >= 4) return this.keep(f);
-    const worse = f.accuracyM > Math.max(25, g.accuracyM * 2.5);
-    // Faster than ~180 km/h plus both error circles: a jump, not a movement.
+    if (!g || f.at - g.at > 10_000) return this.keep(f);
     const dt = Math.max(1, (f.at - g.at) / 1000);
+    // Rougher readings are normal between buildings; only skip them while the good one is fresh.
+    const worse = dt < 5 && f.accuracyM > Math.max(30, g.accuracyM * 3);
+    // Faster than ~180 km/h plus both error circles: a jump, not a movement.
     const jump = haversine(g.coord, f.coord) > dt * 50 + f.accuracyM + g.accuracyM;
-    if (worse || jump) { this.rejected++; return false; }
-    return this.keep(f);
+    if (!worse && !jump) return this.keep(f);
+    // Confirmed: this reading agrees with the previous dropped one, so the new place is real.
+    const r = this.lastRejected;
+    if (r && haversine(r.coord, f.coord) <= r.accuracyM + f.accuracyM + 20) return this.keep(f);
+    if (this.rejectedSince && f.at - this.rejectedSince >= 3000) return this.keep(f);
+    if (!this.rejectedSince) this.rejectedSince = f.at;
+    this.lastRejected = f;
+    return false;
   }
 
   private keep(f: RawFix): boolean {
     this.good = f;
-    this.rejected = 0;
+    this.lastRejected = null;
+    this.rejectedSince = 0;
     return true;
   }
 }

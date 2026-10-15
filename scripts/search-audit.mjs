@@ -113,14 +113,19 @@ function report(rows, names, title) {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const sections = [`# Darbna search audit (${new Date().toISOString().slice(0, 10)})`, ""];
-  const rows = await audit(PROVIDERS);
-  sections.push(report(rows, Object.keys(PROVIDERS), "Providers on their own"));
-  if (process.argv.includes("--engine")) {
+  const rows = process.argv.includes("--engine-only") ? [] : await audit(PROVIDERS);
+  if (rows.length) sections.push(report(rows, Object.keys(PROVIDERS), "Providers on their own"));
+  else { try { sections.push(fs.readFileSync("docs/search-audit.md", "utf8").split("\n").slice(2).join("\n").split("## Darbna's own search")[0]); } catch {} }
+  if (process.argv.includes("--engine") || process.argv.includes("--engine-only")) {
     const { searchIraq } = await import("../packages/core/dist-search/search.mjs");
-    const eng = await audit({ darbna: (q) => searchIraq(q, { lang: "ar", esriKey: process.env.ESRI_KEY, fetchJson: getJson }).then((r) => r.map((p) => ({ name: p.name, coord: p.coord }))) });
+    // Exactly what the app runs: Nominatim + Esri, merged and re-ranked (no photonUrl, like the app).
+    const eng = await audit({ darbna: async (q) => { const r = await searchIraq(q, { lang: "ar", esriKey: process.env.ESRI_KEY, fetchJson: getJson }); await sleep(1100); return r.map((p) => ({ name: p.name, coord: p.coord })); } });
     sections.push("", report(eng, ["darbna"], "Darbna's own search (what the app runs)"));
   }
   fs.mkdirSync("docs", { recursive: true });
   fs.writeFileSync("docs/search-audit.md", sections.join("\n") + "\n");
-  for (const n of Object.keys(PROVIDERS)) console.log(`::notice title=${n}::${rows.filter((r) => r.res[n]?.hit).length}/${rows.length}`);
+  if (process.argv.includes("--engine-only")) {
+    const m = sections.join("\n").match(/\| darbna \| (\d+\/\d+)/); console.log(`::notice title=darbna::${m?.[1]}`);
+  }
+  for (const n of rows.length ? Object.keys(PROVIDERS) : []) console.log(`::notice title=${n}::${rows.filter((r) => r.res[n]?.hit).length}/${rows.length}`);
 }

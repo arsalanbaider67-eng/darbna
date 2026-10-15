@@ -13,3 +13,4 @@ export * from "./precise";
 export * from "./extras";
 export * from "./sos";
 export * from "./hazards";
+export * from "./search";

@@ -575,7 +575,7 @@ export function MainScreen() {
           <RoundBtn icon={satellite ? "map-outline" : "satellite-variant"} label={satellite ? t.settings.mapView : t.settings.satellite} onPress={toggleSatellite} />
           {loc.permission === "granted" && fix && <>
             <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
-            <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15); }} />
+            <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15, true); }} />
           </>}
         </View>
       )}
