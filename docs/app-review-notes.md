@@ -9,8 +9,8 @@ Darbna's maps, routes and road reports cover Iraq only. When the device is outsi
 3. SOS button (right side): shows Iraq's unified emergency number 911. Tapping it only opens the phone's dialer; nothing is dialled automatically.
 
 ROAD REPORTS (user-generated content, guideline 1.2)
-- Reports are a fixed list of road conditions (traffic jam, crash, closed road, speed camera, checkpoint queue, fuel queue…). There is no free text, no photos, no profiles and no messaging between users.
-- Every report can be flagged ("Wrong or abusive report") or voted "Not there"; 3 flags hide a report automatically for moderation, and reports and expire on their own within hours.
+- Reports are a fixed list of road conditions (traffic jam, crash, closed road, speed camera, checkpoint queue, fuel queue…). There is no free text, no photos, no profiles and no messaging between users. (The separate "Map problem" form sends a note to OpenStreetMap's public map-notes system; it is not shown inside Darbna.)
+- Every report can be flagged ("Wrong or abusive report") or voted "Not there"; 3 flags hide a report automatically for moderation, and reports expire on their own within hours.
 - "Checkpoint" refers to the permanent, publicly visible security checkpoints on Iraqi roads, which cause long queues. Drivers report the delay so others can plan or pick another road, the same way they report traffic. Darbna does not show police patrols and nothing in the app helps evade law enforcement.
 - Settings → "Delete my data" removes everything the user has sent from our server and the device.
 
