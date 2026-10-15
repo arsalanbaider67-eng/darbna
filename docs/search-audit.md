@@ -88,3 +88,91 @@ Every query:
 | Duhok Dam | duhok | ✓ #1 | error | ✓ #1 |
 | زانکۆی دهۆک | duhok | ✓ #1 | error | ✓ #1 |
 | جامعة دهوك | duhok | ✓ #1 | error | ✓ #1 |
+
+
+## Darbna's own search (what the app runs)
+
+Hit = one of the top 5 results is in the right city (within 25 km). 53 queries.
+
+| Provider | Hits | Errors |
+|---|---|---|
+| darbna | 51/53 (96%) | 0 |
+
+By kind:
+
+| Kind | darbna |
+|---|---|
+| neighbourhood (9) | 9 |
+| variant (3) | 3 |
+| typo (1) | 1 |
+| street (3) | 3 |
+| landmark (21) | 19 |
+| school (12) | 12 |
+| hospital (1) | 1 |
+| business (3) | 3 |
+
+By language:
+
+| Language | darbna |
+|---|---|
+| ar (35) | 33 |
+| ckb (4) | 4 |
+| en (14) | 14 |
+
+Every query:
+
+| Query | City | darbna |
+|---|---|---|
+| الكرادة | baghdad | ✓ #1 |
+| الكراده | baghdad | ✓ #1 |
+| المنصور | baghdad | ✓ #1 |
+| المنصوور | baghdad | ✓ #3 |
+| الكاظمية | baghdad | ✓ #1 |
+| زيونة | baghdad | ✓ #1 |
+| شارع المتنبي | baghdad | ✓ #1 |
+| شارع فلسطين | baghdad | ✓ #1 |
+| ساحة التحرير | baghdad | ✓ #1 |
+| مطار بغداد الدولي | baghdad | ✓ #1 |
+| Baghdad International Airport | baghdad | ✓ #1 |
+| جامعة بغداد | baghdad | ✓ #1 |
+| مدينة الطب | baghdad | ✓ #1 |
+| Al-Mansour | baghdad | ✓ #1 |
+| قلعة أربيل | erbil | ✓ #1 |
+| قلعة اربيل | erbil | ✓ #1 |
+| Erbil Citadel | erbil | ✓ #1 |
+| قەڵای هەولێر | erbil | ✓ #1 |
+| عنكاوا | erbil | ✓ #1 |
+| Ankawa | erbil | ✓ #2 |
+| Family Mall | erbil | ✓ #2 |
+| فاميلي مول | erbil | ✓ #2 |
+| Majidi Mall | erbil | ✓ #1 |
+| منتزه سامي عبد الرحمن | erbil | ✗ (عبد الرحمن) |
+| Sami Abdulrahman Park | erbil | ✓ #1 |
+| جامعة صلاح الدين | erbil | ✓ #4 |
+| العشار | basra | ✓ #1 |
+| جامعة البصرة | basra | ✓ #1 |
+| كورنيش البصرة | basra | ✓ #1 |
+| Basra International Airport | basra | ✓ #1 |
+| البصره | basra | ✓ #1 |
+| جامعة الموصل | mosul | ✓ #1 |
+| University of Mosul | mosul | ✓ #1 |
+| الجامع النوري | mosul | ✗ (الجامع النووي) |
+| الدواسة | mosul | ✓ #1 |
+| مرقد الإمام علي | najaf | ✓ #1 |
+| Imam Ali Shrine | najaf | ✓ #1 |
+| جامعة الكوفة | najaf | ✓ #1 |
+| مرقد الإمام الحسين | karbala | ✓ #1 |
+| Imam Husayn Shrine | karbala | ✓ #1 |
+| جامعة كربلاء | karbala | ✓ #1 |
+| پارکی ئازادی | sulaymaniyah | ✓ #1 |
+| Azadi Park Sulaymaniyah | sulaymaniyah | ✓ #1 |
+| شارع سالم | sulaymaniyah | ✓ #1 |
+| زانکۆی سلێمانی | sulaymaniyah | ✓ #1 |
+| جامعة السليمانية | sulaymaniyah | ✓ #1 |
+| قلعة كركوك | kirkuk | ✓ #1 |
+| Kirkuk Citadel | kirkuk | ✓ #1 |
+| جامعة كركوك | kirkuk | ✓ #1 |
+| سد دهوك | duhok | ✓ #1 |
+| Duhok Dam | duhok | ✓ #1 |
+| زانکۆی دهۆک | duhok | ✓ #1 |
+| جامعة دهوك | duhok | ✓ #1 |
