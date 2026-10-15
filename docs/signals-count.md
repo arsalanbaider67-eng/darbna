@@ -4,13 +4,13 @@
 
 | City | Traffic lights |
 |---|---|
-| baghdad | error: Overpass unavailable |
-| erbil | 160 |
-| basra | error: Overpass unavailable |
+| baghdad | 97 |
+| erbil | error: Overpass unavailable |
+| basra | 0 |
 | mosul | 18 |
 | sulaymaniyah | 19 |
 | najaf | 0 |
-| karbala | error: Overpass unavailable |
+| karbala | 35 |
 | kirkuk | 23 |
 | duhok | 35 |
 
