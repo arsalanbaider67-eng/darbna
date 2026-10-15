@@ -58,11 +58,11 @@ function dedupe(pts, d = 30) {
 async function osmSignals(city) {
   const [w, s, e, n] = bboxOf(city);
   const q = `[out:json][timeout:60];node["highway"="traffic_signals"](${s},${w},${n},${e});out skel;`;
-  for (const host of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+  for (const host of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter", "https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter", "https://overpass-api.de/api/interpreter"]) {
     try {
       const j = await get(host, { method: "POST", body: new URLSearchParams({ data: q }), headers: { "Content-Type": "application/x-www-form-urlencoded" } });
       return j.elements.map((el) => [el.lon, el.lat]);
-    } catch (err) { console.log(`overpass ${host}: ${err.message}`); await sleep(5000); }
+    } catch (err) { console.log(`overpass ${host}: ${err.message}`); await sleep(20000); }
   }
   throw new Error("Overpass unavailable");
 }
