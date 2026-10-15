@@ -69,13 +69,13 @@ export function SosSheet({ coord, onClose }: { coord: LngLat | null; onClose(): 
   const chooser = (
     <View style={{ gap: 8 }}>
       <Txt size={15} weight="semibold">{L.choose}</Txt>
-      {[KURDISTAN, IRAQ, "TUR", OTHER].map((r) => {
+      {[KURDISTAN, IRAQ, OTHER].map((r) => {
         const on = sos.manual?.region === r && v.basis === "manual";
         return (
           <Pressable key={r} accessibilityRole="radio" accessibilityState={{ selected: on }}
             onPress={() => { chooseSosRegion(r); setChoosing(false); }}
             style={[s.choice, { borderColor: on ? theme.primary : theme.border, backgroundColor: on ? theme.highlight : "transparent" }]}>
-            <Icon name={r === OTHER ? "earth" : r === "TUR" ? "flag-outline" : "map-marker-radius-outline"} color={theme.primary} />
+            <Icon name={r === OTHER ? "earth" : "map-marker-radius-outline"} color={theme.primary} />
             <Txt size={16} style={{ flex: 1 }}>{r === IRAQ ? L.regionIQLong : regionName(r)}</Txt>
           </Pressable>
         );

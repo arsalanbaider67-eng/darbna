@@ -1,9 +1,7 @@
 /**
  * SOS: which emergency numbers to show where you are.
  *
- *  - Kurdistan Region of Iraq (IQ-KR, the official region: Erbil, Duhok, Sulaymaniyah, Halabja)
- *    → its own police / ambulance / civil-defence numbers.
- *  - Elsewhere in Iraq → 911.
+ *  - Anywhere in Iraq, the Kurdistan Region included → 911 (Iraq's unified emergency number).
  *  - Outside Iraq → that country's number only if it's in the verified config; otherwise the app
  *    says it couldn't confirm the number. 911 is never assumed outside Iraq.
  *
@@ -23,6 +21,8 @@ export interface EmergencyContact {
   sources: EmergencySource[];
   /** A real call test in the area before release: when, where and by whom. */
   callTested: { date: string; area: string; by: string } | null;
+  /** Or confirmed by the app owner, backed by an official source. */
+  confirmed?: { date: string; by: string; how: string };
 }
 export interface EmergencyRegion { lastVerified: string; contacts: EmergencyContact[]; note?: string }
 export interface EmergencyConfig {
@@ -64,7 +64,7 @@ export function pickEmergencyConfig(bundled: EmergencyConfig, downloaded: unknow
 export function untestedNumbers(c: EmergencyConfig): { region: string; number: string; service: EmergencyService }[] {
   const out: { region: string; number: string; service: EmergencyService }[] = [];
   for (const [region, r] of Object.entries(c.regions)) {
-    for (const k of r.contacts) if (!k.callTested) out.push({ region, number: k.number, service: k.service });
+    for (const k of r.contacts) if (!k.callTested && !k.confirmed) out.push({ region, number: k.number, service: k.service });
   }
   return out;
 }

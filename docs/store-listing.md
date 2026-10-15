@@ -27,7 +27,7 @@ Seller name (individual account): your legal name.
 • زحام مباشر من سواق دربنا وأوقات وصول أدق
 • طرق للسيارة والمشي، وقفات بالطريق، وتجنب الطرق السريعة أو الترابية أو السيطرات
 • حد السرعة وتنبيه إذا عديته
-• شارك رحلتك مباشرة ويه أهلك، وزر طوارئ (١٠٤ شرطة، ١٢٢ إسعاف، ١١٥ دفاع مدني)
+• شارك رحلتك مباشرة ويه أهلك، وزر طوارئ يتصل بـ ٩١١
 • يتذكر وين صفيت سيارتك
 • ابحث بسرعة عن بانزينخانة، جامع، مستشفى، صيدلية، مطعم أو صراف قريب منك
 • خرائط بدون إنترنت، صور قمر صناعي، وتصميم واضح وسهل القراءة
@@ -41,7 +41,7 @@ Darbna is a navigation app made for Iraq.
 • Live traffic from Darbna drivers for more accurate arrival times
 • Car and walking routes, stops on the way, avoid highways, dirt roads or checkpoints
 • Speed limit with a warning when you go over
-• Share your trip live with family, and an SOS button (104 police, 122 ambulance, 115 fire)
+• Share your trip live with family, and an SOS button that calls 911
 • Remembers where you parked
 • Quick search for fuel, mosques, hospitals, pharmacies, food and ATMs near you
 • Offline maps, satellite view, and a clean, easy-to-read design

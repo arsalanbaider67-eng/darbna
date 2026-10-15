@@ -118,10 +118,10 @@ describe("poor GPS", () => {
 describe("what the SOS screen shows", () => {
   const live = (region: string, at: number): RegionStatus => ({ region, confirmedAt: at, confidence: "confirmed", candidate: region, edgeM: 5000 });
 
-  it("Kurdistan Region: police 104, ambulance 122, civil defence 115", () => {
+  it("Kurdistan Region: 911, like the rest of Iraq", () => {
     const v = resolveSos({ config, now: T0, permission: "granted", live: live(KURDISTAN, T0), cached: null, manual: null });
     expect(v.basis).toBe("location");
-    expect(v.contacts.map((c) => [c.service, c.number])).toEqual([["police", "104"], ["ambulance", "122"], ["civil_defense", "115"]]);
+    expect(v.contacts.map((c) => [c.service, c.number])).toEqual([["general", "911"]]);
   });
 
   it("rest of Iraq: 911 first", () => {
@@ -130,9 +130,10 @@ describe("what the SOS screen shows", () => {
     expect(v.contacts[0].primary).toBe(true);
   });
 
-  it("outside Iraq: the country's verified number, or an honest 'not confirmed' — never 911", () => {
+  it("outside Iraq: an honest 'not confirmed' — never 911", () => {
     const tur = resolveSos({ config, now: T0, permission: "granted", live: live("TUR", T0), cached: null, manual: null });
-    expect(tur.contacts.map((c) => c.number)).toEqual(["112"]);
+    expect(tur.contacts).toEqual([]);
+    expect(tur.unconfirmed).toBe(true);
     const other = resolveSos({ config, now: T0, permission: "granted", live: live(OTHER, T0), cached: null, manual: null });
     expect(other.contacts).toEqual([]);
     expect(other.unconfirmed).toBe(true);
@@ -142,7 +143,7 @@ describe("what the SOS screen shows", () => {
   it("offline / after a restart: last confirmed region and its numbers, marked as possibly outdated", () => {
     const v = resolveSos({ config, now: T0 + 3 * 3600_000, permission: "granted", live: null, cached: { region: KURDISTAN, at: T0 }, manual: null });
     expect(v.basis).toBe("last_known");
-    expect(v.contacts.map((c) => c.number)).toEqual(["104", "122", "115"]);
+    expect(v.contacts.map((c) => c.number)).toEqual(["911"]);
     expect(v.locationStale).toBe(true);
     expect(v.needsChoice).toBe(true); // offered, but the numbers stay on screen
   });
@@ -186,7 +187,8 @@ describe("numbers configuration", () => {
     const newer = { ...config, version: config.version + 1 };
     expect(pickEmergencyConfig(config, newer).version).toBe(config.version + 1);
   });
-  it("lists numbers still waiting for a call test (release gate)", () => {
-    expect(untestedNumbers(config).length).toBe(5);
+  it("release gate: every number is call-tested or confirmed by the owner", () => {
+    expect(untestedNumbers(config)).toEqual([]);
+    expect(untestedNumbers({ ...config, regions: { X: { lastVerified: "2026-01-01", contacts: [{ service: "general", number: "999", sources: [{ title: "t", url: "https://x", official: true }], callTested: null }] } } }).length).toBe(1);
   });
 });
