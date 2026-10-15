@@ -215,6 +215,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
           ) : (
             <Pressable
               accessibilityRole="button"
+              testID="search-result"
               onPress={() => item.place && onPick(item.place)}
               style={({ pressed }) => [s.item, { borderColor: theme.border, backgroundColor: pressed ? theme.surfaceAlt : "transparent" }]}
             >

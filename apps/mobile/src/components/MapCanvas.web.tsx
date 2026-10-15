@@ -395,6 +395,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
     (m as any).setStyle(...styleArgs(latest.current.styleUrl));
     styleLoaded.current = latest.current.styleUrl;
     map.current = m;
+    // Read-only handle for the automated end-to-end test (e2e/real-world.mjs) to check the camera.
+    (window as any).__darbnaMap = m;
     // Map credit: required by the OpenStreetMap licence, so it stays reachable behind the small
     // faded (i), but it's folded away a few seconds after the map opens.
     ensureAttributionCss();

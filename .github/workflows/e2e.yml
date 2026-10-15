@@ -1,0 +1,40 @@
+# Real-world end-to-end test (live map tiles, search, routing) of the latest test build
+# (web-preview-wip, built by "Check branch"). Results: annotations + the e2e-results branch.
+name: E2E real world
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test build
+        run: |
+          git fetch -q origin web-preview-wip
+          mkdir -p serve/darbna && git archive origin/web-preview-wip | tar -x -C serve/darbna
+          (cd serve && nohup python3 -m http.server 8765 >/dev/null 2>&1 &)
+          sleep 2; curl -sf -o /dev/null http://localhost:8765/darbna/ && echo served
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Playwright
+        run: |
+          npm i --no-save --no-audit --no-fund playwright@1.48.2 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Run
+        run: |
+          mkdir -p e2e-out; node e2e/real-world.mjs http://localhost:8765/darbna/ | tee e2e-out/log.txt || true
+          grep -E "^(PASS|FAIL)" e2e-out/log.txt | while read -r line; do
+            case "$line" in PASS*) echo "::notice title=e2e::$line";; FAIL*) echo "::warning title=e2e::$line";; esac
+          done
+          tail -1 e2e-out/log.txt
+      - name: Save results
+        if: always()
+        run: |
+          cd e2e-out && git init -q -b e2e-results && git add . && git -c user.name=ci -c user.email=ci@x commit -qm "e2e $(date -u +%FT%TZ)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" e2e-results
