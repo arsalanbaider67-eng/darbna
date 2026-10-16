@@ -1,0 +1,242 @@
+[
+ {
+  "name": "GPS: your position is shown",
+  "ok": true,
+  "detail": "0 m from the real position"
+ },
+ {
+  "name": "GPS: position follows you smoothly",
+  "ok": true,
+  "detail": "0 m behind"
+ },
+ {
+  "name": "GPS: a real big move is accepted within a few seconds (no frozen dot)",
+  "ok": true,
+  "detail": "3 m from the new place"
+ },
+ {
+  "name": "Map: drag moves the map",
+  "ok": true,
+  "detail": "798 m"
+ },
+ {
+  "name": "Map: stays where you dragged it (no snapping back to GPS)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Map: rotate",
+  "ok": true,
+  "detail": "bearing -82.4° (events: rotatestart,rotate; camera calls: none)"
+ },
+ {
+  "name": "Map: tilt",
+  "ok": true,
+  "detail": "pitch 60.0°"
+ },
+ {
+  "name": "Map: zoom",
+  "ok": true,
+  "detail": "14.0 → 14.4"
+ },
+ {
+  "name": "Map: rotation/tilt kept (nothing resets it)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Search \"الكرادة\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 11 results, first «الكرادة»"
+ },
+ {
+  "name": "Search \"الكرادة\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"الكرادة\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.9 km away"
+ },
+ {
+  "name": "Search \"قلعة أربيل\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 6 results, first «قلعة أربيل»"
+ },
+ {
+  "name": "Search \"قلعة أربيل\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"قلعة أربيل\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.0 km away"
+ },
+ {
+  "name": "Search \"Erbil Citadel\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 7 results, first «قلعة أربيل»"
+ },
+ {
+  "name": "Search \"Erbil Citadel\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"Erbil Citadel\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.0 km away"
+ },
+ {
+  "name": "Search \"البصره\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 12 results, first «البصرة»"
+ },
+ {
+  "name": "Search \"البصره\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"البصره\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.2 km away"
+ },
+ {
+  "name": "Search \"فاميلي مول\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 3 results, first «المسيب فاميلي مول»"
+ },
+ {
+  "name": "Search \"فاميلي مول\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"فاميلي مول\": first result is the expected city",
+  "ok": false,
+  "info": true,
+  "detail": "381.8 km away"
+ },
+ {
+  "name": "Search \"المنصوور\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 10 results, first «المنصور»"
+ },
+ {
+  "name": "Search \"المنصوور\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"المنصوور\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "11.4 km away"
+ },
+ {
+  "name": "Search \"پارکی ئازادی\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 3 results, first «پارکی ئازادی»"
+ },
+ {
+  "name": "Search \"پارکی ئازادی\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"پارکی ئازادی\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.5 km away"
+ },
+ {
+  "name": "Search \"جامعة الموصل\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 10 results, first «جامعة الموصل»"
+ },
+ {
+  "name": "Search \"جامعة الموصل\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"جامعة الموصل\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "2.4 km away"
+ },
+ {
+  "name": "Search \"مرقد الإمام علي\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "2.3s after typing, 3 results, first «مرقد الإمام علي»"
+ },
+ {
+  "name": "Search \"مرقد الإمام علي\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"مرقد الإمام علي\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.8 km away"
+ },
+ {
+  "name": "Search \"شارع المتنبي\": results appear by themselves (no search key)",
+  "ok": true,
+  "detail": "1.3s after typing, 11 results, first «شارع المتنبي»"
+ },
+ {
+  "name": "Search \"شارع المتنبي\": picking a result moves the map to it",
+  "ok": true,
+  "detail": "map 0 m from the picked place"
+ },
+ {
+  "name": "Search \"شارع المتنبي\": first result is the expected city",
+  "ok": true,
+  "info": true,
+  "detail": "0.3 km away"
+ },
+ {
+  "name": "Navigation: a route is found",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Navigation: camera follows and turns with you",
+  "ok": true,
+  "detail": "pitch 50°"
+ },
+ {
+  "name": "Navigation: you can drag the map while driving",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Navigation: the camera stays where you put it",
+  "ok": true,
+  "detail": "moved 0 m"
+ },
+ {
+  "name": "Navigation: recenter button appears",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Navigation: you can rotate while driving",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "Navigation: recenter follows you again",
+  "ok": true,
+  "detail": "1 m from you"
+ }
+]
