@@ -58,6 +58,8 @@ export function NavHud(p: Props) {
   const { theme, t, fmtCtx } = useUi();
   const insets = useSafeAreaInsets();
   const [confirmExit, setConfirmExit] = useState(false);
+  const [bannerHeight, setBannerHeight] = useState(150);
+  const overlayTop = insets.top + 8 + bannerHeight + 12;
   const step = p.g?.nextStep ?? p.route.steps[1] ?? p.route.steps[0];
   const dist = p.g?.distanceToNextM ?? p.route.steps[0]?.distanceM ?? 0;
   const remainingS = p.g?.remainingS ?? p.route.durationS;
@@ -86,10 +88,12 @@ export function NavHud(p: Props) {
   return (
     <>
       {/* Maneuver banner — biggest, highest-contrast thing on screen. */}
-      <View style={[s.banner, { top: insets.top + 8, backgroundColor: theme.banner, borderColor: theme.border }]} accessibilityLiveRegion="polite">
+      <View onLayout={e => setBannerHeight(Math.ceil(e.nativeEvent.layout.height))} style={[s.banner, { top: insets.top + 8, backgroundColor: theme.banner, borderColor: theme.border }]} accessibilityLiveRegion="polite">
         {step && (
           <Row gap={14}>
-            <Icon name={MANEUVER_ICON[step.kind]} size={50} color={theme.primary} />
+            <View style={[s.turnIcon, { backgroundColor: theme.highlight }]}>
+              <Icon name={MANEUVER_ICON[step.kind]} size={48} color={theme.primary} />
+            </View>
             <View style={{ flex: 1 }}>
               <Txt size={30} weight="bold" tight={40} style={{ color: theme.onBanner }}>{fmtDistance(dist, fmtCtx)}</Txt>
               <Txt size={18} weight="semibold" numberOfLines={2} style={{ color: theme.onBanner }}>{instructionText(step, null, fmtCtx)}</Txt>
@@ -106,25 +110,25 @@ export function NavHud(p: Props) {
       </View>
 
       {p.ahead && !status && (
-        <View style={[s.aheadWrap, { top: insets.top + (lanes ? 196 : 150) }]} pointerEvents="none">
+        <View style={[s.aheadWrap, { top: overlayTop }]} pointerEvents="none">
           <AheadChip report={p.ahead.report} distanceM={p.ahead.distanceM} />
         </View>
       )}
 
       {status && (
-        <View style={[s.status, { top: insets.top + 150, backgroundColor: theme.surface, borderColor: status.color }]}>
+        <View style={[s.status, { top: overlayTop, backgroundColor: theme.surface, borderColor: status.color }]}>
           <Icon name={status.icon} size={20} color={status.color} />
           <Txt size={15} weight="semibold" style={{ color: status.color, flexShrink: 1 }}>{status.text}</Txt>
         </View>
       )}
 
       {/* Top corners under the banner: sound on the right, re-center on the left when you've panned away. */}
-      <View style={[s.topRight, { top: insets.top + (lanes ? 196 : 150) }]}>
+      <View style={[s.topRight, { top: overlayTop }]}>
         <RoundBtn icon={p.muted ? "volume-off" : "volume-high"} label={p.muted ? t.nav.unmute : t.nav.mute} onPress={p.onMuteToggle} size={52} />
         <RoundBtn icon={p.sharing ? "share-variant" : "dots-horizontal"} active={p.sharing} label={t.x.menu.title} onPress={p.onMenu} size={52} />
       </View>
       {!p.following && (
-        <View style={[s.topLeft, { top: insets.top + 150 }]}>
+        <View style={[s.topLeft, { top: overlayTop }]}>
           <RoundBtn icon="navigation-variant" label={t.nav.recenter} onPress={p.onRecenter} size={52} />
         </View>
       )}
@@ -194,6 +198,7 @@ export function NavHud(p: Props) {
 }
 
 const s = StyleSheet.create({
+  turnIcon: { width: 72, height: 80, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   banner: { position: "absolute", left: 10, right: 10, borderRadius: 20, padding: 14, borderWidth: 1, elevation: 8, shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
   then: { marginTop: 10, paddingTop: 8, borderTopWidth: 1 },
   status: { position: "absolute", alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 2, maxWidth: "70%" },

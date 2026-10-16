@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, FlatList, Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Image, Keyboard, Pressable, StyleSheet, TextInput, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { arabicKey, haversine, latinKey, parseSharedLocation, type LngLat } from "@darbna/core";
@@ -10,8 +10,9 @@ import { getState, setState, useStore } from "../store";
 import { font, TOUCH } from "../theme";
 import type { Place } from "../types";
 import type { NearbyKind } from "../external";
+import { IS_PREVIEW } from "../build";
 import { QuickSearch } from "./Extras";
-import { Icon, Row, Txt, type IconName } from "./ui";
+import { Btn, Icon, Row, Txt, type IconName } from "./ui";
 
 const QUICK_ICON_FOR: Record<NearbyKind, IconName> = {
   fuel: "gas-station", mosque: "mosque", hospital: "hospital-box", pharmacy: "pill", restaurant: "silverware-fork-knife", atm: "cash",
@@ -43,6 +44,12 @@ export function SearchBar({ onFocus, onSettings }: { onFocus(): void; onSettings
   const insets = useSafeAreaInsets();
   return (
     <View style={[s.barWrap, { top: insets.top + 8 }]}>
+      <View style={[s.brandRow, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Image source={require("../../assets/lockup.png")} style={{ width: 86, height: 42 }} resizeMode="contain" accessibilityLabel={t.appName} />
+        {IS_PREVIEW && <View style={[s.previewTag, { backgroundColor: theme.highlight }]}><Txt size={11} weight="semibold" style={{ color: theme.primary }}>{t.journey.preview}</Txt></View>}
+        <View style={{ flex: 1 }} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t.settings.title} onPress={onSettings} style={s.barIcon}><Icon name="cog-outline" size={23} color={theme.text} /></Pressable>
+      </View>
       <Pressable
         accessibilityRole="search"
         accessibilityLabel={t.search.placeholder}
@@ -51,9 +58,7 @@ export function SearchBar({ onFocus, onSettings }: { onFocus(): void; onSettings
       >
         <Icon name="magnify" size={26} color={theme.primary} />
         <Txt size={18} muted style={{ flex: 1 }}>{t.search.placeholder}</Txt>
-        <Pressable accessibilityRole="button" accessibilityLabel={t.settings.title} onPress={onSettings} hitSlop={12} style={s.barIcon}>
-          <Icon name="cog-outline" size={24} color={theme.textMuted} />
-        </Pressable>
+        <Icon name="arrow-top-left" size={23} color={theme.textMuted} />
       </Pressable>
     </View>
   );
@@ -77,12 +82,19 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
 
   useEffect(() => {
     const query = q.trim();
+    const id = ++seq.current;
     if (query.length < 2) {
       setResults(null);
       setStatus("idle");
       return;
     }
-    const id = ++seq.current;
+    // The optional server may proxy public Nominatim too. Until a dedicated autocomplete
+    // capability is advertised, only an explicit submission should reach that server.
+    if (!DIRECT_MODE && submitted === 0) {
+      setResults(localMatch(query, [...saved.favorites, ...recents]));
+      setStatus("idle");
+      return;
+    }
     // A new query: never leave the previous query's results on screen (tapping one would open the
     // wrong place). Show "searching" until this query's own results arrive.
     setResults(null);
@@ -97,7 +109,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
       setStatus("loading");
       try {
         // Online results as you type (after a short pause), not only after pressing search.
-        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 || query.length >= 3 });
+        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 || query.length >= 3, autocomplete: submitted === 0 });
         if (id !== seq.current) return;
         setResults(r.results);
         setStatus(r.partial ? "partial" : "idle");
@@ -107,7 +119,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
         setResults(localMatch(query, [...saved.favorites, ...recents]));
       }
     }, submitted > 0 ? 0 : query.length >= 3 ? 700 : 250);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); if (seq.current === id) seq.current++; };
   }, [q, online, lang, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function paste() {
@@ -159,7 +171,11 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
         ) : null}
       </View>
 
-      {!results && (
+      {q.trim().length >= 2 && <View style={{ paddingHorizontal: 12, paddingTop: 10, gap: 6 }}>
+        <Btn icon="magnify" label={t.search.fullSearch} onPress={() => { Keyboard.dismiss(); setSubmitted(n => n + 1); }} loading={submitted > 0 && state === "loading"} />
+        <Txt size={12} muted>{t.search.cityHint}</Txt>
+      </View>}
+      {!results && !q.trim() && (
         <View style={{ paddingHorizontal: 10, marginTop: 10 }}>
           <QuickSearch userCoord={userCoord} onResults={setNear} />
         </View>
@@ -243,6 +259,8 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
 }
 
 const s = StyleSheet.create({
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, minHeight: 54, borderWidth: 1, borderRadius: 20, marginBottom: 8 },
+  previewTag: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   barWrap: { position: "absolute", left: 12, right: 12 },
   bar: {
     minHeight: TOUCH + 4, borderRadius: 18, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14,
