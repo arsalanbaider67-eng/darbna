@@ -10,11 +10,16 @@ name: iOS store build
 
 on:
   workflow_dispatch:
+    inputs:
+      share_extension:
+        description: "Include the share extension (needs a registered iPhone for signing)"
+        type: boolean
+        default: false
 
 jobs:
   ios:
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       EXPO_PUBLIC_API_URL: direct
       # Own routing/search server (GitHub → Settings → Variables); empty = public OpenStreetMap services.
@@ -26,6 +31,8 @@ jobs:
       EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
       APP_BUILD_NUMBER: ${{ github.run_number }}
+      DARBNA_SHARE_EXTENSION: ${{ inputs.share_extension && '1' || '0' }}
+      EXPO_PUBLIC_SHARE_EXTENSION: ${{ inputs.share_extension && '1' || '0' }}
       CI: "1"
       NODE_ENV: production
     steps:
@@ -62,6 +69,12 @@ jobs:
       - name: Install JS dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Leave out the share extension module (unless requested)
+        if: ${{ !inputs.share_extension }}
+        working-directory: apps/mobile
+        run: |
+          node -e 'const f="package.json",p=require("./"+f);p.expo=p.expo||{};p.expo.autolinking={...(p.expo.autolinking||{}),exclude:["expo-share-intent"]};require("fs").writeFileSync(f,JSON.stringify(p,null,2))'
+          grep -n -A3 autolinking package.json
       - name: Generate iOS project
         working-directory: apps/mobile
         env:
@@ -82,7 +95,7 @@ jobs:
         working-directory: apps/mobile/ios
         run: |
           set -e
-          PM=$(find . -name PrivacyInfo.xcprivacy -not -path "./Pods/*" | head -1)
+          PM=$(find . -name PrivacyInfo.xcprivacy -not -path "./Pods/*" -not -path "*Share*" -not -path "*Extension*" | head -1)
           [ -n "$PM" ] || { echo "::error::no PrivacyInfo.xcprivacy"; exit 1; }
           grep -q NSPrivacyCollectedDataTypePreciseLocation "$PM" && grep -q CA92.1 "$PM" || { echo "::error::privacy manifest incomplete"; cat "$PM"; exit 1; }
           echo "✓ $PM"
@@ -111,8 +124,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s\n' "$P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
-      # Archive unsigned: automatic signing at archive time wants a development profile, which
-      # needs a registered iPhone. The export step below signs for the App Store (cloud signing).
+      # Archive unsigned: signing at archive time wants a development profile (needs a registered
+      # iPhone). The export below signs everything for the App Store with cloud signing.
       - name: Archive
         working-directory: apps/mobile/ios
         env:
@@ -152,6 +165,26 @@ jobs:
             <key>uploadSymbols</key><true/>
           </dict></plist>
           PLIST
+          # 1) With the share extension: export a signed .ipa locally and check it kept its App Group.
+          if [ "$DARBNA_SHARE_EXTENSION" = "1" ]; then
+          sed 's#<string>upload</string>#<string>export</string>#' ExportOptions.plist > ExportLocal.plist
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Darbna.xcarchive" -exportOptionsPlist ExportLocal.plist \
+            -exportPath "$RUNNER_TEMP/local" -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" > export-local.log 2>&1 || true
+          { grep -E "error:" export-local.log || true; } | sort -u | head -10 | while IFS= read -r l; do echo "::warning title=local export::${l:0:600}"; done
+          IPA=$(ls "$RUNNER_TEMP"/local/*.ipa 2>/dev/null | head -1 || true)
+          [ -n "$IPA" ] || tail -5 export-local.log | while IFS= read -r l; do echo "::warning title=local export (no ipa)::${l:0:600}"; done
+          if [ -n "$IPA" ]; then
+            mkdir -p "$RUNNER_TEMP/ipa" && (cd "$RUNNER_TEMP/ipa" && unzip -q -o "$IPA")
+            for b in "$RUNNER_TEMP"/ipa/Payload/*.app "$RUNNER_TEMP"/ipa/Payload/*.app/PlugIns/*.appex; do
+              [ -d "$b" ] || continue
+              id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$b/Info.plist")
+              ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | { grep -o 'application-groups</key><array><string>[^<]*' || true; } | sed 's/.*<string>//')
+              echo "::notice title=signed $id::app group: ${ent:-none}"
+            done
+          fi
+          fi
+          # 2) Upload.
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Darbna.xcarchive" -exportOptionsPlist ExportOptions.plist \
             -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \

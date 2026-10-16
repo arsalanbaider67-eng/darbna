@@ -110,6 +110,19 @@ const config: ExpoConfig = {
     ["expo-build-properties", { android: { usesCleartextTraffic: TEST_BUILD }, ios: { deploymentTarget: "15.1" } }],
     "./plugins/withReleaseSigning",
     "./plugins/withArabicLabel",
+    // "Share → دربنا" from Google Maps, Apple Maps, WhatsApp, Safari… (iOS share extension; on
+    // Android, Darbna shows up for shared text and links). The app reads the link and opens the route.
+    // Needs the App Group to be signed in, which needs a registered iPhone for the archive signing
+    // (see .github/workflows/ios-store.yml); off until then (DARBNA_SHARE_EXTENSION=1 turns it on).
+    ...(process.env.DARBNA_SHARE_EXTENSION === "1" ? [["expo-share-intent", {
+      iosShareExtensionName: "Darbna Share",
+      iosActivationRules: {
+        NSExtensionActivationSupportsWebURLWithMaxCount: 1,
+        NSExtensionActivationSupportsWebPageWithMaxCount: 1,
+        NSExtensionActivationSupportsText: true,
+      },
+      androidIntentFilters: ["text/*"],
+    }] as [string, any]] : []),
   ],
   extra: {
     supportsRTL: true,

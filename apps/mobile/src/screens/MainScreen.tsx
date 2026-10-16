@@ -3,7 +3,7 @@ import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { cumulativeDistances, haversine, parseSharedLocation, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, placeLearnedSignals, type LearnedSignal, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
+import { cumulativeDistances, haversine, parseSharedLocation, resolveShared, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, placeLearnedSignals, type LearnedSignal, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
 import { ArrivalSheet } from "../components/ArrivalSheet";
@@ -25,6 +25,7 @@ import { primeVoice, stopSpeaking } from "../nav/prompt";
 import { useDemoDrive } from "../hooks/useDemoDrive";
 import { useTrafficSampler } from "../hooks/useTrafficSampler";
 import { useStopSampler } from "../hooks/useStopSampler";
+import { useIncomingShare } from "../hooks/useIncomingShare";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
 import { MapProblemSheet, NavMenuSheet, WatchCard } from "../components/Extras";
@@ -311,6 +312,33 @@ export function MainScreen() {
     const sub = Linking.addEventListener("url", (e) => handle(e.url));
     return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------- shared into Darbna (share sheet)
+  useIncomingShare((text) => { void openShared(text); });
+  async function openShared(text: string) {
+    if (getState().mode === "navigating") return;
+    const r = await resolveShared(text, async (url) => {
+      // Short links (maps.app.goo.gl…) redirect to the full map link; Google sometimes goes via a
+      // consent page that carries the real address in ?continue=.
+      const res = await fetch(url, { redirect: "follow" });
+      let final = res.url || url;
+      try { final = decodeURIComponent(final); } catch {}
+      const body = await res.text().catch(() => "");
+      return { url: final, body: body.slice(0, 300_000) };
+    }).catch(() => null);
+    let place: Place | null = null;
+    if (r && "coord" in r) {
+      place = { id: `shared:${r.coord.join(",")}`, name: r.label ?? t.kinds.shared, kind: "shared", coord: r.coord };
+    } else if (r && "name" in r) {
+      const found = await api.search(r.name, lang, fix?.coord, { remote: true }).catch(() => null);
+      const first = found?.results?.[0];
+      if (first) place = first;
+    }
+    if (!place) return toast(t.place.sharedUnreadable, "error");
+    pickPlace(place, true);
+    // Straight to the route, like tapping Directions (needs your position; otherwise the place card waits).
+    if (fix) void requestRoutes([]);
+  }
 
   // ---------------------------------------------------------------- first fix → center map once
   useEffect(() => {

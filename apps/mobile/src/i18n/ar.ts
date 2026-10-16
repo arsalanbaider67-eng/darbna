@@ -24,7 +24,7 @@ export const ar = {
     landmark: "معلم", street: "شارع", pin: "دبوس على الخريطة", shared: "موقع مُرسل", place: "مكان",
   },
   place: {
-    share: "مشاركة", linkCopied: "تم نسخ الرابط — الصقه في واتساب أو الرسائل",
+    share: "مشاركة", sharedUnreadable: "ما گدرنا نعرف المكان من اللي انشارك. جرب تشارك رابط الموقع من خرائط Google أو Apple.", linkCopied: "تم نسخ الرابط — الصقه في واتساب أو الرسائل",
     directions: "المسار",
     save: "حفظ",
     saved: "محفوظ",
