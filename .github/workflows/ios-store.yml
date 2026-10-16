@@ -157,14 +157,15 @@ jobs:
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Darbna.xcarchive" -exportOptionsPlist ExportLocal.plist \
             -exportPath "$RUNNER_TEMP/local" -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" > export-local.log 2>&1 || true
-          grep -E "error:" export-local.log | sort -u | head -10 | while IFS= read -r l; do echo "::warning title=local export::${l:0:600}"; done
-          IPA=$(ls "$RUNNER_TEMP"/local/*.ipa 2>/dev/null | head -1)
+          { grep -E "error:" export-local.log || true; } | sort -u | head -10 | while IFS= read -r l; do echo "::warning title=local export::${l:0:600}"; done
+          IPA=$(ls "$RUNNER_TEMP"/local/*.ipa 2>/dev/null | head -1 || true)
+          [ -n "$IPA" ] || tail -5 export-local.log | while IFS= read -r l; do echo "::warning title=local export (no ipa)::${l:0:600}"; done
           if [ -n "$IPA" ]; then
             mkdir -p "$RUNNER_TEMP/ipa" && (cd "$RUNNER_TEMP/ipa" && unzip -q -o "$IPA")
             for b in "$RUNNER_TEMP"/ipa/Payload/*.app "$RUNNER_TEMP"/ipa/Payload/*.app/PlugIns/*.appex; do
               [ -d "$b" ] || continue
               id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$b/Info.plist")
-              ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | grep -o 'application-groups</key><array><string>[^<]*' | sed 's/.*<string>//')
+              ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | { grep -o 'application-groups</key><array><string>[^<]*' || true; } | sed 's/.*<string>//')
               echo "::notice title=signed $id::app group: ${ent:-none}"
             done
           fi
