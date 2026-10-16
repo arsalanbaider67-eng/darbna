@@ -52,12 +52,12 @@ export function parseSharedLocation(input: string): SharedLocation | null {
   }
 
   // Google Maps long links: ?q=lat,lng | /@lat,lng,zoom | !3dLAT!4dLNG | ll=lat,lng | query=lat,lng
-  m = text.match(/[?&](?:q|ll|query|destination|daddr)=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i)
+  m = text.match(/[?&](?:q|ll|sll|query|destination|daddr|coordinate|center)=(-?\d+(?:\.\d+)?)(?:,|%2C)\s*(-?\d+(?:\.\d+)?)/i)
     ?? text.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/)
     ?? text.match(/\/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
   if (m) {
     const c = valid(num(m[1]), num(m[2]));
-    if (c) return { coord: c };
+    if (c) return { coord: c, label: linkLabel(text) };
   }
 
   // OpenStreetMap: #map=zoom/lat/lng or ?mlat=..&mlon=..
@@ -74,6 +74,67 @@ export function parseSharedLocation(input: string): SharedLocation | null {
     if (c) return { coord: c };
   }
   return null;
+}
+
+/** A place name carried by a map link: Google /maps/place/NAME/…, Apple Maps ?q=NAME or &name=NAME. */
+function linkLabel(text: string): string | undefined {
+  const dec = (v: string) => { try { return decodeURIComponent(v.replace(/\+/g, " ")).trim(); } catch { return v; } };
+  let m = text.match(/\/maps\/place\/([^/@?]+)/);
+  if (m) return dec(m[1]) || undefined;
+  m = text.match(/[?&](?:name|q)=([^&#]+)/);
+  if (m && !/^-?\d+(\.\d+)?(,|%2C)/i.test(m[1])) return dec(m[1]) || undefined;
+  return undefined;
+}
+
+/** Links in shared text (WhatsApp, Google Maps, Apple Maps… share a sentence with a link in it). */
+export function linksIn(text: string): string[] {
+  return [...foldDigits(text).matchAll(/(?:https?:\/\/|geo:|darbna:\/\/)[^\s<>"']+/gi)].map((m) => m[0].replace(/[).,،]+$/, ""));
+}
+
+/** Short links that carry no coordinates until they're opened (they redirect to the full link). */
+export function isShortMapLink(url: string): boolean {
+  return /^https?:\/\/(maps\.app\.goo\.gl|goo\.gl\/maps|g\.co\/kgs|maps\.apple(\.com)?\/p\/|maps\.apple\/)/i.test(url);
+}
+
+/**
+ * Coordinates anywhere in a shared message: the message itself, each link in it, then the page a
+ * short link leads to (`open` follows the redirect and returns the final address and, if it can,
+ * the page text). Returns the place, or just a name to search for, or null.
+ */
+export async function resolveShared(
+  text: string,
+  open?: (url: string) => Promise<{ url: string; body?: string } | null>,
+): Promise<SharedLocation | { name: string } | null> {
+  const direct = parseSharedLocation(text);
+  if (direct) return direct;
+  const links = linksIn(text);
+  for (const l of links) {
+    const r = parseSharedLocation(l);
+    if (r) return r;
+  }
+  if (open) {
+    for (const l of links.filter(isShortMapLink)) {
+      const page = await open(l).catch(() => null);
+      if (!page) continue;
+      const r = parseSharedLocation(page.url) ?? (page.body ? coordsInPage(page.body) : null);
+      if (r) return { ...r, label: r.label ?? linkLabel(page.url) };
+      const name = linkLabel(page.url);
+      if (name) return { name };
+    }
+  }
+  // A message with no link and no numbers: treat it as a place name ("Family Mall, Erbil").
+  const plain = text.trim();
+  if (!links.length && plain.length >= 3 && plain.length <= 80 && !/\d{4,}/.test(plain)) return { name: plain };
+  return null;
+}
+
+/** Coordinates in a map page's HTML (Google puts them in the preview image and the app state). */
+function coordsInPage(html: string): SharedLocation | null {
+  const m = html.match(/center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/) ?? html.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)
+    ?? html.match(/\/@(-?\d+\.\d+),(-?\d+\.\d+)/) ?? html.match(/ll=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/);
+  if (!m) return null;
+  const c = valid(num(m[1]), num(m[2]));
+  return c ? { coord: c } : null;
 }
 
 /**

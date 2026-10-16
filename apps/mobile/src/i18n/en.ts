@@ -21,7 +21,7 @@ export const en: Strings = {
     landmark: "Landmark", street: "Street", pin: "Dropped pin", shared: "Shared location", place: "Place",
   },
   place: {
-    share: "Share", linkCopied: "Link copied — paste it in WhatsApp or Messages",
+    share: "Share", sharedUnreadable: "Couldn't find a place in what was shared. Try sharing the location link from Google or Apple Maps.", linkCopied: "Link copied — paste it in WhatsApp or Messages",
     directions: "Directions", save: "Save", saved: "Saved", setHome: "Set as home", setWork: "Set as work",
     droppedPin: "Dropped pin", lookingUp: "Looking up address…", distanceFromYou: "{d} away",
   },

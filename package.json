@@ -8,9 +8,13 @@
   ],
   "scripts": {
     "test": "cd packages/core && bun test && cd ../../apps/mobile && bun test && cd ../../server && bun test",
-    "test:server": "cd server && bun test"
+    "test:server": "cd server && bun test",
+    "postinstall": "patch-package"
   },
   "overrides": {
     "expo-asset": "~12.0.0"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.0"
   }
 }

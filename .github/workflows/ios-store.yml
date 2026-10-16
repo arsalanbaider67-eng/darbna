@@ -111,8 +111,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s\n' "$P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
-      # Archive unsigned: automatic signing at archive time wants a development profile, which
-      # needs a registered iPhone. The export step below signs for the App Store (cloud signing).
+      # Archive ad-hoc signed ("-"): no development profile (that would need a registered iPhone),
+      # but the entitlements (App Group for the share extension) stay in the archive. The export
+      # step below signs everything for the App Store with cloud signing.
       - name: Archive
         working-directory: apps/mobile/ios
         env:
@@ -125,7 +126,7 @@ jobs:
           echo "NAME=$NAME" >> "$GITHUB_ENV"
           xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" CODE_SIGNING_REQUIRED=NO \
             archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
           if [ ! -d "$RUNNER_TEMP/Darbna.xcarchive" ]; then
             # Errors as annotations, so they can be read without downloading the log.
@@ -133,6 +134,17 @@ jobs:
             tail -150 archive.log; exit 1
           fi
 
+      - name: Check archive (share extension, entitlements)
+        if: always()
+        run: |
+          A="$RUNNER_TEMP/Darbna.xcarchive/Products/Applications"
+          [ -d "$A" ] || exit 0
+          for b in "$A"/*.app "$A"/*.app/PlugIns/*.appex; do
+            [ -d "$b" ] || continue
+            id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$b/Info.plist")
+            ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | grep -o 'application-groups</key><array><string>[^<]*' | sed 's/.*<string>//')
+            echo "::notice title=archived $id::app group: ${ent:-none}"
+          done
       - name: Upload to App Store Connect (TestFlight)
         working-directory: apps/mobile/ios
         env:

@@ -25,7 +25,7 @@ export const ckb: Strings = {
     landmark: "شوێنی دیار", street: "شەقام", pin: "دەبوس لەسەر نەخشە", shared: "شوێنی نێردراو", place: "شوێن",
   },
   place: {
-    share: "هاوبەشکردن", linkCopied: "بەستەر کۆپی کرا — لە واتسئاپ یان نامەکان دایبنێ",
+    share: "هاوبەشکردن", sharedUnreadable: "نەمانتوانی شوێنەکە لەوەی هاوبەش کرا بناسینەوە. بەستەری شوێن لە نەخشەی Google یان Apple هاوبەش بکە.", linkCopied: "بەستەر کۆپی کرا — لە واتسئاپ یان نامەکان دایبنێ",
     directions: "ڕێگا", save: "پاشەکەوت", saved: "پاشەکەوتکرا", setHome: "بیکە بە ماڵ", setWork: "بیکە بە کار",
     droppedPin: "دەبوس لەسەر نەخشە", lookingUp: "ناونیشان دەدۆزرێتەوە…", distanceFromYou: "{d} لێتەوە",
   },
