@@ -1,24 +1,33 @@
 {
   "_about": "Complete Modern Standard Arabic preview pack, requested by the owner on 2026-10-17. Replaces the earlier Iraqi candidate direction. Record all phrases before installing as one complete preview pack.",
   "review": {
-    "status": "needs-recording-and-listening",
+    "status": "recorded-and-installed-in-preview; listening-review-pending",
     "requiredSpeaker": "male Modern Standard Arabic",
-    "speedPolicy": "Natural generation speed 1.0; playback rate 1.0; no time stretching."
+    "speedPolicy": "Natural generation speed 1.0; playback rate 1.0; no time stretching.",
+    "selectedVoice": {
+      "name": "Hamid",
+      "voiceId": "A9ATTqUUQ6GHu0coCz8t",
+      "language": "ar",
+      "gender": "male",
+      "source": "https://elevenlabs.io/text-to-speech/arabic",
+      "description": "Young male voice with a pleasant tone; suited to news."
+    }
   },
   "voices": {
     "ar": {
       "provider": "elevenlabs",
-      "voice": "Standard Arabic male (resolved from library)",
+      "voice": "Hamid",
       "model": "eleven_v3",
       "settings": {
         "stability": 0.75,
         "similarity_boost": 0.75,
-        "speed": 1.0
+        "speed": 1
       },
       "post": "clean",
       "take": 1,
       "languageCode": "ar",
-      "textNormalization": "off"
+      "textNormalization": "off",
+      "voiceId": "A9ATTqUUQ6GHu0coCz8t"
     }
   },
   "distancesM": [
