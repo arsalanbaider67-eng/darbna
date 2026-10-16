@@ -64,6 +64,9 @@ jobs:
 
       - name: Generate iOS project
         working-directory: apps/mobile
+        env:
+          # Signing team goes into the app target only (app.config.ts → ios.appleTeamId), not the Pods.
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx expo prebuild --platform ios --clean
 
       - name: App Store checks (privacy manifest, translated permission text)
@@ -113,9 +116,12 @@ jobs:
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
-            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic \
             archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
-          test -d "$RUNNER_TEMP/Darbna.xcarchive" || { tail -150 archive.log; exit 1; }
+          if [ ! -d "$RUNNER_TEMP/Darbna.xcarchive" ]; then
+            # Errors as annotations, so they can be read without downloading the log.
+            grep -E "error:|error -|No profiles|No Account|provisioning|Signing for" archive.log | sort -u | head -25 | while IFS= read -r l; do echo "::error title=archive::${l:0:900}"; done
+            tail -150 archive.log; exit 1
+          fi
 
       - name: Upload to App Store Connect (TestFlight)
         working-directory: apps/mobile/ios
@@ -140,7 +146,10 @@ jobs:
             -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
             | tee export.log | grep -E "error:|Upload|EXPORT" || true
-          grep -q "EXPORT SUCCEEDED\|Upload succeeded" export.log || { tail -80 export.log; exit 1; }
+          if ! grep -q "EXPORT SUCCEEDED\|Upload succeeded" export.log; then
+            grep -iE "error|fail|invalid" export.log | sort -u | head -25 | while IFS= read -r l; do echo "::error title=upload::${l:0:900}"; done
+            tail -80 export.log; exit 1
+          fi
           echo "::notice title=uploaded::Build ${{ github.run_number }} sent to App Store Connect — it shows in TestFlight after Apple processes it (10–30 min)."
 
       - name: Clean up key

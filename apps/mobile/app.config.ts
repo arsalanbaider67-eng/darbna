@@ -39,6 +39,8 @@ const config: ExpoConfig = {
   locales: { ar: "./locales/ar.json", ckb: "./locales/ckb.json", en: "./locales/en.json" },
   ios: {
     bundleIdentifier: "iq.darbna.app",
+    // Store builds: signing team for the app target (GitHub secret APPLE_TEAM_ID).
+    ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
     // Privacy manifest (PrivacyInfo.xcprivacy), required for App Store uploads: no tracking; precise
     // location and a random per-install id are used only to make the app work; the "required reason"
     // system APIs used by React Native, AsyncStorage and the map with Apple's approved reasons.
