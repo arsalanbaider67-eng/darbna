@@ -5,12 +5,21 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.resolve(root, process.env.VOICE_REVIEW_DIR || "public/voice-review");
 const active = JSON.parse(fs.readFileSync(path.join(root, "assets/voice/phrases.json"), "utf8"));
-const proposed = JSON.parse(fs.readFileSync(path.resolve(root, process.env.VOICE_PHRASES_FILE || "assets/voice/iraqi-review.json"), "utf8"));
+const proposed = JSON.parse(fs.readFileSync(path.resolve(root, process.env.VOICE_PHRASES_FILE || "assets/voice/standard-arabic-review.json"), "utf8"));
 const standard = proposed.review?.requiredSpeaker === "male Modern Standard Arabic";
 const preferred = ["mv_right", "mv_left", "mv_roundabout_plain", "mv_roundabout_1", "mv_roundabout_2", "mv_roundabout_exit", "rerouting", "mv_arrive"];
 const keys = standard ? [...new Set([...preferred, ...Object.keys(proposed.phrases.ar)])] : ["mv_right", "mv_left", "mv_roundabout_plain", "mv_roundabout_1", "mv_roundabout_2", "mv_roundabout_exit", "d_200m", "then"];
 const esc = s => String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll('"', "&quot;");
 fs.mkdirSync(path.join(out, "current"), { recursive: true });
+const activeMatches = standard && active.voices.ar.voiceId === proposed.voices.ar.voiceId &&
+  keys.every(key => active.phrases.ar[key] === proposed.phrases.ar[key]);
+if (activeMatches) {
+  fs.mkdirSync(path.join(out, "ar"), { recursive: true });
+  for (const key of keys) {
+    const target = path.join(out, `ar/${key}.mp3`);
+    if (!fs.existsSync(target)) fs.copyFileSync(path.join(root, `assets/voice/ar/${key}.mp3`), target);
+  }
+}
 for (const key of keys) fs.copyFileSync(path.join(root, `assets/voice/ar/${key}.mp3`), path.join(out, `current/${key}.mp3`));
 const rows = keys.map(key => {
   const candidate = fs.existsSync(path.join(out, `ar/${key}.mp3`));
