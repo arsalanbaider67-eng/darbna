@@ -64,9 +64,9 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
 
 The owner has replaced the earlier Iraqi voice request: **all Arabic spoken guidance must
 now use Modern Standard Arabic, not Iraqi dialect**. Use standard terms (انعطف، الدوّار، بعد),
-a male voice labelled Modern Standard Arabic, natural generation/playback speed 1.0, and no
-time stretching. `standard-arabic-review.json` covers all 75 clip keys. Generate and validate
-the complete pack before replacing preview recordings; never mix dialect packs. The Iraqi
+a male Arabic news voice with a Modern Standard Arabic script, natural generation/playback speed 1.0, and no
+time stretching. `standard-arabic-review.json` covers all 75 clip keys. The complete pack was generated in Actions run 38981929042 and installed in the preview.
+All 75 MP3s decoded in the browser at playback rate 1.0; never mix dialect packs. The Iraqi
 review artifacts and older voice rule below are historical and superseded for the preview.
 Production/TestFlight remains separate.
 
