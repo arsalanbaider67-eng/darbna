@@ -44,7 +44,7 @@ jobs:
 
       - name: Select Xcode 26 (App Store requires the iOS 26 SDK since April 2026)
         run: |
-          sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | grep -vi -e beta -e rc | sort -V | tail -1)" && xcodebuild -version
+          ls -d /Applications/Xcode_26*.app; X=$(ls -d /Applications/Xcode_26.[0-3]*.app 2>/dev/null | grep -vi -e beta -e rc | sort -V | tail -1); [ -n "$X" ] || X=$(ls -d /Applications/Xcode_26*.app | grep -vi -e beta -e rc | sort -V | tail -1); echo "::notice title=Xcode::$X"; sudo xcode-select -s "$X" && xcodebuild -version
           xcodebuild -version
 
       - name: Install JS dependencies
