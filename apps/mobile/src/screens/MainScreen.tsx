@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, View } from "react-native";
+import { ActivityIndicator, BackHandler, Image, Linking, StyleSheet, useColorScheme, View } from "react-native";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { cumulativeDistances, haversine, parseSharedLocation, resolveShared, reportsAhead, speedLimitAt, WARN_AHEAD, hazardsOnRoute, parseHazards, placeLearnedSignals, type LearnedSignal, type LngLat, type LocationFix, type RoadHazard, type RoadHazardsDoc, type TrafficCell, type Travel } from "@darbna/core";
 import { api, API_URL, ApiError } from "../api";
 import { confirmDialog } from "../dialog";
+import { JourneyPanel } from "../components/JourneyPanel";
 import { ArrivalSheet } from "../components/ArrivalSheet";
 import { MapCanvas, type MapCanvasHandle } from "../components/MapCanvas";
 import { NavHud } from "../components/NavHud";
@@ -15,7 +16,8 @@ import { RoutePreview } from "../components/RoutePreview";
 import { SearchBar, SearchPanel } from "../components/SearchPanel";
 import { SettingsSheet } from "../components/SettingsSheet";
 import { ConnectionPill, LocatingPill, PermissionPanel, Toast, TourPill } from "../components/States";
-import { Btn, Icon, RoundBtn, Txt } from "../components/ui";
+import { Btn, Icon, Panel, RoundBtn, Row, Txt } from "../components/ui";
+import { IS_PREVIEW } from "../build";
 import { UiOverride, useUi } from "../context";
 import { enableCompass } from "../compass";
 import { useConnectivity } from "../hooks/useConnectivity";
@@ -53,7 +55,11 @@ function useStableCallback<A extends unknown[], R>(fn: (...a: A) => R): (...a: A
 export function MainScreen() {
   const { theme, t, fmtCtx } = useUi();
   const insets = useSafeAreaInsets();
+  const mapAppearance = useStore(s => s.settings.mapAppearance ?? "day");
+  const deviceAppearance = useColorScheme();
+  const [mapTools, setMapTools] = useState(false);
   const mode = useStore((s) => s.mode);
+  useEffect(() => setMapTools(false), [mode]);
   const selected = useStore((s) => s.selected);
   const preview = useStore((s) => s.preview);
   const trip = useStore((s) => s.trip);
@@ -564,11 +570,10 @@ export function MainScreen() {
     );
   }
 
-  // Driving is always on the dark map (easier on the eyes, makes the route and arrow pop).
+  // Map brightness follows the driver's explicit preference, independently of the purple panels.
   // Satellite: photos with the roads and names on top (same day or night).
-  const styleUrl = satellite
-    ? `${config.map.styleDay.split("#")[0]}#sat`
-    : theme.dark || mode === "navigating" ? config.map.styleNight : config.map.styleDay;
+  const mapNight = mapAppearance === "night" || (mapAppearance === "auto" && deviceAppearance === "dark");
+  const styleUrl = `${config.map.styleDay.split("#")[0]}#${satellite ? "sat" : mapNight ? "night" : "light"}`;
   const toggleSatellite = () => {
     const next = { ...getState().settings, satellite: !satellite };
     setState({ settings: next });
@@ -576,7 +581,8 @@ export function MainScreen() {
   };
   const selectedIdx = mode === "preview" ? preview.selectedIdx : 0;
   const showSearchBar = mode === "browse" || mode === "place";
-  const pillTop = insets.top + 80;
+  const pillTop = insets.top + 146;
+  const showJourney = mode === "browse" && !sheet && !openReportId && !watch && (loc.permission === "granted" || tour);
 
   return (
     <UiOverride dark={mode === "navigating"}>
@@ -585,6 +591,7 @@ export function MainScreen() {
       <MapCanvas
         ref={map}
         styleUrl={styleUrl}
+        language={lang}
         follow={mode === "navigating" ? (following ? "navigation" : "none") : "none"}
         routes={mapRoutes}
         selectedRouteIdx={selectedIdx}
@@ -606,28 +613,38 @@ export function MainScreen() {
       {showSearchBar && <SearchBar onFocus={() => setState({ mode: "search" })} onSettings={() => setState({ sheet: "settings" })} />}
       {mode !== "navigating" && <ConnectionPill online={online} top={pillTop} />}
       {mode === "browse" && loc.permission === "granted" && !fix && online !== false && <LocatingPill top={pillTop} />}
-      {mode === "browse" && !watch && (tour || outsideIraq) && (
+      {mode === "browse" && !watch && (tour || outsideIraq || (IS_PREVIEW && !fix)) && (
         <TourPill top={pillTop + (online === false ? 44 : 0)} active={tour}
           onPress={() => { const next = !tour; setTour(next); if (next) setTimeout(() => map.current?.flyTo(TOUR_FIX.coord, 14), 50); }} />
       )}
 
-      {(mode === "browse" || mode === "place") && !watch && (
-        <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 300 : 28) }]}>
-          <RoundBtn icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
-          {parked && mode === "browse" && <RoundBtn icon="car-back" label={t.x.parked.title} onPress={openParked} />}
-          <RoundBtn icon={satellite ? "map-outline" : "satellite-variant"} label={satellite ? t.settings.mapView : t.settings.satellite} onPress={toggleSatellite} />
+      {showJourney && !mapTools && <JourneyPanel onPick={p => pickPlace(p)} onSearch={() => setState({ mode: "search" })} />}
+      {mapTools && (mode === "browse" || mode === "place") && !sheet && !openReportId && !watch && <Panel>
+        <Row style={{ marginBottom: 10 }}>
+          <Txt size={18} weight="bold" style={{ flex: 1 }}>{t.journey.mapTools}</Txt>
+          <RoundBtn icon="close" label={t.common.close} onPress={() => setMapTools(false)} size={44} />
+        </Row>
+        <Row style={{ flexWrap: "wrap", gap: 10 }}>
+          {loc.permission === "granted" && fix && <Btn kind="secondary" icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />}
+          <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} />
+          <Btn kind="secondary" icon={satellite ? "map-outline" : "satellite-variant"} label={satellite ? t.settings.mapView : t.settings.satellite} onPress={toggleSatellite} />
+          {parked && <Btn kind="secondary" icon="car-back" label={t.x.parked.title} onPress={openParked} />}
+        </Row>
+      </Panel>}
+      {(mode === "browse" || mode === "place") && !mapTools && !sheet && !openReportId && !watch && (
+        <View style={[s.fab, { bottom: insets.bottom + (mode === "place" ? 300 : showJourney ? 290 : 260) }]}>
+          <RoundBtn icon="layers-outline" label={t.journey.mapTools} onPress={() => setMapTools(true)} />
           {loc.permission === "granted" && fix && <>
-            <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
             <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15, true); }} />
           </>}
         </View>
       )}
 
-      {mode === "browse" && !sheet && !openReportId && !watch && !tour && (
+      {mode === "browse" && !mapTools && !sheet && !openReportId && !watch && !tour && (
         <PermissionPanel state={loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
       )}
 
-      {mode === "place" && selected && !sheet && !openReportId && (
+      {mode === "place" && !mapTools && selected && !sheet && !openReportId && (
         <PlaceSheet
           place={selected}
           userCoord={fix?.coord ?? null}
@@ -715,8 +732,8 @@ export function MainScreen() {
         <WatchCard onClose={() => { fittedWatch.current = false; setState({ watch: null }); }} />
       )}
 
-      {config.mode === "direct" && !config.sharedReports && mode !== "navigating" && (
-        <View pointerEvents="none" style={[s.sample, { top: insets.top + 72, backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
+      {config.mode === "direct" && !config.sharedReports && mode === "browse" && !sheet && !openReportId && (
+        <View pointerEvents="none" style={[s.sample, { top: pillTop + ((tour || outsideIraq || (IS_PREVIEW && !fix)) ? 48 : 0), backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}>
           <Txt size={11} weight="semibold" muted>{t.status.webPreview}</Txt>
         </View>
       )}
@@ -726,7 +743,7 @@ export function MainScreen() {
         </View>
       )}
       {config.sampleData && (
-        <View pointerEvents="none" style={[s.sample, { top: insets.top + (mode === "navigating" ? 4 : 72), backgroundColor: theme.accent }]}>
+        <View pointerEvents="none" style={[s.sample, { top: insets.top + (mode === "navigating" ? 4 : 146), backgroundColor: theme.accent }]}>
           <Txt size={11} weight="bold" style={{ color: theme.onAccent }}>{t.reports.sample}</Txt>
         </View>
       )}
