@@ -11,12 +11,13 @@ const LOCATION_WHY_EN = "Darbna uses your location to show you on the map, plan 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "";
 const TEST_BUILD = API_URL.startsWith("http://");
 
+const PREVIEW = process.env.DARBNA_VARIANT === "preview";
 const config: ExpoConfig = {
   // ASCII project name keeps generated Xcode/Gradle project paths simple; the home-screen
   // label is "دربنا" (CFBundleDisplayName on iOS, app_name on Android via withArabicLabel).
-  name: "Darbna",
-  slug: "darbna",
-  scheme: "darbna",
+  name: PREVIEW ? "Darbna Preview" : "Darbna",
+  slug: PREVIEW ? "darbna-preview" : "darbna",
+  scheme: PREVIEW ? "darbna-preview" : "darbna",
   version: "1.0.0",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
@@ -36,9 +37,9 @@ const config: ExpoConfig = {
   // Old architecture for now: fewer native-module surprises with MapLibre on Expo SDK 54.
   newArchEnabled: false,
   // Per-language app name and permission text (ar = default language, ckb = Sorani Kurdish).
-  locales: { ar: "./locales/ar.json", ckb: "./locales/ckb.json", en: "./locales/en.json" },
+  locales: PREVIEW ? { ar: "./locales/preview/ar.json", ckb: "./locales/preview/ckb.json", en: "./locales/preview/en.json" } : { ar: "./locales/ar.json", ckb: "./locales/ckb.json", en: "./locales/en.json" },
   ios: {
-    bundleIdentifier: "iq.darbna.app",
+    bundleIdentifier: PREVIEW ? "iq.darbna.app.preview" : "iq.darbna.app",
     // Store builds: signing team for the app target (GitHub secret APPLE_TEAM_ID).
     ...(process.env.APPLE_TEAM_ID ? { appleTeamId: process.env.APPLE_TEAM_ID } : {}),
     // Privacy manifest (PrivacyInfo.xcprivacy), required for App Store uploads: no tracking; precise
@@ -72,7 +73,7 @@ const config: ExpoConfig = {
     buildNumber: process.env.APP_BUILD_NUMBER ?? "1",
     supportsTablet: false,
     infoPlist: {
-      CFBundleDisplayName: "دربنا",
+      CFBundleDisplayName: PREVIEW ? "دربنا تجربة" : "دربنا",
       NSLocationWhenInUseUsageDescription: LOCATION_WHY_EN,
       ...(TEST_BUILD
         ? {
@@ -90,13 +91,13 @@ const config: ExpoConfig = {
   android: {
     // Brand guide v1.0: adaptive icon = symbol on Darbna Purple, plus a monochrome layer.
     adaptiveIcon: { foregroundImage: "./assets/adaptive-foreground.png", monochromeImage: "./assets/adaptive-monochrome.png", backgroundColor: "#21194A" },
-    package: "iq.darbna.app",
+    package: PREVIEW ? "iq.darbna.app.preview" : "iq.darbna.app",
     versionCode: Number(process.env.APP_BUILD_NUMBER ?? 1),
     permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
     // Opens shared "geo:" locations (WhatsApp/Telegram "open with") directly in Darbna.
     intentFilters: [
-      { action: "VIEW", data: [{ scheme: "geo" }], category: ["BROWSABLE", "DEFAULT"] },
-      { action: "VIEW", data: [{ scheme: "darbna" }], category: ["BROWSABLE", "DEFAULT"] },
+      ...(!PREVIEW ? [{ action: "VIEW", data: [{ scheme: "geo" }], category: ["BROWSABLE", "DEFAULT"] }] : []),
+      { action: "VIEW", data: [{ scheme: PREVIEW ? "darbna-preview" : "darbna" }], category: ["BROWSABLE", "DEFAULT"] },
     ],
   },
   plugins: [
@@ -125,6 +126,7 @@ const config: ExpoConfig = {
     }] as [string, any]] : []),
   ],
   extra: {
+    buildVariant: PREVIEW ? "preview" : "production",
     supportsRTL: true,
     forcesRTL: false,
   },

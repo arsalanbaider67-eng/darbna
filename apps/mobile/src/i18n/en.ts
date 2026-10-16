@@ -1,8 +1,11 @@
 import type { Strings } from "./ar";
 
 export const en: Strings = {
+  journey: {"voiceReview": "Review Arabic guidance voice", "voiceFailed": "Recorded guidance could not play. On-screen guidance continues; the Arabic speaker will not change.", "voiceLocked": "Arabic guidance uses Modern Standard Arabic recordings; the voice does not change automatically.", "preview": "Preview", "ready": "Your next journey starts here", "subtitle": "Choose a destination. We’ll guide the way.", "places": "Your places", "nearby": "Nearby", "mapTools": "Map tools", "mapAppearance": "Map brightness", "day": "Day", "night": "Night", "auto": "Device", "voiceTest": "Test guidance voice", "voiceHint": "Hear a turn instruction before you set off", "voiceSample": "In 200 meters, turn right", "voiceMissing": "Recorded voice is unavailable in this build", "voicePlaying": "Playing the sample", "recent": "Last destination", "maps": "Map", "more": "More", "less": "Less", "openSearch": "Find a place to save it"},
   appName: "Darbna",
   search: {
+    fullSearch: "Search all Iraq",
+    cityHint: "Tap Search for full results. Add the city name if a place is missing.",
     placeholder: "Where to?",
     noResults: "No results. Try another name or drop a pin on the map.",
     offline: "Search needs internet. Saved and recent places are available.",

@@ -1,6 +1,7 @@
 import { Platform, Share } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { buildShareLink } from "@darbna/core";
+import { APP_SCHEME } from "./build";
 import { toast } from "./store";
 import type { Place } from "./types";
 
@@ -14,7 +15,7 @@ export function placeLink(place: Place): string {
     return buildShareLink(place.coord, place.name, window.location.origin + window.location.pathname);
   }
   const [lng, lat] = place.coord;
-  return `${buildShareLink(place.coord, place.name)}\nhttps://www.openstreetmap.org/?mlat=${lat.toFixed(6)}&mlon=${lng.toFixed(6)}#map=17/${lat.toFixed(6)}/${lng.toFixed(6)}`;
+  return `${buildShareLink(place.coord, place.name).replace(/^darbna:/, `${APP_SCHEME}:`)}\nhttps://www.openstreetmap.org/?mlat=${lat.toFixed(6)}&mlon=${lng.toFixed(6)}#map=17/${lat.toFixed(6)}/${lng.toFixed(6)}`;
 }
 
 export async function sharePlace(place: Place, copiedText: string): Promise<void> {

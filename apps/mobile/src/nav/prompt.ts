@@ -1,11 +1,13 @@
 /**
- * Speaks a guidance prompt: with the recorded voice (Rana / Aaden) when its clips are in this
- * build, otherwise with the phone's own text-to-speech. Street names are never spoken.
+ * Speaks a guidance prompt: with the recorded guidance voice when its clips are in this
+ * build. Arabic never falls back to a device-selected voice. English can use device TTS.
+ * Street names are never spoken.
  */
 import type { Lang } from "../i18n";
 import { playClips, preloadClips, stopClips, unlockClips } from "./clipPlayer";
 import { VOICE_CLIPS } from "./voiceClips";
 import { chooseVoice, primeVoice as primeTts, speak, stopSpeaking as stopTts } from "./voice";
+import { deliverGuidance } from "./promptDelivery";
 
 function clipsFor(lang: Lang, keys: string[] | null): any[] | null {
   const set = lang === "ar" || lang === "en" ? VOICE_CLIPS[lang] : undefined;
@@ -19,13 +21,14 @@ export function hasRecordedVoice(lang: Lang): boolean {
   return !!VOICE_CLIPS[(lang === "ckb" ? "ar" : lang) as "ar" | "en"];
 }
 
-export async function sayPrompt(lang: Lang, text: (spokenLang: Lang) => string, keys: string[] | null, urgent = false): Promise<void> {
+export async function sayPrompt(lang: Lang, text: (spokenLang: Lang) => string, keys: string[] | null, urgent = false): Promise<boolean> {
   // Kurdish has no recorded voice yet: like the phone voice, fall back to Arabic.
-  const recLang: Lang = lang === "ckb" ? "ar" : lang;
+  const recLang = lang === "ckb" ? "ar" : lang;
   const mods = clipsFor(recLang, keys);
-  if (mods && (await playClips(mods, urgent))) return;
-  const v = await chooseVoice(lang);
-  await speak(text(v.lang), v, urgent);
+  return deliverGuidance(recLang, !!mods, () => playClips(mods!, urgent), async () => {
+    const v = await chooseVoice(lang);
+    await speak(text(v.lang), v, urgent);
+  });
 }
 
 /** Call synchronously from the Start tap: unlocks audio on iPhone and loads the clips. */

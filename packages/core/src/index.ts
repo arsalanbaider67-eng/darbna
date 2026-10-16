@@ -8,6 +8,7 @@ export * from "./share";
 export * from "./simulate";
 export * from "./valhalla";
 export * from "./style";
+export * from "./navigationStyle";
 export * from "./traffic";
 export * from "./precise";
 export * from "./extras";

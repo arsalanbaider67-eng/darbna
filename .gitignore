@@ -9,6 +9,11 @@ infra/tiles/data/sprites/
 server/.env.local
 *.log
 build-status.txt
+apps/mobile/dist-preview/
+apps/mobile/dist-native-preview/
+apps/mobile/public/voice-review/
+apps/mobile/voice-review/
+.search-check-cache/
 server-status.txt
 Darbna.apk
 
@@ -21,3 +26,5 @@ Darbna.apk
 
 # Published from packages/core/data at build time
 apps/mobile/public/emergency-numbers.json
+
+apps/mobile/voice-review-standard/

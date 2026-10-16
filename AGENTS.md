@@ -60,6 +60,16 @@ sharing, offline maps, satellite view.
 `ESRI_GEOCODE`, `VALHALLA_URL`, `NOMINATIM_URL`, `SUPABASE_URL`, `SUPABASE_KEY` (publishable),
 optional `MAPBOX_TOKEN`, `HERE_KEY`.
 
+## Latest owner instruction — 2026-10-17
+
+The owner has replaced the earlier Iraqi voice request: **all Arabic spoken guidance must
+now use Modern Standard Arabic, not Iraqi dialect**. Use standard terms (انعطف، الدوّار، بعد),
+a male Arabic news voice with a Modern Standard Arabic script, natural generation/playback speed 1.0, and no
+time stretching. `standard-arabic-review.json` covers all 75 clip keys. The complete pack was generated in Actions run 38981929042 and installed in the preview.
+All 75 MP3s decoded in the browser at playback rate 1.0; never mix dialect packs. The Iraqi
+review artifacts and older voice rule below are historical and superseded for the preview.
+Production/TestFlight remains separate.
+
 ## Rules the owner cares about
 - **Test before claiming something works.** Say exactly what was verified and how (unit test, e2e,
   real device). Never use fake or hardcoded data to make a feature look like it works.
@@ -97,6 +107,27 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
   VPS (`docs/SERVER.md`). Nominatim max 1 request/s.
 
 ## Open work (as of 2026-10-16)
+
+### Isolated redesign preview
+
+Voice/search follow-up: see `docs/VOICE-SEARCH.md`. Arabic recorded guidance must never silently
+fall back to a different device voice; failures show a notice and retain on-screen instructions.
+`assets/voice/iraqi-review.json` is candidate wording, NOT an installed recording pack. The owner
+specifically requested correcting «لوف» to «لِف» and keeping «فلكة» with corrected pronunciation.
+The new manual Iraqi voice-review workflow generates isolated candidates using the existing
+secret; it does not commit or promote them. Native Iraqi listening approval is still required.
+Public Nominatim is submission-only, with serialized request starts and a brief cache. Do not
+restore public autocomplete or proximity-only deduplication; different shops can share a building.
+
+The `codex/darbna-preview` branch prepares a separate trial of the clean purple/yellow design.
+See `docs/PREVIEW.md` for scope, verification, limits and build instructions. Set
+`DARBNA_VARIANT=preview` for `iq.darbna.app.preview` and the `darbna-preview` URL scheme;
+production remains `iq.darbna.app`. The preview has separate local settings/saved-place keys.
+The manual `Build isolated Darbna preview` workflow produces a web artifact without publishing.
+`iOS store build` now accepts `variant=preview`; a separate Apple app record and signing setup
+are required before that variant can reach TestFlight. Sharing is still gated as documented above.
+Never claim a web export or iOS JavaScript export is a signed/tested iPhone build.
+
 1. Share extension (needs iPhone UDID, see above).
 2. VPS for routing/search (`docs/SERVER.md`) before App Store submission.
 3. Owner must re-run `supabase/schema.sql` (traffic-light learning tables).

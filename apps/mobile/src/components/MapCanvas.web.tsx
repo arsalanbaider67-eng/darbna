@@ -7,18 +7,19 @@ import maplibregl, { type GeoJSONSource, type Map as MLMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import hazardsDoc from "@darbna/core/data/road-hazards.json";
 import { webBase } from "../share";
-import { parseHazards, type RoadHazardsDoc, bearing, darkenStyle, FixFilter, goldStyle, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { parseHazards, type RoadHazardsDoc, bearing, navigationStyle, darkenStyle, FixFilter, goldStyle, haversine, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
 import type { MapCanvasHandle } from "./MapCanvas";
-import { downloadArea } from "../offline";
+import { downloadArea } from "../offline.web";
 import { compassHeading } from "../compass";
 
 export type { MapCanvasHandle } from "./MapCanvas";
 
 interface Props {
   styleUrl: string;
+  language: "ar" | "ckb" | "en";
   follow: "none" | "user" | "navigation";
   routes: ApiRoute[];
   selectedRouteIdx: number;
@@ -85,13 +86,13 @@ function ensureRtlPlugin() {
 }
 
 /** Style URL + transform: lightened always; "#gold" = black & gold map, "#night" recolours for night, "#sat" puts it over satellite photos. */
-function styleArgs(url: string): [string, { transformStyle: (prev: unknown, next: any) => any }] {
+function styleArgs(url: string, language: Props["language"]): [string, { transformStyle: (prev: unknown, next: any) => any }] {
   const [clean, tag] = url.split("#");
   const t = (next: any) => (
     tag === "gold" ? goldStyle(lightenStyle(next)) :
     tag === "night" ? darkenStyle(lightenStyle(next)) :
     tag === "sat" ? satelliteStyle(lightenStyle(next), ESRI_KEY) : lightenStyle(next));
-  return [clean, { transformStyle: (_prev, next) => t(next) }];
+  return [clean, { transformStyle: (_prev, next) => navigationStyle(t(next), language) }];
 }
 
 const MARKER_NAMES = [...Object.keys(REPORT_STYLE), "signals"];
@@ -400,8 +401,8 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
       fadeDuration: 0,
     } as any);
     // Same lightening as the server does: no 3D buildings, later POIs.
-    (m as any).setStyle(...styleArgs(latest.current.styleUrl));
-    styleLoaded.current = latest.current.styleUrl;
+    (m as any).setStyle(...styleArgs(latest.current.styleUrl, latest.current.language));
+    styleLoaded.current = `${latest.current.styleUrl}:${latest.current.language}`;
     map.current = m;
     // Read-only handle for the automated end-to-end test (e2e/real-world.mjs) to check the camera.
     (window as any).__darbnaMap = m;
@@ -512,12 +513,12 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
   // ---------------------------------------------------------------- prop → map sync
   useEffect(() => {
     const m = map.current;
-    if (!m || styleLoaded.current === p.styleUrl) return;
-    styleLoaded.current = p.styleUrl;
-    const [url, opts] = styleArgs(p.styleUrl);
+    if (!m || styleLoaded.current === `${p.styleUrl}:${p.language}`) return;
+    styleLoaded.current = `${p.styleUrl}:${p.language}`;
+    const [url, opts] = styleArgs(p.styleUrl, p.language);
     // Full reload (no diff), so "style.load" fires and our route/report layers are re-added.
     (m as any).setStyle(url, { ...opts, diff: false });
-  }, [p.styleUrl]);
+  }, [p.styleUrl, p.language]);
 
   useEffect(() => {
     (map.current?.getSource("routes") as GeoJSONSource | undefined)?.setData(routesFC(p.routes, p.selectedRouteIdx));
@@ -574,7 +575,7 @@ function MapCanvasWeb(p: Props, ref: React.Ref<MapCanvasHandle>) {
 }
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
-  a.styleUrl === b.styleUrl && a.follow === b.follow && a.routes === b.routes &&
+  a.styleUrl === b.styleUrl && a.language === b.language && a.follow === b.follow && a.routes === b.routes &&
   a.selectedRouteIdx === b.selectedRouteIdx && a.destination === b.destination && a.reports === b.reports && a.simFix === b.simFix && a.jams === b.jams && a.learnedSignals === b.learnedSignals && a.traveled === b.traveled && a.parked === b.parked && a.friend === b.friend;
 
 export const MapCanvas = memo(forwardRef<MapCanvasHandle, Props>(MapCanvasWeb), sameExceptCallbacks);

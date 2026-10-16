@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { I18nManager, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { I18nManager, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { api } from "../api";
+import { IS_PREVIEW } from "../build";
+import { webBase } from "../share";
 import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
+import { primeVoice, stopSpeaking } from "../nav/prompt";
+import { playClips } from "../nav/clipPlayer";
+import { VOICE_CLIPS } from "../nav/voiceClips";
 import { hasRecordedVoice } from "../nav/prompt";
 import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
@@ -24,6 +29,16 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
 
   useEffect(() => { void offlineSummary().then(setOffline); }, []);
 
+  useEffect(() => () => stopSpeaking(), []);
+  async function testVoice() {
+    const lang = settings.lang === "en" ? "en" : "ar";
+    const clips = VOICE_CLIPS[lang];
+    if (!clips?.d_200m || !clips?.mv_right) return toast(t.journey.voiceMissing, "error");
+    primeVoice(settings.lang);
+    const ok = await playClips([clips.d_200m, clips.mv_right], true).catch(() => false);
+    toast(ok ? t.journey.voicePlaying : t.journey.voiceMissing, ok ? "info" : "error");
+  }
+
   async function download() {
     if (!onDownloadArea || dlPct !== null) return;
     setDlPct(0);
@@ -41,6 +56,10 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   }
 
   useEffect(() => {
+    if (settings.lang !== "en") {
+      setVoiceNote(hasRecordedVoice(settings.lang) ? t.journey.voiceLocked : t.journey.voiceMissing);
+      return;
+    }
     chooseVoice(settings.lang).then((v) => {
       const name = LANGS.find((l) => l.code === v.lang)?.label ?? v.lang;
       // The recorded voices (Arabic, English) don't depend on what's installed on the phone.
@@ -99,6 +118,16 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
         <View style={{ gap: 6 }}>
           <Txt weight="semibold">{t.settings.language}</Txt>
           <Seg value={settings.lang} options={LANGS.map((l) => ({ v: l.code, label: l.label }))} onChange={changeLang} />
+        </View>
+        <View style={{ gap: 8 }}>
+          <Txt weight="semibold">{t.journey.mapAppearance}</Txt>
+          <Seg value={settings.mapAppearance ?? "day"} options={[{ v: "day", label: t.journey.day }, { v: "night", label: t.journey.night }, { v: "auto", label: t.journey.auto }]} onChange={mapAppearance => update({ mapAppearance })} />
+        </View>
+        <View style={[s.box, { backgroundColor: theme.surfaceAlt }]}>
+          <Txt weight="semibold">{t.settings.voice}</Txt>
+          <Txt size={13} muted>{t.journey.voiceHint}</Txt>
+          <Btn kind="secondary" icon="volume-high" label={t.journey.voiceTest} onPress={() => void testVoice()} />
+          {IS_PREVIEW && Platform.OS === "web" && <Btn kind="ghost" icon="headphones" label={t.journey.voiceReview} onPress={() => void Linking.openURL(`${webBase().replace(/\/?$/, "/")}voice-review/`)} />}
         </View>
         <PointsCard />
         <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} style={{ borderColor: theme.danger }} />

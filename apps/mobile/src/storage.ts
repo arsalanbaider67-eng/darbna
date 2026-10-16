@@ -5,15 +5,16 @@ import type { LngLat, ReportCategory } from "@darbna/core";
 import type { ApiRoute, Place, ServerConfig } from "./types";
 import type { Lang } from "./i18n";
 
+import { STORAGE_PREFIX as PREFIX } from "./build";
 const K = {
-  install: "darbna:installId",
-  settings: "darbna:settings",
-  saved: "darbna:saved",
-  recents: "darbna:recents",
-  trip: "darbna:activeTrip",
-  queue: "darbna:reportQueue",
-  config: "darbna:config",
-  parked: "darbna:parked",
+  install: PREFIX + "installId",
+  settings: PREFIX + "settings",
+  saved: PREFIX + "saved",
+  recents: PREFIX + "recents",
+  trip: PREFIX + "activeTrip",
+  queue: PREFIX + "reportQueue",
+  config: PREFIX + "config",
+  parked: PREFIX + "parked",
 };
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -47,6 +48,8 @@ export interface Settings {
   shareTraffic: boolean;
   /** Satellite photos under the roads and names. */
   satellite?: boolean;
+  /** Map brightness is independent of the purple app panels. */
+  mapAppearance?: "day" | "night" | "auto";
   /** Last chosen way to travel (route screen). */
   travel?: Travel;
   /** Car routes: stay off highways / dirt roads / reported checkpoints. */

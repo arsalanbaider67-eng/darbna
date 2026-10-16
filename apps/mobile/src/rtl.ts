@@ -1,8 +1,9 @@
 import { DevSettings, I18nManager } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Updates from "expo-updates";
+import { STORAGE_PREFIX } from "./build";
 
-const GUARD = "darbna:rtlReloadAt";
+const GUARD = `${STORAGE_PREFIX}rtlReloadAt`;
 
 /**
  * React Native fixes layout direction when the JS bundle starts, so switching between

@@ -1,10 +1,10 @@
 import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
-  Camera, CircleLayer, Images, LineLayer, MapView, ShapeSource, SymbolLayer, UserLocation, type CameraRef,
+  Camera, CircleLayer, Images, LineLayer, MapView, ShapeSource, SymbolLayer, UserLocation, UserTrackingMode, type CameraRef,
 } from "@maplibre/maplibre-react-native";
 import hazardsDoc from "@darbna/core/data/road-hazards.json";
-import { parseHazards, type RoadHazardsDoc, darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
+import { parseHazards, type RoadHazardsDoc, navigationStyle, darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
 import { useUi } from "../context";
 import { downloadAreaBBox, type OfflineResult } from "../offline";
 import { REPORT_STYLE } from "../theme";
@@ -20,6 +20,7 @@ export interface MapCanvasHandle {
 
 interface Props {
   styleUrl: string;
+  language: "ar" | "ckb" | "en";
   follow: "none" | "user" | "navigation";
   routes: ApiRoute[];
   selectedRouteIdx: number;
@@ -79,9 +80,9 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
     // "#light" brand map (lightened), "#gold" black & gold map, "#night" dark map, "#sat" satellite: built from the normal style.
     const make = (st: any) => tag === "sat" ? satelliteStyle(lightenStyle(st), ESRI_KEY) : tag === "night" ? darkenStyle(lightenStyle(st)) : tag === "gold" ? goldStyle(lightenStyle(st)) : lightenStyle(st);
     let live = true;
-    fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(make(st)); }).catch(() => live && setMapStyle(url));
+    fetch(url).then((r) => r.json()).then((st) => { if (live) setMapStyle(navigationStyle(make(st), p.language)); }).catch(() => live && setMapStyle(url));
     return () => { live = false; };
-  }, [p.styleUrl]);
+  }, [p.styleUrl, p.language]);
 
   // Grey "already driven" part of the route, from the phone's own position updates.
   const [driven, setDriven] = useState<number | null>(null);
@@ -253,7 +254,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           ref={camera}
           defaultSettings={defaultSettings}
           followUserLocation={p.follow !== "none" && !sim}
-          followUserMode={navigating ? "course" : "normal"}
+          followUserMode={navigating ? UserTrackingMode.FollowWithCourse : UserTrackingMode.Follow}
           followZoomLevel={navigating ? (walking ? 17.5 : 16.5) : 15}
           followPitch={navigating ? (walking ? 30 : 45) : 0}
           animationDuration={400}
@@ -345,7 +346,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
 }
 
 const sameExceptCallbacks = (a: Props, b: Props) =>
-  a.styleUrl === b.styleUrl &&
+  a.styleUrl === b.styleUrl && a.language === b.language &&
   a.follow === b.follow &&
   a.routes === b.routes &&
   a.selectedRouteIdx === b.selectedRouteIdx &&
