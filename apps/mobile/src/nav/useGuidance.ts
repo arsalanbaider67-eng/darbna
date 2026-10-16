@@ -32,12 +32,18 @@ export function useGuidance(fix: LocationFix | null, online: boolean | null, fmt
   const [reroute, setReroute] = useState<RerouteStatus>("idle");
   const busy = useRef(false);
   const lastFix = useRef<LocationFix | null>(null);
+  const voiceWarningTrip = useRef<number | null>(null);
 
   /** `clips`: the recorded-voice version of the same prompt (see voicePlan.ts). */
   async function say(text: (ctx: FormatCtx) => string, clips: string[] | null, urgent = false) {
     const s = getState();
     if (!s.settings.voice || s.trip?.muted || s.trip?.paused) return;
-    await sayPrompt(s.settings.lang, (lang) => text({ lang, digits: "western" }), clips, urgent);
+    const played = await sayPrompt(s.settings.lang, (lang) => text({ lang, digits: "western" }), clips, urgent);
+    const tripAt = s.trip?.startedAt;
+    if (!played && tripAt != null && getState().trip?.startedAt === tripAt && voiceWarningTrip.current !== tripAt) {
+      voiceWarningTrip.current = tripAt;
+      toast(strings(s.settings.lang).journey.voiceFailed, "error");
+    }
   }
 
   // Opening prompt.
