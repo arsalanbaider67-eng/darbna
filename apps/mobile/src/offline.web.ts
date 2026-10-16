@@ -8,7 +8,8 @@ import type { OfflineResult, OfflineSummary } from "./offline";
 
 export type { OfflineResult, OfflineSummary } from "./offline";
 
-const AREAS_KEY = "darbna:offlineAreas";
+import { STORAGE_PREFIX } from "./build";
+const AREAS_KEY = `${STORAGE_PREFIX}offlineAreas`;
 const MAX_TILES = 4000;
 const MIN_ZOOM = 6;
 // Font ranges a map of Iraq needs: Latin, Arabic, Arabic presentation forms.
