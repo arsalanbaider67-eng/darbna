@@ -1,0 +1,40 @@
+name: Build isolated Darbna preview
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DARBNA_VARIANT: preview
+      EXPO_PUBLIC_API_URL: direct
+      EXPO_PUBLIC_ESRI_KEY: ${{ vars.ESRI_KEY }}
+      EXPO_PUBLIC_ESRI_GEOCODE: ${{ vars.ESRI_GEOCODE }}
+      EXPO_PUBLIC_VALHALLA_URL: ${{ vars.VALHALLA_URL }}
+      EXPO_PUBLIC_NOMINATIM_URL: ${{ vars.NOMINATIM_URL }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY }}
+      EXPO_NO_METRO_WORKSPACE_ROOT: "1"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck --workspace @darbna/mobile
+      - name: Build preview
+        working-directory: apps/mobile
+        run: |
+          cp ../../packages/core/data/emergency-numbers.json public/emergency-numbers.json
+          node scripts/gen-web-icons.mjs
+          node scripts/gen-voice-review.mjs
+          npx expo export --platform web --output-dir dist-preview
+      - uses: actions/upload-artifact@v4
+        with:
+          name: darbna-preview-web
+          path: apps/mobile/dist-preview

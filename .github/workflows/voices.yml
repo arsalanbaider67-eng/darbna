@@ -6,6 +6,11 @@ name: Record voices
 # not be overwritten automatically.
 on:
   workflow_dispatch:
+    inputs:
+      iraqi_review:
+        description: "Generate eight isolated Iraqi pronunciation samples (no active recordings replaced)"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
 
       - name: Record prompts
+        if: ${{ !inputs.iraqi_review }}
         working-directory: apps/mobile
         env:
           AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
@@ -34,6 +40,7 @@ jobs:
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
         run: node scripts/gen-voice.mjs
       - name: Commit recordings
+        if: ${{ !inputs.iraqi_review }}
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
@@ -41,3 +48,23 @@ jobs:
           if git diff --cached --quiet; then echo "::notice title=voices::nothing new to commit"; exit 0; fi
           git commit -q -m "Record guidance voice prompts"
           git push
+      - name: Record isolated Iraqi review
+        if: ${{ inputs.iraqi_review }}
+        working-directory: apps/mobile
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          VOICE_PHRASES_FILE: assets/voice/iraqi-review.json
+          VOICE_REVIEW_DIR: voice-review
+          VOICE_KEYS: mv_right,mv_left,mv_roundabout_plain,mv_roundabout_1,mv_roundabout_2,mv_roundabout_exit,d_200m,then
+        run: node scripts/gen-voice.mjs
+      - name: Build listening comparison
+        if: ${{ always() && inputs.iraqi_review }}
+        working-directory: apps/mobile
+        env:
+          VOICE_REVIEW_DIR: voice-review
+        run: node scripts/gen-voice-review.mjs
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() && inputs.iraqi_review }}
+        with:
+          name: iraqi-voice-listening-review
+          path: apps/mobile/voice-review

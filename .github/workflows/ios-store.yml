@@ -11,6 +11,11 @@ name: iOS store build
 on:
   workflow_dispatch:
     inputs:
+      variant:
+        description: "App to build (preview installs beside the current Darbna)"
+        type: choice
+        options: [production, preview]
+        default: production
       share_extension:
         description: "Include the share extension (needs a registered iPhone for signing)"
         type: boolean
@@ -30,6 +35,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
       EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
       EXPO_NO_METRO_WORKSPACE_ROOT: "1"
+      DARBNA_VARIANT: ${{ inputs.variant || 'production' }}
       APP_BUILD_NUMBER: ${{ github.run_number }}
       DARBNA_SHARE_EXTENSION: ${{ inputs.share_extension && '1' || '0' }}
       EXPO_PUBLIC_SHARE_EXTENSION: ${{ inputs.share_extension && '1' || '0' }}
