@@ -111,9 +111,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s\n' "$P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
-      # Archive ad-hoc signed ("-"): no development profile (that would need a registered iPhone),
-      # but the entitlements (App Group for the share extension) stay in the archive. The export
-      # step below signs everything for the App Store with cloud signing.
+      # Archive unsigned: signing at archive time wants a development profile (needs a registered
+      # iPhone). The export below signs everything for the App Store with cloud signing.
       - name: Archive
         working-directory: apps/mobile/ios
         env:
@@ -126,7 +125,7 @@ jobs:
           echo "NAME=$NAME" >> "$GITHUB_ENV"
           xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
-            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="-" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
           if [ ! -d "$RUNNER_TEMP/Darbna.xcarchive" ]; then
             # Errors as annotations, so they can be read without downloading the log.
@@ -134,17 +133,6 @@ jobs:
             tail -150 archive.log; exit 1
           fi
 
-      - name: Check archive (share extension, entitlements)
-        if: always()
-        run: |
-          A="$RUNNER_TEMP/Darbna.xcarchive/Products/Applications"
-          [ -d "$A" ] || exit 0
-          for b in "$A"/*.app "$A"/*.app/PlugIns/*.appex; do
-            [ -d "$b" ] || continue
-            id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$b/Info.plist")
-            ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | grep -o 'application-groups</key><array><string>[^<]*' | sed 's/.*<string>//')
-            echo "::notice title=archived $id::app group: ${ent:-none}"
-          done
       - name: Upload to App Store Connect (TestFlight)
         working-directory: apps/mobile/ios
         env:
@@ -164,6 +152,23 @@ jobs:
             <key>uploadSymbols</key><true/>
           </dict></plist>
           PLIST
+          # 1) Export a signed .ipa locally and check the share extension kept its App Group.
+          sed 's#<string>upload</string>#<string>export</string>#' ExportOptions.plist > ExportLocal.plist
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Darbna.xcarchive" -exportOptionsPlist ExportLocal.plist \
+            -exportPath "$RUNNER_TEMP/local" -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" > export-local.log 2>&1 || true
+          grep -E "error:" export-local.log | sort -u | head -10 | while IFS= read -r l; do echo "::warning title=local export::${l:0:600}"; done
+          IPA=$(ls "$RUNNER_TEMP"/local/*.ipa 2>/dev/null | head -1)
+          if [ -n "$IPA" ]; then
+            mkdir -p "$RUNNER_TEMP/ipa" && (cd "$RUNNER_TEMP/ipa" && unzip -q -o "$IPA")
+            for b in "$RUNNER_TEMP"/ipa/Payload/*.app "$RUNNER_TEMP"/ipa/Payload/*.app/PlugIns/*.appex; do
+              [ -d "$b" ] || continue
+              id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$b/Info.plist")
+              ent=$(codesign -d --entitlements :- "$b" 2>/dev/null | tr -d '\n\t ' | grep -o 'application-groups</key><array><string>[^<]*' | sed 's/.*<string>//')
+              echo "::notice title=signed $id::app group: ${ent:-none}"
+            done
+          fi
+          # 2) Upload.
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Darbna.xcarchive" -exportOptionsPlist ExportOptions.plist \
             -exportPath "$RUNNER_TEMP/export" -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
