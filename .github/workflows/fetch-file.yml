@@ -1,0 +1,18 @@
+# Downloads a file from a URL into the repo (path) and commits it. For vendoring small patches.
+name: Fetch file
+on:
+  workflow_dispatch:
+    inputs:
+      url: { required: true }
+      path: { required: true }
+permissions: { contents: write }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p "$(dirname "${{ inputs.path }}")"
+          curl -sSfL "${{ inputs.url }}" -o "${{ inputs.path }}"
+          git config user.name github-actions; git config user.email actions@github.com
+          git add "${{ inputs.path }}"; git commit -qm "Vendor ${{ inputs.path }}" && git push
