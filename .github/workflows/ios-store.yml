@@ -102,7 +102,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s\n' "$P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
-      - name: Archive (signed)
+      # Archive unsigned: automatic signing at archive time wants a development profile, which
+      # needs a registered iPhone. The export step below signs for the App Store (cloud signing).
+      - name: Archive
         working-directory: apps/mobile/ios
         env:
           TEAM: ${{ secrets.APPLE_TEAM_ID }}
@@ -114,8 +116,7 @@ jobs:
           echo "NAME=$NAME" >> "$GITHUB_ENV"
           xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
           if [ ! -d "$RUNNER_TEMP/Darbna.xcarchive" ]; then
             # Errors as annotations, so they can be read without downloading the log.
