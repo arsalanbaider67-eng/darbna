@@ -54,6 +54,15 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform ios --clean
 
+      - name: Patch fmt for Xcode 26.4+ (fmtlib/fmt#4740)
+        working-directory: apps/mobile/ios
+        run: |
+          # React Native 0.81 pins fmt 11.0.2, whose consteval check fails with Apple clang 21.
+          # Treat every Apple clang as "no consteval" (the fix upstream fmt 12.1 makes possible).
+          F=Pods/fmt/include/fmt/base.h
+          grep -q "__apple_build_version__ < 14000029L" "$F" || { echo "::error::fmt base.h pattern not found"; exit 1; }
+          chmod u+w "$F"; sed -i '' 's/__apple_build_version__ < 14000029L/__apple_build_version__ > 0/' "$F"
+          grep -n "__apple_build_version__" "$F"
       - name: App Store checks (privacy manifest, translated permission text, no test settings)
         working-directory: apps/mobile/ios
         run: |
