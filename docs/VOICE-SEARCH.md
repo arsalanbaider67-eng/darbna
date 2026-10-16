@@ -5,8 +5,10 @@ navigation prompts now have a Modern Standard Arabic script. The Record voices
 workflow on the preview branch records the full isolated pack with Hamid, a male
 Arabic news voice listed by ElevenLabs, at generation speed 1.0 and playback rate
 1.0. No time stretching is used. `standard-arabic-review.json` has exact key parity
-with the current pack. Install only a complete validated pack into the preview;
-never combine the new and Iraqi clips. The existing TestFlight app is separate.
+with the current pack. All 75 recordings were generated in Actions run 38981929042 and installed together
+in the preview. All 75 decoded in the browser at playback rate 1.0 without audio
+errors; the mobile tests (19), TypeScript check, and web export passed. Never combine
+new and Iraqi clips. Listening review remains subjective and is available to the owner. The existing TestFlight app is separate.
 
 The older Iraqi review notes below are historical and superseded by this request.
 

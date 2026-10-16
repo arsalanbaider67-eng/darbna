@@ -1,7 +1,7 @@
 # Voice update — 2026-10-17
 
 The latest owner request supersedes the Iraqi voice work described below:
-all Arabic navigation speech is now being replaced with Modern Standard Arabic.
+all 75 Arabic navigation recordings in the preview have been replaced with Modern Standard Arabic.
 See `VOICE-SEARCH.md` for the complete 75-prompt pack and generation workflow.
 
 # Darbna redesign preview — 16 October 2026
