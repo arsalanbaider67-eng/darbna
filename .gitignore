@@ -26,3 +26,5 @@ Darbna.apk
 
 # Published from packages/core/data at build time
 apps/mobile/public/emergency-numbers.json
+
+apps/mobile/voice-review-standard/

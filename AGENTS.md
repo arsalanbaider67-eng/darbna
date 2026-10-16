@@ -60,6 +60,16 @@ sharing, offline maps, satellite view.
 `ESRI_GEOCODE`, `VALHALLA_URL`, `NOMINATIM_URL`, `SUPABASE_URL`, `SUPABASE_KEY` (publishable),
 optional `MAPBOX_TOKEN`, `HERE_KEY`.
 
+## Latest owner instruction — 2026-10-17
+
+The owner has replaced the earlier Iraqi voice request: **all Arabic spoken guidance must
+now use Modern Standard Arabic, not Iraqi dialect**. Use standard terms (انعطف، الدوّار، بعد),
+a male voice labelled Modern Standard Arabic, natural generation/playback speed 1.0, and no
+time stretching. `standard-arabic-review.json` covers all 75 clip keys. Generate and validate
+the complete pack before replacing preview recordings; never mix dialect packs. The Iraqi
+review artifacts and older voice rule below are historical and superseded for the preview.
+Production/TestFlight remains separate.
+
 ## Rules the owner cares about
 - **Test before claiming something works.** Say exactly what was verified and how (unit test, e2e,
   real device). Never use fake or hardcoded data to make a feature look like it works.
