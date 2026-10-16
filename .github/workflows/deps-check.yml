@@ -1,0 +1,20 @@
+# Prints the installed Expo package versions (diagnosing build breakages from new npm releases).
+name: Deps check
+on: { workflow_dispatch: {} }
+jobs:
+  deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - name: Versions
+        run: |
+          for p in expo expo-asset expo-modules-core expo-audio expo-font react-native; do
+            for d in node_modules apps/mobile/node_modules; do
+              [ -f "$d/$p/package.json" ] && echo "::notice title=$d/$p::$(node -p "require('./$d/$p/package.json').version")"
+            done
+          done
+          ls node_modules/expo/internal 2>&1 | head; npm ls expo-asset 2>&1 | head -20 | while IFS= read -r l; do echo "::notice title=npm ls::$l"; done
+          cd apps/mobile && npx expo install --check 2>&1 | head -30 | while IFS= read -r l; do echo "::notice title=expo check::$l"; done
