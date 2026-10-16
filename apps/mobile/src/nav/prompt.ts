@@ -1,5 +1,5 @@
 /**
- * Speaks a guidance prompt: with the recorded voice (Sufyan / Daniel) when its clips are in this
+ * Speaks a guidance prompt: with the recorded guidance voice when its clips are in this
  * build. Arabic never falls back to a device-selected voice. English can use device TTS.
  * Street names are never spoken.
  */
