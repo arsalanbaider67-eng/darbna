@@ -41,7 +41,7 @@ export default function App() {
     })();
   }, []);
 
-  if (!ready || !fontsLoaded) return <View style={{ flex: 1, backgroundColor: "#0E5E6F" }} />;
+  if (!ready || !fontsLoaded) return <View style={{ flex: 1, backgroundColor: "#21194A" }} />;
 
   return (
     <SafeAreaProvider>
