@@ -67,7 +67,7 @@ jobs:
         working-directory: apps/mobile/ios
         run: |
           set -e
-          PM=$(find . -name PrivacyInfo.xcprivacy -not -path "./Pods/*" | head -1)
+          PM=$(find . -name PrivacyInfo.xcprivacy -not -path "./Pods/*" -not -path "*Share*" -not -path "*Extension*" | head -1)
           [ -n "$PM" ] || { echo "::error::no PrivacyInfo.xcprivacy"; exit 1; }
           grep -q NSPrivacyCollectedDataTypePreciseLocation "$PM" && grep -q CA92.1 "$PM" || { echo "::error::privacy manifest incomplete"; cat "$PM"; exit 1; }
           echo "✓ $PM"
