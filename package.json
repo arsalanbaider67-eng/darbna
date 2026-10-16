@@ -9,5 +9,8 @@
   "scripts": {
     "test": "cd packages/core && bun test && cd ../../apps/mobile && bun test && cd ../../server && bun test",
     "test:server": "cd server && bun test"
+  },
+  "overrides": {
+    "expo-asset": "~12.0.0"
   }
 }
