@@ -1,0 +1,21 @@
+# Prints npm package info (versions, peer deps, README excerpts) as annotations, for planning upgrades.
+name: Package info
+on:
+  workflow_dispatch:
+    inputs:
+      pkg: { description: "npm package", required: true }
+      grep: { description: "README lines to show (regex)", required: false, default: "SDK|patch|xcode|AppGroup|appGroup|ios[A-Z]|webUrl|useShareIntent" }
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: |
+          P="${{ inputs.pkg }}"
+          echo "::notice title=dist-tags::$(npm view $P dist-tags --json | tr -d '\n')"
+          echo "::notice title=versions::$(npm view $P versions --json | tr -d '\n ' | tail -c 900)"
+          echo "::notice title=peer::$(npm view $P peerDependencies --json | tr -d '\n')"
+          mkdir t && cd t && npm pack $P >/dev/null 2>&1 && tar xzf *.tgz && ls package
+          grep -nE "${{ inputs.grep }}" package/README.md | head -60 | while IFS= read -r l; do echo "::notice title=readme::${l:0:400}"; done
+          ls package/plugin 2>/dev/null | head; find package -name "*.swift" | head -5 | while read f; do echo "::notice title=swift::$f"; done

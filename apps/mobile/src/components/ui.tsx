@@ -11,13 +11,20 @@ const BLUR: any = Platform.OS === "web" ? { backdropFilter: "blur(14px)", Webkit
 
 export type IconName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 
-export function Txt({ style, weight = "regular", muted, size = 16, ...p }: TextProps & { weight?: keyof typeof font; muted?: boolean; size?: number }) {
+/**
+ * `tight` = how tall the text should take up in the layout (px). The real line height stays big
+ * enough for Noto Sans Arabic's tall glyphs (iOS clips anything above the line box), and negative
+ * margins pull the neighbours closer instead.
+ */
+export function Txt({ style, weight = "regular", muted, size = 16, tight, ...p }: TextProps & { weight?: keyof typeof font; muted?: boolean; size?: number; tight?: number }) {
   const { theme } = useUi();
+  const lh = Math.round(size * 1.6);
+  const trim = tight != null && tight < lh ? (lh - tight) / 2 : 0;
   return (
     <Text
       {...p}
       maxFontSizeMultiplier={1.4}
-      style={[{ fontFamily: font[weight], fontSize: size, lineHeight: Math.round(size * 1.55), color: muted ? theme.textMuted : theme.text }, style]}
+      style={[{ fontFamily: font[weight], fontSize: size, lineHeight: tight != null ? lh : Math.round(size * 1.55), marginVertical: trim ? -trim : undefined, color: muted ? theme.textMuted : theme.text }, style]}
     />
   );
 }

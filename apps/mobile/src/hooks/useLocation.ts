@@ -19,6 +19,8 @@ export function useLocation(mode: LocationMode) {
   const [appActive, setAppActive] = useState(AppState.currentState === "active");
   const sub = useRef<Location.LocationSubscription | null>(null);
   const filter = useRef(new FixFilter());
+  const lastAt = useRef(0);
+  const polling = useRef(false);
 
   const check = useCallback(async () => {
     const services = await Location.hasServicesEnabledAsync().catch(() => true);
@@ -62,6 +64,7 @@ export function useLocation(mode: LocationMode) {
           : { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 3 },
         (loc) => {
           if (cancelled) return;
+          lastAt.current = Date.now();
           const f = toFix(loc);
           // Skip rough fixes that land 10+ m away from the good ones around them.
           if (filter.current.accept({ coord: f.coord, accuracyM: f.accuracyM, at: Date.now() })) setFix(f);
@@ -69,8 +72,24 @@ export function useLocation(mode: LocationMode) {
       );
       if (cancelled) sub.current.remove();
     })().catch(() => setPermission("services_off"));
+    // While navigating, iPhones go quiet when you stand still. Ask for a fresh reading after 4 s of
+    // silence, so "GPS lost" only shows when the phone really can't get a position.
+    const beat = nav ? setInterval(() => {
+      if (cancelled || polling.current || Date.now() - lastAt.current < 4000) return;
+      polling.current = true;
+      Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.BestForNavigation }),
+        new Promise<null>((r) => setTimeout(() => r(null), 6000)),
+      ]).then((loc) => {
+        if (!loc || cancelled) return;
+        lastAt.current = Date.now();
+        const f = toFix(loc);
+        if (filter.current.accept({ coord: f.coord, accuracyM: f.accuracyM, at: Date.now() })) setFix(f);
+      }).catch(() => {}).finally(() => { polling.current = false; });
+    }, 2000) : null;
     return () => {
       cancelled = true;
+      if (beat) clearInterval(beat);
       sub.current?.remove();
       sub.current = null;
     };

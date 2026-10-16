@@ -49,6 +49,11 @@ export interface GuidanceOptions {
   rerouteCooldownMs: number;
   arrivalRadiusM: number;
   gpsLostMs: number;
+  /**
+   * Standing still (last fix slower than ~7 km/h): iPhones stop sending positions when nothing
+   * changes, so silence there isn't a lost signal. Only call it lost after this long.
+   */
+  stillLostMs: number;
   /** On foot: prompts much closer to the turn, tighter off-route, no wrong-way rule. */
   walking?: boolean;
 }
@@ -69,6 +74,7 @@ export const DEFAULT_GUIDANCE_OPTIONS: GuidanceOptions = {
   rerouteCooldownMs: 15000,
   arrivalRadiusM: 30,
   gpsLostMs: 10000,
+  stillLostMs: 120000,
 };
 
 /** Distances (m) at which the far / near / now prompts fire, by speed. */
@@ -97,6 +103,7 @@ export class GuidanceEngine {
   private prevOff = 0;
   private wrongWaySince: number | null = null;
   private lastRerouteAt = -Infinity;
+  private lastSpeed = 0;
   private rerouteFiredThisEpisode = false;
   private announced = new Map<number, Set<AnnouncementStage>>();
   private arrived = false;
@@ -133,7 +140,8 @@ export class GuidanceEngine {
   /** Call periodically (e.g. every second) so a silent GPS becomes visible. */
   tick(now: number): GuidanceState {
     if (this.arrived) return this.last;
-    if (this.last.lastFixAt !== null && now - this.last.lastFixAt > this.opt.gpsLostMs && this.last.status !== "gps_lost") {
+    const lostAfter = this.lastSpeed > 2 ? this.opt.gpsLostMs : this.opt.stillLostMs;
+    if (this.last.lastFixAt !== null && now - this.last.lastFixAt > lostAfter && this.last.status !== "gps_lost") {
       this.last = { ...this.last, status: "gps_lost", shouldReroute: false, announcement: null };
     }
     return this.last;
@@ -198,6 +206,7 @@ export class GuidanceEngine {
     if (this.arrived) return this.last;
     const now = fix.timestamp;
     const speed = fix.speedMps && fix.speedMps > 0 ? fix.speedMps : 0;
+    this.lastSpeed = speed;
     const heading = fix.headingDeg !== undefined && fix.headingDeg !== null && fix.headingDeg >= 0 ? fix.headingDeg : null;
     const best = this.snap(fix.coord, heading, speed);
     const offDist = best.pr.distance;

@@ -210,7 +210,7 @@ export function SpeedSign({ kmh, over }: { kmh: number; over: boolean }) {
   const { fmtCtx } = useUi();
   return (
     <View style={[s.sign, { backgroundColor: over ? "#FF3B30" : "#FFFFFF" }]} accessibilityLabel={`${kmh} km/h`}>
-      <Txt size={22} weight="bold" style={{ color: over ? "#FFFFFF" : "#111111", lineHeight: 26 }}>{fmtNumber(kmh, fmtCtx)}</Txt>
+      <Txt size={22} weight="bold" tight={26} style={{ color: over ? "#FFFFFF" : "#111111" }}>{fmtNumber(kmh, fmtCtx)}</Txt>
     </View>
   );
 }

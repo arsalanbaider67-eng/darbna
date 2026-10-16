@@ -117,12 +117,20 @@ describe("GuidanceEngine", () => {
     expect(g.update(fix(r.geometry[0], 60_000)).status).toBe("arrived");
   });
 
-  it("flags lost GPS when fixes stop", () => {
+  it("flags lost GPS when fixes stop while driving", () => {
     const r = lRoute();
     const g = new GuidanceEngine(r);
-    g.update(fix(r.geometry[1], 0));
+    g.update(fix(r.geometry[1], 0, { speed: 12 }));
     expect(g.tick(5_000).status).toBe("on_route");
     expect(g.tick(11_000).status).toBe("gps_lost");
+  });
+
+  it("standing still: no positions from the phone is not a lost signal", () => {
+    const r = lRoute();
+    const g = new GuidanceEngine(r);
+    g.update(fix(r.geometry[1], 0, { speed: 0 }));
+    expect(g.tick(60_000).status).toBe("on_route");
+    expect(g.tick(121_000).status).toBe("gps_lost");
   });
 });
 

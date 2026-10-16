@@ -91,7 +91,7 @@ export function NavHud(p: Props) {
           <Row gap={14}>
             <Icon name={MANEUVER_ICON[step.kind]} size={50} color={theme.primary} />
             <View style={{ flex: 1 }}>
-              <Txt size={30} weight="bold" style={{ color: theme.onBanner, lineHeight: 40 }}>{fmtDistance(dist, fmtCtx)}</Txt>
+              <Txt size={30} weight="bold" tight={40} style={{ color: theme.onBanner }}>{fmtDistance(dist, fmtCtx)}</Txt>
               <Txt size={18} weight="semibold" numberOfLines={2} style={{ color: theme.onBanner }}>{instructionText(step, null, fmtCtx)}</Txt>
             </View>
           </Row>
@@ -137,8 +137,8 @@ export function NavHud(p: Props) {
       ) : (
         <>
           <View style={[s.speed, { bottom: barH + 14, backgroundColor: theme.surface, borderColor: over ? theme.danger : theme.primary }]} accessibilityLabel={`${kmh} km/h`}>
-            <Txt size={28} weight="bold" style={{ lineHeight: 32, color: over ? theme.danger : theme.text }}>{String(kmh)}</Txt>
-            <Txt size={11} muted style={{ lineHeight: 13 }}>km/h</Txt>
+            <Txt size={28} weight="bold" tight={32} style={{ color: over ? theme.danger : theme.text }}>{String(kmh)}</Txt>
+            <Txt size={11} muted tight={13}>km/h</Txt>
           </View>
           {p.limitKmh != null && (
             <View style={[s.limit, { bottom: barH + 96 }]}>
@@ -178,7 +178,7 @@ export function NavHud(p: Props) {
               <Icon name="close" size={26} color={theme.danger} />
             </Pressable>
             <View style={{ flex: 1, alignItems: "center" }}>
-              <Txt size={24} weight="bold" style={{ color: theme.primary, lineHeight: 30 }}>{fmtDuration(remainingS, fmtCtx)}</Txt>
+              <Txt size={24} weight="bold" tight={30} style={{ color: theme.primary }}>{fmtDuration(remainingS, fmtCtx)}</Txt>
               <Txt size={14} muted>
                 {fmtDistance(remainingM, fmtCtx)} · {fmt(t.nav.arrivalAt, { time: fmtClock(new Date(Date.now() + remainingS * 1000), fmtCtx) })}
               </Txt>
