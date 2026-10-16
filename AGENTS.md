@@ -54,7 +54,8 @@ sharing, offline maps, satellite view.
 
 **Secrets** (names only; values are the owner's — never ask for them in chat, never commit them):
 `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (App Store Connect API key),
-`ELEVENLABS_API_KEY`, `SERVER_HOST`, `SERVER_SSH_KEY`.
+`ELEVENLABS_API_KEY`, `AZURE_SPEECH_KEY`/`AZURE_SPEECH_REGION`, `SERVER_HOST`/`SERVER_USER`/`SERVER_SSH_KEY`,
+`ANDROID_UPLOAD_*` (Play signing, not set up yet).
 **Variables**: `ESRI_KEY` (licensed satellite + Esri geocoding, required for store builds),
 `ESRI_GEOCODE`, `VALHALLA_URL`, `NOMINATIM_URL`, `SUPABASE_URL`, `SUPABASE_KEY` (publishable),
 optional `MAPBOX_TOKEN`, `HERE_KEY`.
