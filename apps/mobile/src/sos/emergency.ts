@@ -20,11 +20,12 @@ import bundledConfig from "@darbna/core/data/emergency-numbers.json";
 import shapesJson from "@darbna/core/data/sos-regions.json";
 import { webBase } from "../share";
 import { getState, setState } from "../store";
+import { STORAGE_PREFIX } from "../build";
 
 export const BUNDLED_CONFIG = bundledConfig as unknown as EmergencyConfig;
 const SHAPES = shapesJson as unknown as RegionShapes;
 
-const K = { config: "darbna:sosConfig", region: "darbna:sosRegion", manual: "darbna:sosManual" };
+const K = { config: `${STORAGE_PREFIX}sosConfig`, region: `${STORAGE_PREFIX}sosRegion`, manual: `${STORAGE_PREFIX}sosManual` };
 
 async function readJSON<T>(k: string): Promise<T | null> {
   try { const v = await AsyncStorage.getItem(k); return v ? (JSON.parse(v) as T) : null; } catch { return null; }
