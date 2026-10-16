@@ -110,6 +110,8 @@ const config: ExpoConfig = {
     ["expo-build-properties", { android: { usesCleartextTraffic: TEST_BUILD }, ios: { deploymentTarget: "15.1" } }],
     "./plugins/withReleaseSigning",
     "./plugins/withArabicLabel",
+    // Xcode 26.4+: build the fmt pod as C++17 (React Native 0.81 + newer clang).
+    "./plugins/withFmtCxx17",
   ],
   extra: {
     supportsRTL: true,
