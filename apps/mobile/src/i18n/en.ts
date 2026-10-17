@@ -1,8 +1,11 @@
 import type { Strings } from "./ar";
 
 export const en: Strings = {
+  journey: {"voiceReview": "Review Arabic guidance voice", "voiceFailed": "Recorded guidance could not play. On-screen guidance continues; the Arabic speaker will not change.", "voiceLocked": "Arabic guidance uses Modern Standard Arabic recordings; the voice does not change automatically.", "preview": "Preview", "ready": "Your next journey starts here", "subtitle": "Choose a destination. We’ll guide the way.", "places": "Your places", "nearby": "Nearby", "mapTools": "Map tools", "mapAppearance": "Map brightness", "day": "Day", "night": "Night", "auto": "Device", "voiceTest": "Test guidance voice", "voiceHint": "Hear a turn instruction before you set off", "voiceSample": "In 200 meters, turn right", "voiceMissing": "Recorded voice is unavailable in this build", "voicePlaying": "Playing the sample", "recent": "Last destination", "maps": "Map", "more": "More", "less": "Less", "openSearch": "Find a place to save it"},
   appName: "Darbna",
   search: {
+    fullSearch: "Search all Iraq",
+    cityHint: "Tap Search for full results. Add the city name if a place is missing.",
     placeholder: "Where to?",
     noResults: "No results. Try another name or drop a pin on the map.",
     offline: "Search needs internet. Saved and recent places are available.",
@@ -75,6 +78,7 @@ export const en: Strings = {
     sent: "Thanks! Report sent.", merged: "Already reported — counted as a confirmation.",
     rateLimited: "Report limit reached. Try again later.", outsideIraq: "Reports only work inside Iraq — you're outside Iraq right now.", notReady: "This kind of report isn't switched on yet. Try another kind.", failedQueued: "Offline — the report will be sent automatically.",
     categories: { speed_bump: "Speed bump", congestion: "Traffic", crash: "Crash", closure: "Road closed", roadworks: "Roadworks", pothole: "Pothole", flooding: "Flooding", checkpoint: "Checkpoint", checkpoint_slow: "Checkpoint – long wait", camera: "Speed camera", fuel_queue: "Fuel – long queue", fuel_closed: "Fuel station closed" },
+    blockReporter: "Block this reporter", blocked: "Reports from this sender are now hidden from you.",
     stillThere: "Still there", notThere: "Not there", flag: "Wrong or abusive report",
     community: "Driver report", official: "Verified official information", sample: "Sample data",
     confidence: "Confidence: {p}%",
@@ -90,14 +94,18 @@ export const en: Strings = {
   },
   permission: {
     title: "We need your location",
-    body: "To show where you are and guide you. Your location is used on your device and for route calculation only; your trip path is not stored.",
+    body: "Uses location while the app is open to show your position and calculate routes through service providers. Optional reports, trip sharing and traffic contribution can send location. See Settings → Privacy policy.",
     allow: "Allow location", deniedTitle: "Location not allowed",
     deniedBody: "You can search and preview routes, but guidance needs your location. Enable it in Settings.",
     openSettings: "Open Settings", servicesOff: "Location services are off on this device. Turn them on so we can find you.",
   },
   settings: {
+    deleteFailed: "Server deletion did not complete. Your deletion ID is preserved; reconnect and try again.",
+    privacyLink: "Privacy policy",
+    supportLink: "Support and report abuse",
+
     satellite: "Satellite view", mapView: "Map view",
-    shareTraffic: "Help with live traffic", shareTrafficHint: "While you navigate, Darbna sends how fast traffic is moving — anonymously, never the start or end of your trip.",
+    shareTraffic: "Help with live traffic", shareTrafficHint: "Optional: sends location, speed and stop events with a random trip code during navigation. First and latest 300 m are withheld. See the privacy policy.",
     capTrafficLive: "✓ Live traffic where Darbna drivers are on the road (more users = more traffic info)",
     capOfflineMapsOn: "✓ Map areas you've viewed or downloaded below",
     offlineTitle: "Offline maps", offlineHint: "Save the area on screen so the map works with no internet. Searching and new routes still need internet.",
@@ -113,7 +121,7 @@ export const en: Strings = {
     capOfflineRouting: "✗ Calculating new routes offline (not available)",
     capTraffic: "✗ Live traffic (not available — times are estimates)",
     privacy: "Privacy",
-    privacyBody: "No account needed. Your trip path is never stored. Reports and traffic speeds carry only anonymous codes and are deleted within days of expiring (traffic speeds within 2 hours).",
+    privacyBody: "No account or ads. Optional reports and sharing send location and pseudonymous codes to our services. Read the policy for providers, retention and deletion limits.",
     deleteData: "Delete my data",
     deleteConfirm: "This erases saved places and history from this device and unlinks your reports and votes on the server. Continue?",
     deleted: "Deleted", attribution: "Map data", version: "Version", restartNeeded: "The app restarts to change layout direction",
