@@ -62,7 +62,7 @@ the server; the app only receives the API URL at build time and style URLs at ru
 
 ## Privacy, in one paragraph
 
-No accounts. The app generates a random install ID; the server stores only an HMAC of it
+No accounts or ads. Reports use a pseudonymous installation identifier; optional traffic uses a trip code. Location and search requests reach configured providers. Contribution is off by default. The [privacy policy](https://arsalanbaider67-eng.github.io/darbna/privacy.html) explains sharing, retention and deletion limits. Map data © OpenStreetMap contributors (ODbL).
 to rate-limit reports and enforce one vote per report, and erases that link when a report
 expires. Trip paths are never sent for storage — the server proxies route requests without
 logging coordinates. "Delete my data" in Settings wipes the device and unlinks everything

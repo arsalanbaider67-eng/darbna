@@ -4,8 +4,8 @@ Read this first. It is the single handoff document for anyone (Claude, Codex, Cu
 Gemini, a human) working on this repo. Keep it up to date when you change how things work.
 
 ## What Darbna is
-A free turn-by-turn navigation app for **Iraq** (دربنا, "our road"). Arabic first (Iraqi dialect),
-Sorani Kurdish (ckb) and English. Recorded Iraqi-voice guidance, driver road reports (checkpoint
+A free turn-by-turn navigation app for **Iraq** (دربنا, "our road"). Arabic first (Standard Arabic voice guidance),
+Sorani Kurdish (ckb) and English. Recorded Standard Arabic voice guidance, driver road reports (checkpoint
 queues, cameras, crashes…), live traffic and traffic lights learned from drivers, SOS (911), trip
 sharing, offline maps, satellite view.
 
@@ -65,8 +65,7 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
   real device). Never use fake or hardcoded data to make a feature look like it works.
 - Arabic is the default language; layouts are RTL. Every user-facing string goes in all three
   i18n files.
-- Arabic voice = ElevenLabs voice "Sufyan" (id `9FHjCdVXgA4tYxIYHTcZ`, model eleven_v3, speed 0.91,
-  stability/similarity 0.75), **never slowed down or time-stretched**. English = "Daniel".
+- Arabic voice: owner approved Standard Arabic Hamid recordings on 17 October 2026 (voice `A9ATTqUUQ6GHu0coCz8t`, eleven_v3, generation/playback speed 1.0, stability/similarity 0.75). This supersedes the earlier Iraqi/Sufyan instruction. Never time-stretch. English remains Daniel. Do not silently substitute a device voice for Arabic.
 - Brand: purple `#21194A` panels, yellow `#FFD25E` highlights, white `#FFF5EF` text (`brand/`).
 - SOS shows **only 911** (Iraq, Kurdistan Region included). The release gate
   (`scripts/check-emergency-release.mjs`) blocks store builds unless every number is call-tested or
