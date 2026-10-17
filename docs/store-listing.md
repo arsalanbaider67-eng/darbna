@@ -1,75 +1,33 @@
-# Darbna — store listing (App Store & Google Play)
+# Darbna store listing — 17 October 2026
 
-Privacy policy URL: https://arsalanbaider67-eng.github.io/darbna/privacy.html
-Support URL: https://github.com/arsalanbaider67-eng/darbna/issues
-Bundle ID / package: `iq.darbna.app` · Category: Navigation · Price: Free · Age rating: 4+ / Everyone
-Seller name (individual account): your legal name.
+Bundle: `iq.darbna.app`. Existing app record: 6823604581. Version 1.0.0. Free. Category: Navigation.
+Support: https://arsalanbaider67-eng.github.io/darbna/support.html
+Privacy: https://arsalanbaider67-eng.github.io/darbna/privacy.html
 
-## Names (30 characters max)
-- Arabic: **دربنا – خرائط وملاحة العراق**
-- English: **Darbna – Iraq Maps & Navigation**
-- Kurdish: **دەربنا – نەخشە و ڕێنمایی عێراق**
+## Arabic description
+دربنا تطبيق خرائط وملاحة للعراق، بواجهة عربية مع دعم الكردية السورانية والإنجليزية.
 
-## Subtitle (App Store, 30 max) / Short description (Play, 80 max)
-- AR: سيطرات، زحام وإرشاد صوتي عراقي / إرشاد صوتي بالعراقي، تنبيه السيطرات والكامرات، زحام مباشر من السواق
-- EN: Checkpoints, traffic, Iraqi voice / Iraqi-voice navigation with checkpoint & camera alerts and live traffic from drivers
-- KU: خاڵی پشکنین، قەرەباڵغی، ڕێنمایی / ڕێنمایی دەنگی، ئاگادارکردنەوەی خاڵی پشکنین و کامێرا، قەرەباڵغی ڕاستەوخۆ
+• إرشادات صوتية مسجلة بالعربية الفصحى والإنجليزية.
+• حساب مسارات للسيارة والمشي، وإضافة محطات على الطريق.
+• البحث عن الأماكن والخدمات القريبة، وحفظ الأماكن ومكان وقوف السيارة.
+• بلاغات عن أحوال الطرق من المستخدمين، مع خيارات الإبلاغ عن البلاغات الخاطئة.
+• مشاركة الرحلة اختيارياً عبر رابط، أثناء فتح التطبيق.
+• تنزيل مناطق من الخريطة للاستخدام دون اتصال، حيث تتوفر الخدمة. حساب طريق جديد أو إعادة حسابه يحتاج إلى الإنترنت.
+• عرض حدود السرعة والتنبيهات حيث تتوفر بيانات الخريطة؛ قد تكون البيانات ناقصة.
 
-## Keywords (App Store, 100 characters, comma-separated)
-- AR: خرائط,ملاحة,العراق,بغداد,اربيل,سيطرة,زحام,طريق,جي بي اس,مسار,كامرة,بانزينخانة
-- EN: iraq,maps,navigation,gps,baghdad,erbil,basra,checkpoint,traffic,route,arabic,kurdish
+لا يحتاج إلى حساب ولا يعرض إعلانات. مساهمة الزحام اختيارية ومتوقفة افتراضياً. بيانات الطرق والبحث والزحام تعتمد على التغطية المتاحة ولا تضمن جميع الأماكن أو الظروف الفعلية.
 
-## Description
-### العربية
-دربنا تطبيق ملاحة مصنوع للعراق.
-• إرشاد صوتي باللهجة العراقية: «ورا ٣٠٠ متر لوف يمين»
-• تنبيه قبل السيطرات وكامرات السرعة والحوادث والطرق المقطوعة، يبلغ عنها السواق
-• زحام مباشر من سواق دربنا وأوقات وصول أدق
-• طرق للسيارة والمشي، وقفات بالطريق، وتجنب الطرق السريعة أو الترابية أو السيطرات
-• حد السرعة وتنبيه إذا عديته
-• شارك رحلتك مباشرة ويه أهلك، وزر طوارئ يتصل بـ ٩١١
-• يتذكر وين صفيت سيارتك
-• ابحث بسرعة عن بانزينخانة، جامع، مستشفى، صيدلية، مطعم أو صراف قريب منك
-• خرائط بدون إنترنت، صور قمر صناعي، وتصميم واضح وسهل القراءة
-• بدون حساب وبدون إعلانات. مسار رحلتك ما ينحفظ.
-بيانات الخريطة من OpenStreetMap.
+استخدم التطبيق عندما يكون ذلك آمناً، واتبع الشواخص والتعليمات الرسمية. الإرشاد والمشاركة يعملان أثناء فتح التطبيق. الجولة والقيادة التجريبية محاكاة واضحة للتجربة من خارج العراق.
 
-### English
-Darbna is a navigation app made for Iraq.
-• Turn-by-turn voice guidance in Iraqi Arabic, and in English
-• Alerts before checkpoints, speed cameras, crashes and closed roads reported by drivers
-• Live traffic from Darbna drivers for more accurate arrival times
-• Car and walking routes, stops on the way, avoid highways, dirt roads or checkpoints
-• Speed limit with a warning when you go over
-• Share your trip live with family, and an SOS button that calls 911
-• Remembers where you parked
-• Quick search for fuel, mosques, hospitals, pharmacies, food and ATMs near you
-• Offline maps, satellite view, and a clean, easy-to-read design
-• No account, no ads. Your trip path is never stored.
-Map data © OpenStreetMap contributors.
+بيانات الخريطة © مساهمو OpenStreetMap. الخرائط من OpenFreeMap والصور الفضائية من Esri ومزودي بياناتها عند توفرها.
 
-### کوردی
-دەربنا ئەپێکی ڕێنمایی ڕێگایە بۆ عێراق.
-• ڕێنمایی دەنگی بە عەرەبیی عێراقی و ئینگلیزی
-• ئاگادارکردنەوە پێش خاڵی پشکنین، کامێرای خێرایی، ڕووداو و ڕێگای داخراو
-• قەرەباڵغی ڕاستەوخۆ لە شۆفێرانی دەربنا
-• ڕێگای ئۆتۆمبێل و پیاسە، وەستان لە ڕێگا، دوورکەوتنەوە لە ڕێگای خێرا، خۆڵ یان خاڵی پشکنین
-• هاوبەشکردنی گەشت لەگەڵ خێزان و دوگمەی فریاکەوتن
-• بێ هەژمار و بێ ڕیکلام.
+## English description
+Darbna provides maps and navigation for Iraq, with Arabic, Sorani Kurdish and English interfaces. It includes recorded Standard Arabic and English guidance, driving and walking routes, route stops, nearby search, saved places and parked-position reminders. Community road reports and optional foreground trip sharing depend on available services. Traffic contribution is off by default. Available downloaded map areas do not calculate routes offline. New routes and rerouting require connectivity. Map, place, speed-limit and traffic coverage can be incomplete. Follow official signs and use the app only when safe. No account or ads.
 
-## App Store "App Privacy" answers
-- Data collected: **Location → Precise location**: used for App Functionality; **not linked to you**; **not used for tracking**.
-- **User Content → Other** (road reports, map notes): App Functionality; not linked to you; not used for tracking.
-- **Identifiers → Device ID**: a random app-generated ID (not the advertising ID) for duplicate/abuse checks and points; not linked to identity; not used for tracking.
-- No contact info, no health, no financial data, no browsing history, no purchases, no tracking.
+## Privacy declaration preparation
+Precise Location, Device ID (random installation identifier), and Other User Content are collected for App Functionality, linked through the installation identifier, and not used for tracking. Search queries are sent to search providers: assess Search History collection/retention with the actual provider contract before final publication. IP hashes are retained for abuse prevention. Confirm all SDK/provider practices and any Diagnostics or Other Data disclosures; the source manifest alone does not prove the App Store form complete. Do not select “Data Not Collected”.
 
-## Google Play "Data safety" answers
-- Location → Precise location: collected, **not shared**; processed ephemerally for routing; required for the core feature; not optional to the app's main function.
-- App activity → Other user-generated content (reports): collected, optional.
-- Device or other IDs: random app ID, collected for fraud prevention/functionality.
-- Data encrypted in transit: **Yes**. Users can request deletion: **Yes** (Settings → Delete my data).
-- Location permission: foreground only ("while using the app"); no background location.
+## Metadata still requiring evidence
+Actual iPhone screenshots of the shipping build, complete age questionnaire (UGC present; no ads/chat/social media), content-rights confirmation, legal review contact, pricing/territories and EU trader declaration if applicable. No fixed age rating is promised before the questionnaire. Screenshots must show actual native UI, not web mockups. Share-extension and background navigation claims must not appear. Do not claim all Iraq places, universal traffic coverage, guaranteed speed limits or automatic emergency calling.
 
-## Screenshots needed
-- iPhone 6.9" (1320×2868) — at least 3; Google Play phone — at least 2 (1080×1920 or larger), plus a 1024×500 feature graphic.
-- Suggested: home map with quick search · route screen with Car/Walk and options · driving with checkpoint warning and speed limit · share trip / SOS.
+See app-review-audit.md for the submission gate.
