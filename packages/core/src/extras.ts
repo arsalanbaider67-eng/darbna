@@ -84,6 +84,12 @@ export function speedLimitAt(spans: SpeedLimitSpan[], shapeIndex: number): numbe
 export const LEVEL_POINTS = [0, 50, 150, 400, 1000, 2500];
 
 export function levelFor(points: number): { level: number; next: number | null; progress: number } {
+  points = Number.isFinite(points) ? Math.max(0, Math.floor(points)) : 0;
+  if (points >= 2500) {
+    const level = 6 + Math.floor((points - 2500) / 1000);
+    const base = 2500 + (level - 6) * 1000;
+    return { level, next: base + 1000, progress: (points - base) / 1000 };
+  }
   let level = 1;
   for (let i = 0; i < LEVEL_POINTS.length; i++) if (points >= LEVEL_POINTS[i]) level = i + 1;
   const next = LEVEL_POINTS[level] ?? null;
