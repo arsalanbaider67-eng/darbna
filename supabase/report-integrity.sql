@@ -55,7 +55,7 @@ select r.id,r.category,r.lat,r.lng,r.created_at,r.expires_at,r.status,r.hidden_r
   (select count(*) from darbna_private.reports x where x.reporter_hash=r.reporter_hash and x.created_at>now()-interval '1 hour') as reports_last_hour,
   (select count(*) from darbna_private.report_reviews x where x.reporter_hash=r.reporter_hash and x.verdict in ('fake','abuse')) as confirmed_offences
 from darbna_private.reports r
-where r.flags>0 and not exists(select 1 from darbna_private.report_reviews x where x.report_id=r.id)
+where r.flags>0 and not exists(select 1 from darbna_private.report_reviews x where x.report_id=r.id and x.verdict in ('fake','abuse'))
 order by r.flags desc,r.created_at;
 revoke all on darbna_private.report_review_queue from public,anon,authenticated;
 

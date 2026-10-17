@@ -18,6 +18,9 @@ begin
  if darbna_private.reward_balance(h)<>0 or darbna_private.reward_balance(darbna_private.check_install(b))<>0 then raise exception 'confirmed fake retained rewards'; end if;
  perform darbna_private.review_report(rid,'valid','TEST ONLY corrected evidence after appeal');
  if darbna_private.reward_balance(h)<>2 or darbna_private.reward_balance(darbna_private.check_install(b))<>2 then raise exception 'appeal failed to restore credit'; end if;
+ update darbna_private.reports set flags=1 where id=rid;
+ if not exists(select 1 from darbna_private.report_review_queue where id=rid) then raise exception 'new flags hidden after a valid review'; end if;
+ perform darbna_private.review_report(rid,'valid','TEST ONLY reviewed new flag after correction');
  -- Clearance and raw flags do not convict a reporter or grant reward credit.
  insert into darbna_private.reports(category,lat,lng,reporter_hash,expires_at) values('pothole',36.02,44.02,h,now()+interval '1 hour') returning id into rid;
  perform public.darbna_vote(b,rid,'gone');
