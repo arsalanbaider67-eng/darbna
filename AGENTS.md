@@ -96,6 +96,15 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
   VPS (`docs/SERVER.md`). Nominatim max 1 request/s.
 
 ## Open work (as of 2026-10-16)
+0. The owner authorized a navigation-and-points release on 17 October 2026, including a new
+   signed TestFlight build, on `codex/navigation-points-release`. Prize screens and contact
+   collection are excluded from this build. Points are recognition only, without redeemable
+   value: +2 once for an independently confirmed report and +2 for an independent confirmation.
+   Five distinct owner-confirmed fake/abusive reports cause a reporting ban; raw flags do not.
+   The Supabase scoring/moderation migrations are installed and rollback-tested.
+   Future prizes remain disabled, with no offers, on the separate `codex/report-rewards` preview.
+   Do not enable prizes through a remote switch after review; they require defined funded
+   offers, published rules, privacy updates and a new reviewed app version.
 1. Share extension (needs iPhone UDID, see above).
 2. VPS for routing/search (`docs/SERVER.md`) before App Store submission.
 3. Owner must re-run `supabase/schema.sql` (traffic-light learning tables).
