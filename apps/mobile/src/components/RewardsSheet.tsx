@@ -63,8 +63,6 @@ export function RewardsSheet({ onClose }: { onClose(): void }) {
     <Row><Txt size={21} weight="bold" style={{ flex: 1 }}>{t.rewards.title}</Txt><Btn kind="ghost" label={t.common.close} onPress={onClose} disabled={busy} /></Row>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16, paddingBottom: 12 }}>
       <Txt muted>{t.rewards.intro}</Txt>
-      <Txt weight="bold">{t.rewards.plannedOdds}</Txt>
-      {PLANNED_REWARD_ODDS.map(o => <Txt key={o.kind}>{t.rewards.kinds[o.kind]} · {fmtNumber(o.units / 200, fmtCtx)}%</Txt>)}
       {driving && <Txt style={{ color: theme.warn }}>{t.rewards.parkFirst}</Txt>}
       {loading && <Txt>{t.common.loading}</Txt>}
       {notice && <Txt accessibilityLiveRegion="polite" style={{ color: theme.primary }}>{notice}</Txt>}
@@ -79,6 +77,7 @@ export function RewardsSheet({ onClose }: { onClose(): void }) {
         {data.enabled && !data.offers.length && <Txt>{t.rewards.noOffers}</Txt>}
         {data.enabled && rulesReady && <>
           <Txt weight="bold">{t.rewards.rules}</Txt><Txt>{text(data.terms)}</Txt>
+          {PLANNED_REWARD_ODDS.map(o => <Txt key={o.kind}>{t.rewards.kinds[o.kind]} · {fmtNumber(o.units / 200, fmtCtx)}%</Txt>)}
           <Row><Txt style={{ flex: 1 }}>{t.rewards.drawConsent}</Txt><Switch accessibilityLabel={t.rewards.drawConsent} disabled={busy || driving} value={drawConsent} onValueChange={setDrawConsent} /></Row>
         </>}
         {unclaimedMilestones.map(m => {

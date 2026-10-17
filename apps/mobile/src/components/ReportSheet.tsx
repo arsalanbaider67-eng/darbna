@@ -39,6 +39,7 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
         toast(t.reports.failedQueued, "info");
         onClose();
       } else if (e instanceof ApiError && e.code === "rate_limited") toast(t.reports.rateLimited, "error");
+      else if (e instanceof ApiError && e.code === "reporter_banned") toast(t.rewards.reportingBanned, "error");
       else if (e instanceof ApiError && e.code === "outside_iraq") toast(t.reports.outsideIraq, "error");
       else if (e instanceof ApiError && (e.code === "bad_category" || e.code === "unsupported")) toast(t.reports.notReady, "error");
       else toast(t.common.retry, "error");
