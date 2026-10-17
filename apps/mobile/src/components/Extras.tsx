@@ -160,7 +160,7 @@ export function PointsCard() {
         <Icon name="star-four-points" color={theme.primary} size={28} />
         <View style={{ flex: 1 }}>
           <Txt size={13} muted>{t.x.points.title}</Txt>
-          <Txt size={20} weight="bold" style={{ color: theme.primary }}>{fmtNumber(p, fmtCtx)} · {t.x.points.levels[lv.level - 1]}</Txt>
+          <Txt size={20} weight="bold" style={{ color: theme.primary }}>{fmtNumber(p, fmtCtx)} · {(t.x.points.levels[lv.level - 1] ?? t.x.points.levels[t.x.points.levels.length - 1])}</Txt>
         </View>
         <Txt weight="semibold">{fmt(t.x.points.level, { n: fmtNumber(lv.level, fmtCtx) })}</Txt>
       </Row>

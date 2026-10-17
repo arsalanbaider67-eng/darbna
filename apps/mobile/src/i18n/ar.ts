@@ -118,6 +118,7 @@ export const ar = {
   ordinals: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"],
   units: { m: "{v} م", km: "{v} كم", mSpoken: "{v} متر", kmSpoken: "{v} كيلومتر", min: "{v} د", hr: "{h} س {m} د" },
   reports: {
+    reportingBanned: "حُظر إرسال البلاغات بعد خمس مخالفات مؤكدة لبلاغات مزيفة أو مسيئة. تواصل مع darbnaiq@gmail.com لطلب المراجعة.",
     title: "بلّغ",
     onlyWhenStopped: "بلّغ بس إذا كنت واقف أو راكب مو سايق.",
     imPassenger: "أنا راكب",
