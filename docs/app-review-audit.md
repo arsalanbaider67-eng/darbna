@@ -23,7 +23,7 @@ This is a practical audit of the current repository and visible Apple setup, not
 | Simulated tour positions could make public reports | Tour/demo report submission disabled; neither contributes traffic |
 | Deletion failure could look successful and erase the ID needed to retry | Server confirmation first, local wipe second; meaningful regression tests |
 | Privacy text incorrectly promised identifier-free sharing and fixed deletion deadlines | Revised Arabic, Sorani and English policy explains installation/trip identifiers, IP hashes, providers, public notes and cleanup limits |
-| In-app privacy/support missing | Settings links plus public three-language policy/support pages; public email darbnasupport@gmail.com |
+| In-app privacy/support missing | Settings links plus public three-language policy/support pages; public email darbnaiq@gmail.com |
 | Sender blocking missing | Private block table, per-install filtered report feed and block button; moderator ban table with insert guard; author hashes never exposed in public report JSON |
 | Flagged reports could return on refresh | Personalized report query excludes the viewer's flagged/gone reports |
 | Typing could issue public geocoder autocomplete requests | Local suggestions while typing; explicit remote search; queued/cached requests and clearer full-search action |
@@ -94,6 +94,17 @@ Priority “blocker” means resolve before submission. “Device check” requi
 4. Test that exact build on iPhone, record evidence and capture real screenshots. Re-test consent/deletion/UGC using an isolated disposable test identity.
 5. Finish Apple metadata, privacy/age/content-rights/export answers, reviewer contact, territories and any required owner legal decisions.
 6. Remove draft holds from the review notes only after the blockers are resolved. Owner performs final App Store submission.
+
+
+## Verified delivery
+
+- Web release PR [#2](https://github.com/arsalanbaider67-eng/darbna/pull/2) merged as b8bfcc4c70a448bc12b75b2da42d7d835ff19f81. [GitHub Pages run 38985638039](https://github.com/arsalanbaider67-eng/darbna/actions/runs/38985638039) built and deployed successfully.
+- Live web verification downloaded all 75 Arabic assets and confirmed each SHA-256 equals its owner-approved source file. All 75 asset hashes are referenced by the live JavaScript bundle. The live permission/consent/support controls were inspected.
+- The Arabic store description, keywords, copyright, support URL, no-login setting, reviewer notes and owner-provided reviewer contact were saved in Apple's draft. A reload verified persistence; private phone/email fields were redacted by browser tooling. The owner's personal phone number is not in this repository or public support pages.
+- Public support contact changed to **darbnaiq@gmail.com** at the owner's request. No message was sent to the mailbox and receipt/response operation has not been tested.
+- TestFlight stayed unchanged. The automatic unsigned iOS check triggered by the web merge was cancelled; no signed iOS store workflow was dispatched and no new build was uploaded to App Store Connect.
+- The primary branch check passed. The separate Cloudflare Workers integration still reports a failed check; it is not the successful GitHub Pages deployment used above.
+- Apple privacy questionnaire, age rating, content-rights declaration, actual native screenshots, pricing/territory/legal confirmations, production-service capacity/licensing and exact-build iPhone acceptance remain pending. The code audit does not certify store readiness.
 
 ## Policy references
 
