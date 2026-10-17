@@ -81,7 +81,7 @@ export function MainScreen() {
   // were standing in central Erbil, so search, routes, reports and the demo drive all work.
   const [tour, setTour] = useState(false);
   const loc = useMemo(() => (tour ? { ...realLoc, permission: "granted" as const, fix: TOUR_FIX } : realLoc), [tour, realLoc]);
-  const outsideIraq = !tour && ((realLoc.fix && !inIraq(realLoc.fix.coord)) || realLoc.permission === "denied" || realLoc.permission === "blocked" || realLoc.permission === "services_off");
+  const outsideIraq = !tour && ((realLoc.fix && !inIraq(realLoc.fix.coord)) || realLoc.permission === "unknown" || realLoc.permission === "denied" || realLoc.permission === "blocked" || realLoc.permission === "services_off");
   const fix = loc.fix;
   // SOS region (Kurdistan Region / rest of Iraq / abroad) follows you all the time, so the SOS
   // screen is right the moment it's opened — even before the map has loaded.
@@ -137,9 +137,9 @@ export function MainScreen() {
 
   const { guidance, reroute } = useGuidance(mode === "navigating" ? navFix : null, online, fmtCtx);
   // Live traffic: real drives only (never the demo), and only if the user hasn't turned it off.
-  useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
+  useTrafficSampler(tripRoute ?? null, guidance, trip?.startedAt ?? null, mode === "navigating" && !demo && !tour && tripRoute?.travel !== "walk" && shareTraffic === true && !!config?.sharedTraffic);
   // Traffic lights learned from drivers: same rules (real car trips, sharing on).
-  useStopSampler(fix, trip?.startedAt ?? null, mode === "navigating" && !demo && !tour && tripRoute?.travel !== "walk" && shareTraffic !== false && !!config?.sharedTraffic);
+  useStopSampler(fix, trip?.startedAt ?? null, mode === "navigating" && !demo && !tour && tripRoute?.travel !== "walk" && shareTraffic === true && !!config?.sharedTraffic);
 
   // ---------------------------------------------------------------- stops passed on the way
   const passed = useRef<{ routeId: string; n: number }>({ routeId: "", n: 0 });
@@ -683,7 +683,7 @@ export function MainScreen() {
 
       {mode === "search" && <SearchPanel online={online} userCoord={fix?.coord ?? null} onPick={(p) => pickPlace(p)} onSettings={() => setState({ sheet: "settings" })} />}
 
-      {sheet === "report" && <ReportSheet fix={fix} online={online} onClose={() => setState({ sheet: null })} />}
+      {sheet === "report" && <ReportSheet fix={tour || demo ? null : fix} online={online} onClose={() => setState({ sheet: null })} />}
       {sheet === "settings" && (
         <SettingsSheet
           onClose={() => setState({ sheet: null })}
