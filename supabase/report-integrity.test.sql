@@ -14,12 +14,16 @@ begin
  perform public.darbna_vote(c,rid,'confirm');
  if darbna_private.reward_balance(h)<>2 or (public.darbna_me(a)->>'points')::integer<>2
    or darbna_private.reward_balance(darbna_private.check_install(b))<>2 or (public.darbna_me(b)->>'points')::integer<>2 then raise exception 'plus two incorrect'; end if;
+ perform darbna_private.review_report(rid,'fake','TEST ONLY confirmed fabrication');
+ if darbna_private.reward_balance(h)<>0 or darbna_private.reward_balance(darbna_private.check_install(b))<>0 then raise exception 'confirmed fake retained rewards'; end if;
+ perform darbna_private.review_report(rid,'valid','TEST ONLY corrected evidence after appeal');
+ if darbna_private.reward_balance(h)<>2 or darbna_private.reward_balance(darbna_private.check_install(b))<>2 then raise exception 'appeal failed to restore credit'; end if;
  -- Clearance and raw flags do not convict a reporter or grant reward credit.
  insert into darbna_private.reports(category,lat,lng,reporter_hash,expires_at) values('pothole',36.02,44.02,h,now()+interval '1 hour') returning id into rid;
  perform public.darbna_vote(b,rid,'gone');
  if darbna_private.reward_balance(darbna_private.check_install(b))<>2 then raise exception 'clearance earned reward'; end if;
  update darbna_private.reports set flags=3,status='hidden',hidden_reason='flags' where id=rid;
- if exists(select 1 from darbna_private.report_reviews where reporter_hash=h) or exists(select 1 from darbna_private.banned_reporters where reporter_hash=h) then raise exception 'flags convicted reporter'; end if;
+ if exists(select 1 from darbna_private.report_reviews where reporter_hash=h and verdict in ('fake','abuse')) or exists(select 1 from darbna_private.banned_reporters where reporter_hash=h) then raise exception 'flags convicted reporter'; end if;
  for i in 1..5 loop
    insert into darbna_private.reports(category,lat,lng,reporter_hash,expires_at) values('pothole',36.03,44.03,h,now()+interval '1 hour') returning id into rid;
    ids:=array_append(ids,rid);

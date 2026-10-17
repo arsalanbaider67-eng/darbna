@@ -86,8 +86,8 @@ language sql stable security definer set search_path=darbna_private,extensions,p
 select coalesce(sum(points) filter(where not reversed),0)::bigint from darbna_private.reward_ledger where who=h;
 $$;
 
--- Only successful independent checks earn reward credit. Unconfirmed reports and thanks
--- earn recognition points as before, but cannot alone unlock a prize.
+-- Independent confirmations earn +2 credit for the checker and +2 once for the author.
+-- Unconfirmed submissions, clearance votes and thanks earn no reward credit.
 create or replace function darbna_private.reward_vote() returns trigger
 language plpgsql security definer set search_path=darbna_private,extensions,public as $$
 declare author text;
