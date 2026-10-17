@@ -1,0 +1,70 @@
+-- Transaction-isolated rewards regression. No real prizes or reports retained.
+begin;
+do $$
+declare
+ a text:='reward-author-'||gen_random_uuid(); b text:='reward-checker-'||gen_random_uuid();
+ c text:='reward-other-'||gen_random_uuid(); rid uuid; did uuid; cid uuid;
+ h text; payload json; i integer; rev integer; prize text; words text:='TEST ONLY rules for an isolated rollback transaction. Not a real prize offer.';
+begin
+ if has_table_privilege('anon','darbna_private.reward_claims','select') or has_table_privilege('anon','darbna_private.reward_draws','select') then raise exception 'private data exposed'; end if;
+ if has_function_privilege('anon','darbna_private.review_reward_claim(uuid,text,text)','execute') then raise exception 'admin exposed'; end if;
+ if has_function_privilege('anon','darbna_private.reward_random_bucket()','execute') then raise exception 'private randomness exposed'; end if;
+ if darbna_private.reward_level(6499)<>9 or darbna_private.reward_level(6500)<>10 or darbna_private.reward_level(16500)<>20 then raise exception 'wrong level boundaries'; end if;
+ select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='car';
+ if i<>1 then raise exception 'car odds wrong'; end if;
+ select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='voucher';
+ if i<>8000 then raise exception 'voucher odds wrong'; end if;
+ select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='oil_change';
+ if i<>100 then raise exception 'oil odds wrong'; end if;
+ select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='mobile_credit';
+ if i<>11899 then raise exception 'guaranteed odds wrong'; end if;
+ for i in 1..100 loop if darbna_private.reward_random_bucket() not between 0 and 19999 then raise exception 'randomness out of range'; end if; end loop;
+ h:=darbna_private.check_install(a);
+ insert into darbna_private.reports(category,lat,lng,reporter_hash,expires_at) values('pothole',36.01,44.01,h,now()+interval '1 hour') returning id into rid;
+ if darbna_private.reward_balance(h)<>0 then raise exception 'unconfirmed report earned reward'; end if;
+ perform public.darbna_vote(b,rid,'confirm');
+ if darbna_private.reward_balance(h)<>2 or darbna_private.reward_balance(darbna_private.check_install(b))<>2 then raise exception 'action credit wrong'; end if;
+ begin perform public.darbna_vote(b,rid,'confirm'); raise exception 'repeated vote accepted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'already_voted' then raise; end if; end;
+ if darbna_private.reward_balance(h)<>2 then raise exception 'retry awarded points twice'; end if;
+ update darbna_private.reports set status='hidden',hidden_reason='flags' where id=rid;
+ if darbna_private.reward_balance(h)<>0 then raise exception 'abusive report retained credit'; end if;
+ insert into darbna_private.reward_ledger(who,event_key,points) values(h,'TEST-ONLY',6500),(darbna_private.check_install(c),'TEST-ONLY',6500);
+ insert into darbna_private.reward_offers(milestone,kind,weight,title,detail,capacity,published,funded)
+ select 10,kind,weight,jsonb_build_object('ar',words,'en',words,'ckb',words),jsonb_build_object('ar',words,'en',words,'ckb',words),1,true,true
+ from (values('voucher',8000),('oil_change',100),('car',1),('mobile_credit',11899)) x(kind,weight);
+ begin perform public.darbna_reward_draw(a,10,'draft-v1',1); raise exception 'closed program accepted draw';
+ exception when sqlstate 'P0001' then if sqlerrm<>'program_closed' then raise; end if; end;
+ update darbna_private.reward_program set enabled=true,launch_reviewed=true,terms_version='TEST-ONLY',terms=jsonb_build_object('ar',words,'en',words,'ckb',words) where singleton;
+ select pool_revision into rev from darbna_private.reward_program where singleton;
+ begin perform public.darbna_reward_draw(a,10,'wrong',rev); raise exception 'stale terms accepted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'terms_changed' then raise; end if; end;
+ begin perform public.darbna_reward_draw(a,10,'TEST-ONLY',rev-1); raise exception 'stale pool accepted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'terms_changed' then raise; end if; end;
+ begin perform public.darbna_reward_draw(a,20,'TEST-ONLY',rev); raise exception 'unearned milestone accepted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'not_eligible' then raise; end if; end;
+ begin perform public.darbna_reward_claim(a,gen_random_uuid(),'email','test@example.invalid','TEST-ONLY'); raise exception 'client chose own prize';
+ exception when sqlstate 'P0001' then if sqlerrm<>'draw_not_found' then raise; end if; end;
+ payload:=public.darbna_reward_draw(a,10,'TEST-ONLY',rev); did:=(payload->>'id')::uuid;
+ if (public.darbna_reward_draw(a,10,'TEST-ONLY',rev)->>'id')::uuid<>did then raise exception 'retry rerolled'; end if;
+ select o.kind into prize from darbna_private.reward_draws d join darbna_private.reward_offers o on o.id=d.offer_id where d.id=did;
+ if prize is distinct from (select darbna_private.reward_kind_for_bucket(bucket) from darbna_private.reward_draws where id=did) then raise exception 'draw did not match cryptographic bucket'; end if;
+ begin perform public.darbna_reward_draw(c,10,'TEST-ONLY',rev); raise exception 'exhausted pool silently reweighted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'offer_unavailable' then raise; end if; end;
+ begin perform public.darbna_reward_claim(a,did,'email','wrong','TEST-ONLY'); raise exception 'bad contact accepted';
+ exception when sqlstate 'P0001' then if sqlerrm<>'bad_contact' then raise; end if; end;
+ payload:=public.darbna_reward_claim(a,did,'email',' TEST@EXAMPLE.INVALID ','TEST-ONLY'); cid:=(payload->>'id')::uuid;
+ if (public.darbna_reward_claim(a,did,'email','test@example.invalid','TEST-ONLY')->>'id')::uuid<>cid then raise exception 'claim retry duplicated'; end if;
+ if public.darbna_rewards(a)::text like '%test@example.invalid%' then raise exception 'contact leaked'; end if;
+ if json_array_length(public.darbna_rewards(b)->'claims')<>0 or json_array_length(public.darbna_rewards(b)->'draws')<>0 then raise exception 'another install saw history'; end if;
+ begin perform darbna_private.review_reward_claim(cid,'sent'); raise exception 'sent before approval';
+ exception when sqlstate 'P0001' then if sqlerrm<>'invalid_transition' then raise; end if; end;
+ perform darbna_private.review_reward_claim(cid,'approved'); perform darbna_private.review_reward_claim(cid,'sent');
+ begin perform darbna_private.review_reward_claim(cid,'approved'); raise exception 'sent reopened';
+ exception when sqlstate 'P0001' then if sqlerrm<>'invalid_transition' then raise; end if; end;
+ perform public.darbna_delete_me(a);
+ if exists(select 1 from darbna_private.reward_claims where claimant_hash=h) or exists(select 1 from darbna_private.reward_draws where claimant_hash=h) or exists(select 1 from darbna_private.reward_ledger where who=h) then raise exception 'privacy deletion failed'; end if;
+ if (select sum(used) from darbna_private.reward_offers where milestone=10)<>1 then raise exception 'privacy deletion falsely replenished stock'; end if;
+end $$;
+rollback;
+select 'PASS: exact odds, server randomness, credit/reversal, locked draw retries, claim ownership, inventory pause, private contacts, manual transitions and deletion; all fixtures rolled back' as rewards_test;

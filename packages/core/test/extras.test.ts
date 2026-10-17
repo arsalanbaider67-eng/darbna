@@ -48,7 +48,7 @@ describe("levels", () => {
   it("counts up through the levels", () => {
     expect(levelFor(0).level).toBe(1);
     expect(levelFor(60).level).toBe(2);
-    expect(levelFor(3000)).toEqual({ level: 6, next: null, progress: 1 });
+    expect(levelFor(3000)).toEqual({ level: 6, next: 3500, progress: 0.5 });
   });
 });
 
