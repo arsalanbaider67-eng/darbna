@@ -3,7 +3,7 @@ import type { ExpoConfig } from "expo/config";
 // Location permission text. The localized versions (Arabic, Sorani, English) live in locales/*.json
 // and are what iPhone users see; this English one is the fallback. It names every use, including
 // sharing a report's or a shared trip's location, as App Review requires (guideline 5.1.1).
-const LOCATION_WHY_EN = "Darbna uses your location to show you on the map, plan routes and guide you while you drive or walk. If you send a road report or share a trip, that location is shared with other drivers or with the person you share it with. Your trip path is not stored on our servers.";
+const LOCATION_WHY_EN = "Darbna uses your location while the app is open to show your position and calculate routes through service providers. Road reports, trip sharing and traffic contribution are optional and can send location to our services and intended recipients. Traffic contribution is off by default.";
 
 // Test builds that talk to a dev server over plain http on your Wi-Fi (EXPO_PUBLIC_API_URL=http://…)
 // get the http exceptions below. Everything else, including "direct" mode (store builds: all
