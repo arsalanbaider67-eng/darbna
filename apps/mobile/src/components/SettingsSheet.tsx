@@ -1,3 +1,4 @@
+import { RewardsSheet } from "./RewardsSheet";
 import Constants from "expo-constants";
 import React, { useEffect, useState } from "react";
 import { I18nManager, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
@@ -22,6 +23,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   const { theme, t } = useUi();
   const settings = useStore((s) => s.settings);
   const config = useStore((s) => s.config);
+  const [rewardsOpen, setRewardsOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [offline, setOffline] = useState<OfflineSummary | null>(null);
@@ -110,6 +112,8 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
     </Row>
   );
 
+  if (rewardsOpen) return <RewardsSheet onClose={() => setRewardsOpen(false)} />;
+
   return (
     <Panel style={{ maxHeight: "88%" }}>
       <Row style={{ marginBottom: 8 }}>
@@ -122,6 +126,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
           <Seg value={settings.lang} options={LANGS.map((l) => ({ v: l.code, label: l.label }))} onChange={changeLang} />
         </View>
         <PointsCard />
+        <Btn kind="secondary" icon="gift-outline" label={t.rewards.title} onPress={() => setRewardsOpen(true)} />
         <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} style={{ borderColor: theme.danger }} />
         <Row>
           <View style={{ flex: 1 }}>
