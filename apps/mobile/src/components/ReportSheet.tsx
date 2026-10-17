@@ -109,6 +109,18 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
     }
   }
 
+  async function blockReporter() {
+    setBusy(true);
+    try {
+      const result = await api.blockReporter(r.id);
+      result.hiddenIds.forEach(removeReport);
+      toast(t.reports.blocked, "ok");
+      onClose();
+    } catch (e) {
+      toast(e instanceof ApiError && e.code === "own_report" ? t.reports.own : t.common.retry, "error");
+    } finally { setBusy(false); }
+  }
+
   async function vote(v: "confirm" | "gone" | "flag") {
     setBusy(true);
     try {
@@ -158,6 +170,7 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
           {social && !r.isSample && (
             <Btn kind="ghost" icon="thumb-up-outline" label={t.x.thanks.button} onPress={() => void thank()} disabled={busy} style={{ marginTop: 6, borderColor: theme.border }} />
           )}
+          {social && !r.isSample && <Btn kind="ghost" icon="account-cancel-outline" label={t.reports.blockReporter} onPress={() => void blockReporter()} disabled={busy} />}
           <Pressable onPress={() => vote("flag")} disabled={busy} style={{ minHeight: TOUCH - 12, justifyContent: "center", alignItems: "center" }}>
             <Txt size={13} style={{ color: theme.danger }}>{t.reports.flag}</Txt>
           </Pressable>

@@ -1,22 +1,22 @@
-# App Review notes (paste into App Store Connect → App Review Information → Notes)
+# App Review notes — release candidate
 
-Darbna is a free turn-by-turn navigation app for Iraq. There is no account and no sign-in, so no demo login is needed.
+Darbna is a navigation app for Iraq. No account or sign-in is required.
 
-HOW TO TEST FROM OUTSIDE IRAQ
-Darbna's maps, routes and road reports cover Iraq only. When the device is outside Iraq (or location is denied), the map shows an "Outside Iraq? Explore Darbna from Erbil" button: tap it and the app behaves as if you were standing in central Erbil. Then:
-1. Tap the search bar and type "Family Mall" or "قلعة أربيل" (Erbil Citadel). Results appear as you type.
-2. Pick a result → "Directions" → "Start". Tap "Demo" for a simulated drive so you can hear the voice guidance and see speed limits, speed-camera and speed-bump warnings without driving in Iraq.
-3. SOS button (right side): shows Iraq's unified emergency number 911. Tapping it only opens the phone's dialer; nothing is dialled automatically.
+TESTING OUTSIDE IRAQ
+Allow foreground location, or use the labelled Erbil tour option when outside Iraq or location is unavailable. This is a public fixed tour position, not the user's actual location. Search for Erbil Citadel or Erbil airport and explicitly press the full-search button for remote results; typing can show local suggestions. Select a place, request directions and start a route. The labelled Demo mode simulates navigation without driving. Tour/demo positions cannot submit public road reports or contribute traffic samples.
 
-ROAD REPORTS (user-generated content, guideline 1.2)
-- Reports are a fixed list of road conditions (traffic jam, crash, closed road, speed camera, checkpoint queue, fuel queue…). There is no free text, no photos, no profiles and no messaging between users. (The separate "Map problem" form sends a note to OpenStreetMap's public map-notes system; it is not shown inside Darbna.)
-- Every report can be flagged ("Wrong or abusive report") or voted "Not there"; 3 flags hide a report automatically for moderation, and reports expire on their own within hours.
-- "Checkpoint" refers to the permanent, publicly visible security checkpoints on Iraqi roads, which cause long queues. Drivers report the delay so others can plan or pick another road, the same way they report traffic. Darbna does not show police patrols and nothing in the app helps evade law enforcement.
-- Settings → "Delete my data" removes everything the user has sent from our server and the device.
+AUDIO
+Arabic instructions are bundled Standard Arabic recordings at normal playback speed. Settings includes a voice test. English recordings are also bundled; Sorani uses the available supported voice fallback and reports availability.
 
-LOCATION AND PRIVACY
-- Location is used only while the app is in use (no background location).
-- Optional, anonymous traffic sharing (Settings → "Help with live traffic"): speed samples and red-light stop spots with no identifier, never the first/last 300 m of a trip.
-- No ads, no tracking, no analytics SDKs. Privacy policy: https://arsalanbaider67-eng.github.io/darbna/privacy.html
+LOCATION / CONNECTIVITY
+Navigation and live trip updates run in the foreground. No background location is requested. New routes, rerouting, search and community services require connectivity. Downloaded map areas do not provide offline route calculation. Speed-limit and traffic coverage depends on available data.
 
-Map data © OpenStreetMap contributors. Satellite imagery © Esri (licensed through ArcGIS Location Platform).
+COMMUNITY REPORTS
+Fixed road-condition categories only, without profiles, chat, uploaded photos or free text in the in-app report feed. Users can flag a wrong/abusive report or mark it gone; three flags hide it. “Block this reporter” hides all current and future reports from that sender for the blocking installation. Private moderator bans prevent new reports. The separate map-problem form posts text and location publicly to OpenStreetMap, not the Darbna report feed. Permanent public security-checkpoint queues concern road delays; no police patrols or DUI checkpoints are offered. Do not test emergency services: SOS opens the dialler for 911 only after user action.
+
+PRIVACY
+Traffic contribution is off by default and requires an explicit choice. Real-navigation samples use a pseudonymous trip code and withhold the first/latest 300 m. Road reports and trip sharing use a random installation identifier. Deletion waits for server confirmation; the policy explains retention, third-party services and limits.
+Privacy: https://arsalanbaider67-eng.github.io/darbna/privacy.html
+Support: https://arsalanbaider67-eng.github.io/darbna/support.html
+
+PRE-SUBMISSION HOLD: moderation operation and physical-device acceptance checks must be completed before final App Store submission. This draft does not assert those checks passed.

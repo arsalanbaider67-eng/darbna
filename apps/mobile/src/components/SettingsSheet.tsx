@@ -1,11 +1,15 @@
+import Constants from "expo-constants";
 import React, { useEffect, useState } from "react";
-import { I18nManager, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
+import { I18nManager, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from "react-native";
 import { api } from "../api";
 import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
-import { hasRecordedVoice } from "../nav/prompt";
+import { hasRecordedVoice, primeVoice, stopSpeaking } from "../nav/prompt";
+import { playClips } from "../nav/clipPlayer";
+import { VOICE_CLIPS } from "../nav/voiceClips";
+import { deleteUserData } from "../privacyControls";
 import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
 import { PointsCard } from "./Extras";
@@ -18,6 +22,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   const { theme, t } = useUi();
   const settings = useStore((s) => s.settings);
   const config = useStore((s) => s.config);
+  const [deleting, setDeleting] = useState(false);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
   const [offline, setOffline] = useState<OfflineSummary | null>(null);
   const [dlPct, setDlPct] = useState<number | null>(null);
@@ -49,7 +54,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   }, [settings.lang, t]);
 
   function update(patch: Partial<Settings>) {
-    const next = { ...getState().settings, ...patch };
+    const next = { ...getState().settings, ...patch, ...(patch.shareTraffic !== undefined ? { trafficConsentVersion: 1 } : {}) };
     setState({ settings: next });
     void saveSettings(next);
   }
@@ -66,12 +71,28 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
   function deleteData() {
     void confirmDialog(t.settings.deleteData, t.settings.deleteConfirm, t.settings.deleteData, t.common.cancel, true).then(async (yes) => {
       if (!yes) return;
-      await api.deleteMe().catch(() => {}); // best-effort; local wipe happens regardless
-      await wipeLocalData();
-      setState({ saved: { favorites: [] }, recents: [], trip: null });
-      toast(t.settings.deleted, "ok");
+      if (deleting) return;
+      setDeleting(true);
+      try {
+        await deleteUserData({
+          stop: () => { stopSpeaking(); setState({ trip: null, share: null }); },
+          removeRemote: () => api.deleteMe(),
+          wipeLocal: wipeLocalData,
+          finish: () => { setState({ saved: { favorites: [] }, recents: [], trip: null, reports: {}, points: null, parked: null, stops: [], mode: "browse" }); toast(t.settings.deleted, "ok"); },
+        });
+      } catch { toast(t.settings.deleteFailed, "error"); }
+      finally { setDeleting(false); }
     });
   }
+
+  async function testVoice() {
+    const clips = VOICE_CLIPS[settings.lang === "en" ? "en" : "ar"];
+    if (!clips?.d_200m || !clips?.mv_right) return toast(t.journey.voiceMissing, "error");
+    primeVoice(settings.lang);
+    const ok = await playClips([clips.d_200m, clips.mv_right], true).catch(() => false);
+    toast(ok ? t.journey.voicePlaying : t.journey.voiceMissing, ok ? "info" : "error");
+  }
+  const openInfo = (url: string) => void Linking.openURL(url).catch(() => toast(t.common.retry, "error"));
 
   const Seg = <T extends string>({ value, options, onChange }: { value: T; options: { v: T; label: string }[]; onChange(v: T): void }) => (
     <Row gap={6} style={{ flexWrap: "wrap" }}>
@@ -161,10 +182,13 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
         <View style={{ gap: 4 }}>
           <Txt weight="semibold">{t.settings.privacy}</Txt>
           <Txt size={14} muted>{t.settings.privacyBody}</Txt>
-          <Btn kind="danger" icon="delete-outline" label={t.settings.deleteData} onPress={deleteData} style={{ marginTop: 8 }} />
+          <Btn kind="ghost" icon="shield-check" label={t.settings.privacyLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/privacy.html")} />
+          <Btn kind="ghost" icon="help-circle-outline" label={t.settings.supportLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/support.html")} />
+          <Btn kind="secondary" icon="volume-high" label={t.journey.voiceTest} onPress={() => void testVoice()} />
+          <Btn kind="danger" icon="delete-outline" label={t.settings.deleteData} onPress={deleteData} disabled={deleting} style={{ marginTop: 8 }} />
         </View>
         <Txt size={13} muted>
-          {t.settings.version} 0.1.0
+          {t.settings.version} {Constants.expoConfig?.version ?? "1.0.0"}
         </Txt>
       </ScrollView>
     </Panel>

@@ -19,7 +19,7 @@ function ensure(): boolean {
   if (!modeSet) {
     modeSet = true;
     // Speak even with the silent switch on, and lower music instead of stopping it.
-    audio.setAudioModeAsync?.({ playsInSilentMode: true, interruptionMode: "duckOthers", shouldPlayInBackground: true }).catch?.(() => {});
+    audio.setAudioModeAsync?.({ playsInSilentMode: true, interruptionMode: "duckOthers", shouldPlayInBackground: false }).catch?.(() => {});
   }
   if (!player) {
     player = audio.createAudioPlayer(null);

@@ -1,7 +1,7 @@
 import React, { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import {
-  Camera, CircleLayer, Images, LineLayer, MapView, ShapeSource, SymbolLayer, UserLocation, type CameraRef,
+  Camera, CircleLayer, Images, LineLayer, MapView, ShapeSource, SymbolLayer, UserLocation, UserTrackingMode, type CameraRef,
 } from "@maplibre/maplibre-react-native";
 import hazardsDoc from "@darbna/core/data/road-hazards.json";
 import { parseHazards, type RoadHazardsDoc, darkenStyle, goldStyle, lightenStyle, lineProgress, lineProgressTable, satelliteStyle, snapToLine, trafficLevel, type LngLat, type LocationFix, type TrafficCell } from "@darbna/core";
@@ -253,7 +253,7 @@ function MapCanvasInner(p: Props, ref: React.Ref<MapCanvasHandle>) {
           ref={camera}
           defaultSettings={defaultSettings}
           followUserLocation={p.follow !== "none" && !sim}
-          followUserMode={navigating ? "course" : "normal"}
+          followUserMode={navigating ? UserTrackingMode.FollowWithCourse : UserTrackingMode.Follow}
           followZoomLevel={navigating ? (walking ? 17.5 : 16.5) : 15}
           followPitch={navigating ? (walking ? 30 : 45) : 0}
           animationDuration={400}

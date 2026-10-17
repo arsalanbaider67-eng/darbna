@@ -36,7 +36,7 @@ export interface SearchEnv {
 }
 
 /** Iraq's bounding box (lon/lat), used to keep results inside Iraq. */
-export const IRAQ_BBOX: [number, number, number, number] = [38.7, 29.0, 48.9, 37.5];
+const IRAQ_BBOX: [number, number, number, number] = [38.7, 29.0, 48.9, 37.5];
 const inIraq = ([x, y]: LngLat) => x >= IRAQ_BBOX[0] && x <= IRAQ_BBOX[2] && y >= IRAQ_BBOX[1] && y <= IRAQ_BBOX[3];
 
 // ---------------------------------------------------------------- name matching
@@ -77,7 +77,7 @@ export function nameMatch(query: string, name: string): number {
 // ---------------------------------------------------------------- providers
 async function nominatim(q: string, env: SearchEnv): Promise<SearchHit[]> {
   const p: Record<string, string> = {
-    q, format: "jsonv2", countrycodes: "iq", limit: "10", addressdetails: "1", namedetails: "1",
+    q, format: "jsonv2", countrycodes: "iq", limit: String(Math.min(40, env.limit ?? 20)), addressdetails: "1", namedetails: "1",
     "accept-language": `${env.lang},ar,en`,
   };
   if (env.near) p.viewbox = `${env.near[0] - 0.5},${env.near[1] + 0.5},${env.near[0] + 0.5},${env.near[1] - 0.5}`; // bias only, not a limit
@@ -94,7 +94,7 @@ async function nominatim(q: string, env: SearchEnv): Promise<SearchHit[]> {
 }
 
 async function photon(q: string, env: SearchEnv): Promise<SearchHit[]> {
-  const p: Record<string, string> = { q, limit: "10", bbox: IRAQ_BBOX.join(",") };
+  const p: Record<string, string> = { q, limit: String(Math.min(40, env.limit ?? 20)), bbox: IRAQ_BBOX.join(",") };
   if (env.near) { p.lat = String(env.near[1]); p.lon = String(env.near[0]); }
   const j = await env.fetchJson(`${env.photonUrl}/api/?${new URLSearchParams(p)}`);
   return ((j?.features ?? []) as any[]).map((f, i) => {
@@ -108,12 +108,12 @@ async function photon(q: string, env: SearchEnv): Promise<SearchHit[]> {
 
 async function esri(q: string, env: SearchEnv): Promise<SearchHit[]> {
   if (!env.esriKey) return [];
-  const p: Record<string, string> = { SingleLine: q, countryCode: "IRQ", maxLocations: "10", outFields: "PlaceName,Place_addr,Type,City", f: "json", token: env.esriKey, langCode: env.lang === "en" ? "EN" : "AR" };
+  const p: Record<string, string> = { SingleLine: q, countryCode: "IRQ", maxLocations: String(Math.min(40, env.limit ?? 20)), outFields: "PlaceName,Place_addr,Type,City", f: "json", token: env.esriKey, langCode: env.lang === "en" ? "EN" : "AR" };
   if (env.near) p.location = `${env.near[0]},${env.near[1]}`;
   const j = await env.fetchJson(`https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${new URLSearchParams(p)}`);
   if (j?.error) throw new Error(`esri ${j.error.code}`);
   return ((j?.candidates ?? []) as any[]).map((c, i) => ({
-    id: `esri:${c.location.x.toFixed(5)},${c.location.y.toFixed(5)}`, name: c.attributes?.PlaceName || String(c.address ?? "").split(",")[0],
+    id: `esri:${c.location.x.toFixed(5)},${c.location.y.toFixed(5)}:${encodeURIComponent(c.attributes?.PlaceName || c.address || "")}`, name: c.attributes?.PlaceName || String(c.address ?? "").split(",")[0],
     secondary: c.attributes?.Place_addr || c.attributes?.City || "", coord: [c.location.x, c.location.y] as LngLat,
     kind: c.attributes?.Type || "place", source: "esri" as const, score: (c.score ?? 80) / 100 - i * 0.03, alt: [] as string[],
   }));
@@ -143,28 +143,52 @@ export async function searchIraq(query: string, env: SearchEnv): Promise<SearchH
   }
   const settled = await Promise.allSettled(tasks.map(([, p]) => p));
   const failed = tasks.filter((_, i) => settled[i].status === "rejected").map(([s]) => s);
+  // Autocomplete may deliberately skip the public service with no other provider configured.
+  // That means "submit a full search", not "offline".
+  if (!tasks.length) return Object.assign([], { failed: [] });
   if (failed.length === tasks.length) throw new Error(`all search services failed (${failed.join(", ")})`);
 
   const all: (SearchHit & { alt?: string[] })[] = [];
   settled.forEach((s) => { if (s.status === "fulfilled") all.push(...s.value); });
+  // On a submitted search, retry a common Arabic spelling only when the exact query
+  // returned nothing. The injected fetcher must enforce the public service's rate limit.
+  if (!all.length && folded && folded !== q && !env.skipNominatim && !env.photonUrl && !env.esriKey) {
+    try { all.push(...await nominatim(folded, env)); }
+    catch { failed.push("nominatim"); }
+  }
   const scored = all
-    .filter((h) => h.name && Number.isFinite(h.coord[0]) && inIraq(h.coord))
+    .filter((h) => h.name && Number.isFinite(h.coord[0]) && Number.isFinite(h.coord[1]) && inIraq(h.coord))
     .map((h) => {
       const match = Math.max(nameMatch(q, h.name), ...(h.alt ?? []).map((a) => nameMatch(q, a)));
       const near = env.near ? Math.exp(-haversine(env.near, h.coord) / 40_000) : 0;
       return { ...h, score: match * 0.55 + h.score * SOURCE_WEIGHT[h.source] * 0.3 + near * 0.15 };
     })
     .sort((a, b) => b.score - a.score);
-  // The same place from two services (same name and close, or practically the same spot): keep the best.
+  // Merge the same named place, never unrelated businesses merely sharing a building.
   const out: SearchHit[] = [];
   for (const h of scored) {
     const k = nameKey(h.name);
-    if (out.some((o) => haversine(o.coord, h.coord) < 60 || (haversine(o.coord, h.coord) < 400 && nameKey(o.name) === k))) continue;
+    if (out.some((o) => o.id === h.id || (haversine(o.coord, h.coord) < 120 && nameKey(o.name) === k))) continue;
     const { alt: _alt, ...hit } = h as SearchHit & { alt?: string[] };
     out.push(hit);
-    if (out.length >= (env.limit ?? 10)) break;
+    if (out.length >= (env.limit ?? 20)) break;
   }
   return Object.assign(out, { failed });
+}
+
+/** Merge an approximate built-in index with provider hits without hiding nearby businesses.
+ * A provider's coordinate replaces the approximate seed for the same named place.
+ */
+export function mergePlaceResults<T extends { id: string; name: string; coord: LngLat; score: number; quality?: string }>(local: T[], remote: T[], limit = 20): T[] {
+  const out: T[] = [];
+  for (const hit of [...remote, ...local]) {
+    const same = out.findIndex(other => other.id === hit.id ||
+      (nameKey(other.name) === nameKey(hit.name) && haversine(other.coord, hit.coord) <
+        (other.quality === "seed_unverified" || hit.quality === "seed_unverified" ? 400 : 120)));
+    if (same < 0) out.push(hit);
+    else if (out[same].quality === "seed_unverified" && hit.quality !== "seed_unverified") out[same] = hit;
+  }
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 /** Common Arabic spelling differences folded the way Iraqi names are usually written on the map. */

@@ -9,8 +9,8 @@ import { api } from "../api";
  * from the first or last 300 m of a trip; stops that can't be sent within a day are dropped.
  */
 export function useStopSampler(fix: LocationFix | null, tripKey: number | null, active: boolean) {
-  const detector = useMemo(() => new StopDetector(), [tripKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tripId = useMemo(() => (tripKey ? Crypto.randomUUID() : ""), [tripKey]);
+  const detector = useMemo(() => new StopDetector(), [tripKey, active]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tripId = useMemo(() => (tripKey ? Crypto.randomUUID() : ""), [tripKey, active]);
   const queue = useRef<{ s: StopEvent; t: number }[]>([]);
   const sending = useRef(false);
 
@@ -20,10 +20,11 @@ export function useStopSampler(fix: LocationFix | null, tripKey: number | null, 
   }, [fix, active, detector]);
 
   useEffect(() => {
-    if (!active || !tripId) return;
+    if (!active || !tripId) { queue.current = []; return; }
+    let cancelled = false;
     const flush = async () => {
       for (const s of detector.take()) queue.current.push({ s, t: Date.now() });
-      if (sending.current) return;
+      if (cancelled || sending.current) return;
       queue.current = queue.current.filter((x) => Date.now() - x.t < 86_400_000);
       const batch = queue.current.slice(0, 30);
       if (!batch.length) return;
@@ -40,7 +41,8 @@ export function useStopSampler(fix: LocationFix | null, tripKey: number | null, 
     const id = setInterval(flush, 60_000);
     return () => {
       clearInterval(id);
-      void flush(); // trip ended: send what's ready (the last stop of the trip never is)
+      cancelled = true;
+      queue.current = []; // consent revoked or trip ended: discard unsent samples
     };
   }, [active, tripId, detector]);
 }

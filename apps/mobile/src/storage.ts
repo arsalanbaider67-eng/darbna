@@ -45,6 +45,7 @@ export interface Settings {
   digits: "arabic" | "western";
   /** Send anonymous speed samples while navigating (live traffic). */
   shareTraffic: boolean;
+  trafficConsentVersion?: number;
   /** Satellite photos under the roads and names. */
   satellite?: boolean;
   /** Last chosen way to travel (route screen). */
@@ -56,7 +57,7 @@ export interface Settings {
   /** Warn about speed cameras and going over the limit. */
   speedAlerts?: boolean;
 }
-export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: true };
+export const DEFAULT_SETTINGS: Settings = { lang: "ar", theme: "auto", voice: true, digits: "western", shareTraffic: false };
 export const loadSettings = () => getJSON<Settings | null>(K.settings, null);
 export const saveSettings = (s: Settings) => setJSON(K.settings, s);
 
