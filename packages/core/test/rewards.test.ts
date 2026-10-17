@@ -20,10 +20,10 @@ test("reward contact normalization rejects unusable contacts and normalizes dupl
 test("all 20,000 draw positions award exactly the configured odds, without a no-prize slot", () => {
   const counts: Record<string,number> = {};
   for (let i = 0; i < 20000; i++) { const prize = rewardAtBucket(i); counts[prize] = (counts[prize] ?? 0) + 1; }
-  expect(counts).toEqual({ voucher: 8000, oil_change: 100, car: 1, guaranteed_reward: 11899 });
+  expect(counts).toEqual({ voucher: 8000, oil_change: 100, car: 1, mobile_credit: 11899 });
   expect(rewardAtBucket(8099)).toBe("oil_change");
   expect(rewardAtBucket(8100)).toBe("car");
-  expect(rewardAtBucket(8101)).toBe("guaranteed_reward");
+  expect(rewardAtBucket(8101)).toBe("mobile_credit");
   expect(() => rewardAtBucket(20000)).toThrow();
   expect(() => rewardAtBucket(-1)).toThrow();
 });
