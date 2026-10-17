@@ -10,6 +10,7 @@ import { isRTL, type Lang } from "./src/i18n";
 import { MainScreen } from "./src/screens/MainScreen";
 import { DEFAULT_SETTINGS, loadRecents, loadSaved, loadSettings, saveSettings } from "./src/storage";
 import { setState } from "./src/store";
+import { explicitTrafficConsent } from "./src/privacyControls";
 import { ensureDirection } from "./src/rtl";
 
 /** Arabic by default; Kurdish or English only if the phone is set to them. */
@@ -32,6 +33,10 @@ export default function App() {
         await saveSettings(settings);
       } else {
         settings = { ...DEFAULT_SETTINGS, ...settings }; // fill in settings added since last launch
+      }
+      if (settings.trafficConsentVersion !== 1) {
+        settings = explicitTrafficConsent(settings);
+        await saveSettings(settings);
       }
       // Layout direction is fixed per JS session; reload once if it doesn't match the language.
       await ensureDirection(isRTL(settings.lang));

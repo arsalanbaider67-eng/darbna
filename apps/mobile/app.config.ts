@@ -50,13 +50,19 @@ const config: ExpoConfig = {
       NSPrivacyCollectedDataTypes: [
         {
           NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypePreciseLocation",
-          NSPrivacyCollectedDataTypeLinked: false,
+          NSPrivacyCollectedDataTypeLinked: true,
           NSPrivacyCollectedDataTypeTracking: false,
           NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
         },
         {
           NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeDeviceID",
-          NSPrivacyCollectedDataTypeLinked: false,
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+        },
+        {
+          NSPrivacyCollectedDataType: "NSPrivacyCollectedDataTypeOtherUserContent",
+          NSPrivacyCollectedDataTypeLinked: true,
           NSPrivacyCollectedDataTypeTracking: false,
           NSPrivacyCollectedDataTypePurposes: ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
         },
