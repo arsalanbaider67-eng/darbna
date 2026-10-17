@@ -6,7 +6,7 @@ export const PLANNED_REWARD_ODDS = [
   { kind: "voucher", units: 8000 },
   { kind: "oil_change", units: 100 },
   { kind: "car", units: 1 },
-  { kind: "guaranteed_reward", units: 11899 },
+  { kind: "mobile_credit", units: 11899 },
 ] as const;
 /** Boundary helper for tests/display only. Production draws are server-generated. */
 export function rewardAtBucket(bucket: number): typeof PLANNED_REWARD_ODDS[number]["kind"] {
