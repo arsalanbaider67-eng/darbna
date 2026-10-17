@@ -12,7 +12,7 @@ import { useUi } from "../context";
 import { REPORT_STYLE } from "../theme";
 import type { ApiRoute, Place, PublicReport } from "../types";
 import type { MapCanvasHandle } from "./MapCanvas";
-import { downloadArea } from "../offline";
+import { downloadArea } from "../offline.web";
 import { compassHeading } from "../compass";
 
 export type { MapCanvasHandle } from "./MapCanvas";

@@ -11,7 +11,7 @@ import { font, TOUCH } from "../theme";
 import type { Place } from "../types";
 import type { NearbyKind } from "../external";
 import { QuickSearch } from "./Extras";
-import { Icon, Row, Txt, type IconName } from "./ui";
+import { Btn, Icon, Row, Txt, type IconName } from "./ui";
 
 const QUICK_ICON_FOR: Record<NearbyKind, IconName> = {
   fuel: "gas-station", mosque: "mosque", hospital: "hospital-box", pharmacy: "pill", restaurant: "silverware-fork-knife", atm: "cash",
@@ -77,12 +77,17 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
 
   useEffect(() => {
     const query = q.trim();
+    const id = ++seq.current;
     if (query.length < 2) {
       setResults(null);
       setStatus("idle");
       return;
     }
-    const id = ++seq.current;
+    if (!DIRECT_MODE && submitted === 0) {
+      setResults(localMatch(query, [...saved.favorites, ...recents]));
+      setStatus("idle");
+      return;
+    }
     // A new query: never leave the previous query's results on screen (tapping one would open the
     // wrong place). Show "searching" until this query's own results arrive.
     setResults(null);
@@ -97,7 +102,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
       setStatus("loading");
       try {
         // Online results as you type (after a short pause), not only after pressing search.
-        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 || query.length >= 3 });
+        const r = await api.search(query, lang, userCoord ?? undefined, { remote: submitted > 0 || query.length >= 3, autocomplete: submitted === 0 });
         if (id !== seq.current) return;
         setResults(r.results);
         setStatus(r.partial ? "partial" : "idle");
@@ -107,7 +112,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
         setResults(localMatch(query, [...saved.favorites, ...recents]));
       }
     }, submitted > 0 ? 0 : query.length >= 3 ? 700 : 250);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); if (seq.current === id) seq.current++; };
   }, [q, online, lang, submitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function paste() {
@@ -158,6 +163,8 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
           <Pressable accessibilityLabel={t.search.clear} hitSlop={12} onPress={() => setQ("")}><Icon name="close-circle" size={22} color={theme.textMuted} /></Pressable>
         ) : null}
       </View>
+
+      {q.trim().length >= 2 && <View style={{ paddingHorizontal: 10, marginTop: 8 }}><Btn label={t.search.fullSearch} icon="magnify" onPress={() => setSubmitted(n => n + 1)} /><Txt size={12} muted>{t.search.cityHint}</Txt></View>}
 
       {!results && (
         <View style={{ paddingHorizontal: 10, marginTop: 10 }}>
