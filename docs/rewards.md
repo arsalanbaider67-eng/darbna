@@ -8,7 +8,7 @@ draw and manual review/delivery by the owner. There are no paid entries or rewar
 | Voucher | 40% | 8,000 |
 | Free oil change | 0.5% | 100 |
 | Free car | 0.005% | 1 |
-| A different guaranteed reward, not yet specified | 59.495% | 11,899 |
+| Mobile top-up voucher | 59.495% | 11,899 |
 
 These are planned probabilities, not available offers. A 40% voucher probability does
 not promise a 40% discount. Independent draws do not guarantee a car every 20,000 draws.
@@ -18,8 +18,8 @@ No real offers, balances, contacts or claims are seeded by the migration.
 
 - Settings opens the Arabic-first rewards screen; English and Sorani are included.
 - Recognition points remain separate from reward eligibility. New independent checks
-  earn reward credit: first confirmation gives the author 10, each confirming installation
-  gives the author 5, and checking another report gives the checker 1 once per report.
+  earn +2 reward credit for the author once per confirmed report and +2 for each independent
+  driver confirming another report once. Submission alone, clearance votes and thanks earn none.
   Self-checks and unconfirmed reports do not qualify. Flagged/removed reports reverse credit.
 - Levels continue beyond six. Level 10 needs 6,500 reward credits; level 20 needs 16,500.
   Historical recognition points are not backfilled into reward eligibility.
@@ -39,8 +39,8 @@ No real offers, balances, contacts or claims are seeded by the migration.
 
 ## Database and owner review
 
-Apply `schema.sql` first, then `rewards.sql`. Reapplying the base schema later can overwrite
-`darbna_delete_me`; reapply the rewards migration afterward. The migration starts with
+Apply `schema.sql` first, then `rewards.sql`, then `report-integrity.sql`. Reapplying the base schema later can overwrite
+`darbna_delete_me`; reapply both feature migrations afterward. The migration starts with
 `enabled=false`, `launch_reviewed=false`, and no offers. Do not enable it as part of a build.
 
 Owner-only SQL Editor review (never grant this function or private table access to app roles):
@@ -63,7 +63,7 @@ with phone and WhatsApp sharing a canonical number.
 
 ## Launch blockers
 
-1. Specify the remaining reward, voucher value/discount and merchant conditions, oil-change
+1. Specify the mobile top-up amount/operator restrictions, voucher value/discount and merchant conditions, oil-change
    provider/service coverage, car model/value, quantities, funding and fulfilment commitments.
 2. Obtain promotion review for every eligible country, age group and distribution channel.
    Free earned entries alone do not establish legal eligibility. Publish official rules in
@@ -94,3 +94,34 @@ manual transitions and deletion. These are single-connection tests, not a load/c
 Fixtures were rolled back. The installed program was verified disabled with zero offers,
 draws and claims. Rewards UI is a separate local preview; production web and TestFlight
 have not received this feature.
+
+## Confirmed abuse and +2 scoring update
+
+The planned prize breakdown is removed from the top of the preview. Actual odds remain
+visible with the rules before any enabled draw. The 59.495% category is mobile top-up vouchers;
+amounts, operators and funding are still unset. Future report points are +2 once for the
+author after an independent confirmation, and +2 per driver confirming another report once.
+Existing recognition balances are preserved. Legacy thanks recognition remains separate.
+
+Raw flags enter the private report_review_queue; expiration and clearance are not offences.
+The owner reviews evidence and calls private review_report(report UUID, fake/abuse/valid, reason).
+Only five distinct owner-confirmed fake/abusive reports cause the automatic reporting ban.
+Repeated review of the same report adds no strike. Correcting a verdict to valid can lift
+that automatic ban, but never a separate owner ban. This is human-reviewed moderation,
+not an automatic truth detector. New report submissions (including duplicate paths) and
+confirmations reject banned installations. Unusual activity counts and driver feedback help
+review; the app does not silently add GPS evidence collection or claim to verify presence.
+
+Owner review example (private SQL Editor only):
+
+```sql
+select * from darbna_private.report_review_queue;
+-- Replace UUID and reason after examining the actual evidence.
+select darbna_private.review_report('REPORT_UUID', 'fake', 'Evidence reviewed by owner');
+-- Correct an error, if appropriate:
+select darbna_private.review_report('REPORT_UUID', 'valid', 'Correction after appeal');
+```
+
+Moderation verdicts and hashed identities survive normal data deletion to enforce bans;
+privacy text discloses this. Device reinstallation can still bypass anonymous identity,
+so this cannot be described as a permanent ban on a verified person.
