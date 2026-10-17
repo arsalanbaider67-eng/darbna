@@ -13,7 +13,9 @@ users. Map tiles (OpenFreeMap) and shared reports (Supabase) stay as they are.
 
 - Ubuntu 24.04, **4 vCPU, 8 GB RAM, 80 GB disk** (Hetzner, DigitalOcean, Contabo, …).
 - When creating it, add an **SSH key** (not a password):
-  - On Windows (PowerShell): `ssh-keygen -t ed25519 -f darbna_server -N '""'`
+  - On Windows: run `ssh-keygen -t ed25519 -f darbna_server` and press Enter twice
+    at the passphrase prompts for a dedicated unattended deployment key. Do not
+    pass literal quote characters as the passphrase.
   - Paste the contents of `darbna_server.pub` into the provider's "SSH key" box.
   - Keep `darbna_server` (no extension) private: it goes into GitHub in step 3, nowhere else.
 
@@ -26,17 +28,38 @@ Add two **A records** with the VPS's IP address:
 | A | `routing` | VPS IP |
 | A | `search` | VPS IP |
 
+Use DNS-only records for these two new API names. Caddy terminates HTTPS on the
+server. Keep the existing website records unchanged.
+
 ## 3. GitHub secrets (repo → Settings → Secrets and variables → Actions → Secrets)
 
 - `SERVER_HOST`: the VPS IP
 - `SERVER_SSH_KEY`: the whole text of the private key file `darbna_server`
+- `SERVER_KNOWN_HOSTS`: the server's SSH host public key, in `known_hosts` format.
+  Confirm its fingerprint during the owner's first login and compare with
+  `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server. Do not replace
+  a mismatching key with an unverified `ssh-keyscan` result.
+
+This workflow requires root access (the default `SERVER_USER`). It rejects other
+users explicitly rather than failing partway through privileged commands.
 
 ## 4. Deploy
 
 GitHub → Actions → **Server deploy** → Run workflow. It installs Docker, copies the setup and
-starts everything. The first time, the Iraq map is downloaded and indexed: **30–90 minutes**
-before the addresses answer (the run ends with a "not ready yet" warning; that's expected).
-Run it again later to confirm both show ✓.
+starts everything. Ubuntu's package repository supplies Docker and Compose.
+The first time, the Iraq map is downloaded and indexed. The workflow can finish
+while the import continues; a running container is not a ready routing/search
+service. Check both status endpoints and real Iraq searches/routes before
+changing the app's endpoints. Do not restart imports just to poll progress.
+
+The container images are pinned by digest, including Nominatim 5.3 with PostgreSQL
+16. Review and test image updates explicitly. Import settings leave memory for
+both services on the 12 GB launch VPS. Caddy access logging is disabled and its
+runtime error logs remove the request object. Avoid printing backend logs in CI;
+they may contain query text. Backend Docker log storage is disabled; use status
+endpoints, process/resource checks and index files to monitor imports. Caddy's
+filtered operational logs are bounded to two 5 MB files. The database ports are internal to Docker, with only
+SSH and HTTP/HTTPS exposed on the host.
 
 ## 5. Switch the app over
 

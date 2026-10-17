@@ -1,16 +1,18 @@
 # Installs / updates Darbna's routing + search server on your VPS (routing.darbna.com, search.darbna.com).
 # Run it from GitHub → Actions → "Server deploy" → Run workflow. Safe to run again any time.
-# Needs 2 repository secrets (Settings → Secrets and variables → Actions):
+# Needs repository secrets (Settings → Secrets and variables → Actions):
 #   SERVER_HOST     the VPS's IP address, e.g. 203.0.113.10
 #   SERVER_SSH_KEY  the PRIVATE half of an SSH key whose public half is on the VPS (root login)
+#   SERVER_KNOWN_HOSTS  the verified SSH host public key in known_hosts format
 # Optional secret SERVER_USER (default: root). See docs/SERVER.md.
 name: Server deploy
+permissions: { contents: read }
 
 on:
   workflow_dispatch:
     inputs:
       refresh_map_data:
-        description: "Rebuild routes from the newest OpenStreetMap data (takes ~30 min; search updates by itself)"
+        description: "Rebuild routes from the newest OpenStreetMap data (wait for readiness before using)"
         type: boolean
         default: false
 
@@ -19,7 +21,7 @@ concurrency: { group: server-deploy, cancel-in-progress: false }
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       HOST: ${{ secrets.SERVER_HOST }}
       USER_NAME: ${{ secrets.SERVER_USER || 'root' }}
@@ -29,29 +31,38 @@ jobs:
       - name: Check secrets
         env:
           KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST_KEYS: ${{ secrets.SERVER_KNOWN_HOSTS }}
         run: |
           missing=""
           [ -n "$HOST" ] || missing="$missing SERVER_HOST"
           [ -n "$KEY" ] || missing="$missing SERVER_SSH_KEY"
+          [ -n "$HOST_KEYS" ] || missing="$missing SERVER_KNOWN_HOSTS"
+          [ "$USER_NAME" = root ] || { echo "::error::This workflow requires the configured root deployment user."; exit 1; }
           if [ -n "$missing" ]; then echo "::error title=missing secrets::Add these GitHub secrets first:$missing"; exit 1; fi
 
       - name: SSH key
         env:
           KEY: ${{ secrets.SERVER_SSH_KEY }}
+          HOST_KEYS: ${{ secrets.SERVER_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/id_darbna && chmod 600 ~/.ssh/id_darbna
-          ssh-keyscan -T 20 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          echo "SSH=ssh -i $HOME/.ssh/id_darbna -o BatchMode=yes $USER_NAME@$HOST" >> "$GITHUB_ENV"
+          printf '%s\n' "$HOST_KEYS" > ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+          echo "SSH=ssh -i $HOME/.ssh/id_darbna -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes $USER_NAME@$HOST" >> "$GITHUB_ENV"
 
       - name: Prepare server (Docker, swap, firewall)
         run: |
           $SSH 'bash -s' <<'EOF'
           set -e
-          if ! command -v docker >/dev/null; then curl -fsSL https://get.docker.com | sh; fi
+          if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq
+            apt-get install -y docker.io docker-compose-v2
+          fi
+          systemctl enable --now docker
           # Nominatim's first import needs memory headroom: add 4 GB swap once if there is none.
           if [ "$(swapon --show | wc -l)" = "0" ]; then fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile && echo '/swapfile none swap sw 0 0' >> /etc/fstab; fi
-          if command -v ufw >/dev/null; then ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; yes | ufw enable >/dev/null || true; fi
+          if command -v ufw >/dev/null; then ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null; ufw --force enable >/dev/null; fi
           mkdir -p /opt/darbna
           # One random database password, made on the server and never shown anywhere.
           [ -f /opt/darbna/.env ] || { echo "NOMINATIM_DB_PASSWORD=$(openssl rand -hex 24)" > /opt/darbna/.env; chmod 600 /opt/darbna/.env; }
@@ -60,7 +71,7 @@ jobs:
 
       - name: Copy files
         run: |
-          scp -i ~/.ssh/id_darbna -o BatchMode=yes infra/docker-compose.darbna.yml infra/Caddyfile.darbna "$USER_NAME@$HOST:/opt/darbna/"
+          scp -i ~/.ssh/id_darbna -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes infra/docker-compose.darbna.yml infra/Caddyfile.darbna "$USER_NAME@$HOST:/opt/darbna/"
 
       - name: Start / update
         env:
@@ -73,10 +84,10 @@ jobs:
           # The rebuild flag is one-shot: reset it so a later restart doesn't rebuild again.
           if [ "$REBUILD" = "True" ]; then $SSH "cd /opt/darbna && sed -i 's/^REBUILD_ROUTING=True/REBUILD_ROUTING=False/' .env"; fi
 
-      - name: Check (the first install takes 30–90 min before these answer)
+      - name: Check readiness (initial import continues on the server)
         run: |
           for u in "https://routing.darbna.com/status" "https://search.darbna.com/status"; do
             code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "$u" || true)
             if [ "$code" = "200" ]; then echo "✓ $u"; else echo "::warning title=not ready yet::$u answered '$code'. On a first install the map is still being built; run this workflow again later, or check DNS."; fi
           done
-          $SSH "cd /opt/darbna && docker compose -f docker-compose.darbna.yml logs --tail 5 valhalla nominatim" || true
+          # Do not print service logs here: they can contain users' queries.

@@ -1,20 +1,21 @@
 # HTTPS certificates are fetched automatically once both names point at this server (DNS A records).
-(private_logs) {
-	# Never log query strings or bodies: they contain coordinates and search text.
-	log {
+{
+	# Reverse-proxy errors can include the full request even without access logs.
+	log default {
 		format filter {
 			wrap json
 			fields {
-				request>uri delete
-				request>headers delete
+				request delete
 			}
 		}
 	}
 }
 
+# Access logging is intentionally disabled. Route/search requests include
+# coordinates and search text; even redacted access logs retain client IPs.
+
 routing.darbna.com {
 	encode zstd gzip
-	import private_logs
 	reverse_proxy valhalla:8002 {
 		# The web app calls this from github.io / darbna.com.
 		header_down Access-Control-Allow-Origin "*"
@@ -23,7 +24,6 @@ routing.darbna.com {
 
 search.darbna.com {
 	encode zstd gzip
-	import private_logs
 	reverse_proxy nominatim:8080 {
 		header_down Access-Control-Allow-Origin "*"
 	}

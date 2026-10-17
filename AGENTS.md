@@ -24,7 +24,7 @@ sharing, offline maps, satellite view.
 | `apps/mobile/assets/voice` | Recorded voice prompts (ElevenLabs), `phrases.json` + `scripts/gen-voice.mjs` |
 | `supabase/schema.sql` | Database: tables in schema `darbna_private`, only `SECURITY DEFINER` RPCs exposed. The owner runs this file by hand in Supabase after changes |
 | `server/` | Optional own API server (not used by the shipped app) |
-| `infra/`, `docs/SERVER.md` | Plan for the owner's VPS (routing.darbna.com / search.darbna.com: Valhalla, Nominatim, Caddy) — not live yet |
+| `infra/`, `docs/SERVER.md` | Owner's live VPS (routing.darbna.com / search.darbna.com: Valhalla, Nominatim, Caddy); verify app build endpoints separately |
 | `e2e/real-world.mjs` | Playwright test of the web build against real services (GPS, free map gestures, 10 Iraq searches, navigation) |
 | `docs/` | `STATUS.md` (old feature matrix), `ARCHITECTURE.md`, `store-listing.md`, `app-review-notes.md`, `search-audit.md`, `signals-count.md`, `EMERGENCY_NUMBERS.md` |
 
@@ -106,7 +106,7 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
    Do not enable prizes through a remote switch after review; they require defined funded
    offers, published rules, privacy updates and a new reviewed app version.
 1. Share extension (needs iPhone UDID, see above).
-2. VPS for routing/search (`docs/SERVER.md`) before App Store submission.
+2. VPS routing/search deployed and API-tested on 18 October 2026. Production endpoint rebuilds and actual iPhone acceptance remain required before App Store submission. See `docs/SERVER.md`.
 3. Owner must re-run `supabase/schema.sql` (traffic-light learning tables).
 4. App Store listing, screenshots, age rating; then "Submit for Review" (owner presses it).
 5. `docs/STATUS.md` is outdated (pre-TestFlight) — refresh it.
