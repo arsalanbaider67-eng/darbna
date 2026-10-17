@@ -92,17 +92,15 @@ create or replace function darbna_private.reward_vote() returns trigger
 language plpgsql security definer set search_path=darbna_private,extensions,public as $$
 declare author text;
 begin
-  if new.vote not in('confirm','gone') then return new; end if;
+  if new.vote<>'confirm' then return new; end if;
   select reporter_hash into author from darbna_private.reports where id=new.report_id;
   if author is null or author=new.voter_hash then return new; end if;
   if exists(select 1 from darbna_private.banned_reporters where reporter_hash in(author,new.voter_hash)) then return new; end if;
   insert into darbna_private.reward_ledger(who,event_key,report_id,points)
-    values(new.voter_hash,'check:'||new.report_id,new.report_id,1) on conflict do nothing;
+    values(new.voter_hash,'check:'||new.report_id,new.report_id,2) on conflict do nothing;
   if new.vote='confirm' then
     insert into darbna_private.reward_ledger(who,event_key,report_id,points)
-      values(author,'report:'||new.report_id,new.report_id,10) on conflict do nothing;
-    insert into darbna_private.reward_ledger(who,event_key,report_id,points)
-      values(author,'confirm:'||new.report_id||':'||new.voter_hash,new.report_id,5) on conflict do nothing;
+      values(author,'report:'||new.report_id,new.report_id,2) on conflict do nothing;
   end if;
   return new;
 end $$;
@@ -147,7 +145,7 @@ end $$;
 create or replace function darbna_private.reward_kind_for_bucket(b integer) returns text
 language plpgsql immutable as $$ begin
   if b is null or b<0 or b>=20000 then raise exception 'bad_bucket'; end if;
-  return case when b<8000 then 'voucher' when b<8100 then 'oil_change' when b<8101 then 'car' else 'guaranteed_reward' end;
+  return case when b<8000 then 'voucher' when b<8100 then 'oil_change' when b<8101 then 'car' else 'mobile_credit' end;
 end $$;
 create or replace function darbna_private.bump_reward_program() returns trigger
 language plpgsql as $$ begin
@@ -196,7 +194,7 @@ begin
   if n<>4 or total<>20000 or not exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and x.kind='voucher' and x.weight=8000)
     or not exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and x.kind='oil_change' and x.weight=100)
     or not exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and x.kind='car' and x.weight=1)
-    or not exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and x.kind='guaranteed_reward' and x.weight=11899) then raise exception 'pool_incomplete' using errcode='P0001'; end if;
+    or not exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and x.kind='mobile_credit' and x.weight=11899) then raise exception 'pool_incomplete' using errcode='P0001'; end if;
   -- Pause the WHOLE pool if any prize is unavailable; never silently improve or worsen odds.
   if exists(select 1 from darbna_private.reward_offers x where x.milestone=milestone and x.published and
     (not x.funded or x.used>=x.capacity or coalesce(length(x.title->>'ar'),0)<1 or coalesce(length(x.title->>'en'),0)<1 or coalesce(length(x.title->>'ckb'),0)<1

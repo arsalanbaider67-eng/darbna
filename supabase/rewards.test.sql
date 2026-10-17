@@ -16,23 +16,23 @@ begin
  if i<>8000 then raise exception 'voucher odds wrong'; end if;
  select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='oil_change';
  if i<>100 then raise exception 'oil odds wrong'; end if;
- select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='guaranteed_reward';
+ select count(*) into i from generate_series(0,19999) x where darbna_private.reward_kind_for_bucket(x)='mobile_credit';
  if i<>11899 then raise exception 'guaranteed odds wrong'; end if;
  for i in 1..100 loop if darbna_private.reward_random_bucket() not between 0 and 19999 then raise exception 'randomness out of range'; end if; end loop;
  h:=darbna_private.check_install(a);
  insert into darbna_private.reports(category,lat,lng,reporter_hash,expires_at) values('pothole',36.01,44.01,h,now()+interval '1 hour') returning id into rid;
  if darbna_private.reward_balance(h)<>0 then raise exception 'unconfirmed report earned reward'; end if;
  perform public.darbna_vote(b,rid,'confirm');
- if darbna_private.reward_balance(h)<>15 or darbna_private.reward_balance(darbna_private.check_install(b))<>1 then raise exception 'action credit wrong'; end if;
+ if darbna_private.reward_balance(h)<>2 or darbna_private.reward_balance(darbna_private.check_install(b))<>2 then raise exception 'action credit wrong'; end if;
  begin perform public.darbna_vote(b,rid,'confirm'); raise exception 'repeated vote accepted';
  exception when sqlstate 'P0001' then if sqlerrm<>'already_voted' then raise; end if; end;
- if darbna_private.reward_balance(h)<>15 then raise exception 'retry awarded points twice'; end if;
+ if darbna_private.reward_balance(h)<>2 then raise exception 'retry awarded points twice'; end if;
  update darbna_private.reports set status='hidden',hidden_reason='flags' where id=rid;
  if darbna_private.reward_balance(h)<>0 then raise exception 'abusive report retained credit'; end if;
  insert into darbna_private.reward_ledger(who,event_key,points) values(h,'TEST-ONLY',6500),(darbna_private.check_install(c),'TEST-ONLY',6500);
  insert into darbna_private.reward_offers(milestone,kind,weight,title,detail,capacity,published,funded)
  select 10,kind,weight,jsonb_build_object('ar',words,'en',words,'ckb',words),jsonb_build_object('ar',words,'en',words,'ckb',words),1,true,true
- from (values('voucher',8000),('oil_change',100),('car',1),('guaranteed_reward',11899)) x(kind,weight);
+ from (values('voucher',8000),('oil_change',100),('car',1),('mobile_credit',11899)) x(kind,weight);
  begin perform public.darbna_reward_draw(a,10,'draft-v1',1); raise exception 'closed program accepted draw';
  exception when sqlstate 'P0001' then if sqlerrm<>'program_closed' then raise; end if; end;
  update darbna_private.reward_program set enabled=true,launch_reviewed=true,terms_version='TEST-ONLY',terms=jsonb_build_object('ar',words,'en',words,'ckb',words) where singleton;
