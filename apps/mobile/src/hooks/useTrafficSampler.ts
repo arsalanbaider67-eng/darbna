@@ -12,9 +12,9 @@ const MAX_AGE_MS = 15 * 60_000;
  * within 15 minutes are dropped — old traffic is useless and not worth keeping.
  */
 export function useTrafficSampler(route: ApiRoute | null, g: GuidanceState | null, tripKey: number | null, active: boolean) {
-  const sampler = useMemo(() => (route ? new TrafficSampler(route) : null), [route?.id, route?.geometry]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sampler = useMemo(() => (route ? new TrafficSampler(route) : null), [route?.id, route?.geometry, active]); // eslint-disable-line react-hooks/exhaustive-deps
   // Random per trip, never stored: lets the database count distinct cars without knowing who.
-  const tripId = useMemo(() => (tripKey ? Crypto.randomUUID() : ""), [tripKey]);
+  const tripId = useMemo(() => (tripKey ? Crypto.randomUUID() : ""), [tripKey, active]);
   const queue = useRef<{ s: SpeedSample; t: number }[]>([]);
   const sending = useRef(false);
 
@@ -26,9 +26,10 @@ export function useTrafficSampler(route: ApiRoute | null, g: GuidanceState | nul
   }, [g, active, sampler]);
 
   useEffect(() => {
-    if (!active || !tripId) return;
+    if (!active || !tripId) { queue.current = []; return; }
+    let cancelled = false;
     const flush = async () => {
-      if (sending.current) return;
+      if (cancelled || sending.current) return;
       queue.current = queue.current.filter((x) => Date.now() - x.t < MAX_AGE_MS);
       const batch = queue.current.slice(0, 40);
       if (!batch.length) return;
@@ -45,7 +46,8 @@ export function useTrafficSampler(route: ApiRoute | null, g: GuidanceState | nul
     const id = setInterval(flush, 60_000);
     return () => {
       clearInterval(id);
-      void flush(); // trip ended: send what's left
+      cancelled = true;
+      queue.current = []; // consent revoked or trip ended: discard unsent samples
     };
   }, [active, tripId]);
 }
