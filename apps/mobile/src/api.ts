@@ -37,7 +37,7 @@ async function request<T>(path: string, opts: { method?: string; body?: unknown;
 const serverApi = {
   config: () => request<ServerConfig>("/v1/config", { timeoutMs: 6000 }),
 
-  search: (q: string, lang: string, near?: LngLat, _opts: { remote?: boolean } = {}) =>
+  search: (q: string, lang: string, near?: LngLat, _opts: { remote?: boolean; autocomplete?: boolean } = {}) =>
     request<{ results: (Place & { score: number })[]; partial: boolean }>(
       `/v1/search?q=${encodeURIComponent(q)}&lang=${lang}${near ? `&near=${near[0].toFixed(3)},${near[1].toFixed(3)}` : ""}`,
       { timeoutMs: 8000 },
@@ -61,6 +61,8 @@ const serverApi = {
 
   vote: (id: string, vote: "confirm" | "gone" | "flag") =>
     request<{ report: PublicReport }>(`/v1/reports/${id}/votes`, { method: "POST", body: { vote }, install: true }),
+
+  blockReporter: async (_id: string): Promise<{ hiddenIds: string[] }> => { throw new ApiError("unsupported"); },
 
   deleteMe: () => request<{ deleted: unknown }>("/v1/me", { method: "DELETE", install: true }),
 

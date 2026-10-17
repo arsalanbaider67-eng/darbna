@@ -16,11 +16,12 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import {
-  applyTraffic, arabicKey, searchIraq, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
+  applyTraffic, arabicKey, searchIraq, mergePlaceResults, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
   type SpeedSample, type TrafficCell, type LearnedSignal, type StopEvent,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
+import { createCachedSearch, createRequestGate, type SearchOptions } from "./searchClient";
 import { ApiError } from "./apiError";
 import { getInstallId } from "./storage";
 import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
@@ -92,11 +93,9 @@ function searchGazetteer(q: string, lang: string, near?: LngLat): (Place & { sco
 }
 
 // ---------------------------------------------------------------- Nominatim (≤ 1 req/s)
-let nextNominatim = 0;
+const waitForNominatim = createRequestGate(NOMINATIM_OWN ? 0 : 1100);
 async function nominatim(path: string, params: Record<string, string>): Promise<any> {
-  const wait = nextNominatim - Date.now();
-  nextNominatim = Math.max(Date.now(), nextNominatim) + 1100;
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  await waitForNominatim();
   const qs = new URLSearchParams({ format: "jsonv2", addressdetails: "1", namedetails: "1", ...params });
   return getJson(`${NOMINATIM}${path}?${qs}`, 8000);
 }
@@ -172,27 +171,28 @@ export const directApi = {
     social: SHARED_REPORTS,
   }),
 
-  search: async (q: string, lang: string, near?: LngLat, opts: { remote?: boolean } = {}) => {
+  search: createCachedSearch<Place & { score: number }>(async (q: string, lang: string, near: LngLat | undefined, opts: SearchOptions) => {
     const local = searchGazetteer(q, lang, near);
     if (!opts.remote || q.trim().length < 2) return { results: local, partial: false };
     try {
-      // Several services at once (packages/core/src/search.ts); Nominatim only when its
-      // one-request-per-second limit allows, the others every time.
-      const skipNominatim = !NOMINATIM_OWN && Date.now() < nextNominatim;
-      if (!skipNominatim) nextNominatim = Date.now() + 1100;
+      // The public service forbids autocomplete. Submitted searches wait for their slot;
+      // configured autocomplete providers can still suggest results while typing.
+      const skipNominatim = !NOMINATIM_OWN && opts.autocomplete === true;
       const hits = await searchIraq(q, {
         lang, near, esriKey: ESRI_GEOCODE_KEY, skipNominatim, nominatimUrl: NOMINATIM, photonUrl: PHOTON,
-        fetchJson: (url) => getJson(url, 8000),
+        limit: 20,
+        fetchJson: async (url) => {
+          if (url.startsWith(`${NOMINATIM}/search?`)) await waitForNominatim();
+          return getJson(url, 8000);
+        },
       });
-      const remote = hits
-        .filter((r) => !local.some((g) => haversine(g.coord, r.coord) < 300))
-        .map((h) => ({ id: h.id, name: h.name, secondary: h.secondary, kind: h.kind, coord: h.coord, source: h.source as Place["source"], score: h.score }));
-      return { results: [...local, ...remote].sort((x, y) => y.score - x.score).slice(0, 12), partial: (hits as any).failed?.length > 0 };
+      const remote = hits.map((h) => ({ id: h.id, name: h.name, secondary: h.secondary, kind: h.kind, coord: h.coord, source: h.source, score: h.score }));
+      return { results: mergePlaceResults<Place & { score: number }>(local, remote), partial: (hits.failed?.length ?? 0) > 0 };
     } catch (e) {
-      if (!local.length) throw e instanceof ApiError ? e : new ApiError("offline");
+      if (!local.length) throw e instanceof ApiError ? e : new ApiError("search_unavailable");
       return { results: local, partial: true };
     }
-  },
+  }),
 
   reverse: async (at: LngLat, lang: string) => {
     const it = await nominatim("/reverse", { lat: String(at[1]), lon: String(at[0]), zoom: "18", "accept-language": `${lang},ar,en` });
@@ -247,7 +247,7 @@ export const directApi = {
 
   reports: async (bbox: [number, number, number, number]) => {
     if (SHARED_REPORTS) {
-      const r = await rpc<{ reports: PublicReport[]; serverTime: string }>("darbna_reports", { min_lng: bbox[0], min_lat: bbox[1], max_lng: bbox[2], max_lat: bbox[3] });
+      const r = await rpc<{ reports: PublicReport[]; serverTime: string }>("darbna_reports_for_install", { install: await getInstallId(), min_lng: bbox[0], min_lat: bbox[1], max_lng: bbox[2], max_lat: bbox[3] });
       return { reports: r.reports.map(rescore), serverTime: r.serverTime };
     }
     return localReports();
@@ -259,6 +259,11 @@ export const directApi = {
       install: await getInstallId(), category, lng: coord[0], lat: coord[1], heading: heading != null && heading >= 0 ? heading : null,
     });
     return { report: rescore(r.report), duplicate: r.duplicate };
+  },
+
+  blockReporter: async (id: string): Promise<{ hiddenIds: string[] }> => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    return rpc("darbna_block_reporter", { install: await getInstallId(), report_id: id });
   },
 
   vote: async (id: string, vote: "confirm" | "gone" | "flag") => {
@@ -328,8 +333,8 @@ export const directApi = {
   },
 
   deleteMe: async () => {
-    await AsyncStorage.removeItem(REPORTS_KEY);
     if (SHARED_REPORTS) await rpc("darbna_delete_me", { install: await getInstallId() });
+    await AsyncStorage.removeItem(REPORTS_KEY);
     return { deleted: true };
   },
 };
