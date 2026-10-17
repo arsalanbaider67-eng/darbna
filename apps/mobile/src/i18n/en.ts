@@ -72,6 +72,7 @@ export const en: Strings = {
   ordinals: ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"],
   units: { m: "{v} m", km: "{v} km", mSpoken: "{v} meters", kmSpoken: "{v} kilometers", min: "{v} min", hr: "{h} h {m} min" },
   reports: {
+    reportingBanned: "Reporting is banned after five confirmed fake or abusive reports. Contact darbnaiq@gmail.com to request a review.",
     title: "Report",
     onlyWhenStopped: "Only report when stopped or if you're a passenger.",
     imPassenger: "I'm a passenger",
