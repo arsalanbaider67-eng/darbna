@@ -98,8 +98,10 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
 ## Open work (as of 2026-10-16)
 0. Rewards are an isolated, disabled preview on `codex/report-rewards`. Read `docs/rewards.md`
    before editing. Planned odds are 40% voucher, 0.5% oil change, 0.005% car and 59.495%
-   another guaranteed reward (still unspecified). Never enable/seed offers or ship a new
-   TestFlight build as part of this work. Apply rewards.sql after schema.sql; contact
+   mobile top-up vouchers. Correct reports and independent confirmations earn +2 each;
+   five distinct owner-confirmed fake/abusive reports cause a reporting ban (raw flags do not).
+   Never enable/seed offers or ship a new
+   TestFlight build as part of this work. Apply rewards.sql, then report-integrity.sql after schema.sql; contact
    privacy answers, stronger eligibility/anti-fraud and funded official offers remain launch gates.
 1. Share extension (needs iPhone UDID, see above).
 2. VPS for routing/search (`docs/SERVER.md`) before App Store submission.
