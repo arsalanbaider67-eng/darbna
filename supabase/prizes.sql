@@ -31,11 +31,10 @@ create table if not exists darbna_private.prize_wins (
 alter table darbna_private.prize_wins enable row level security;
 revoke all on darbna_private.prize_wins from public, anon, authenticated;
 
--- Same curve as levelFor() in packages/core/src/extras.ts.
+-- Same curve as levelFor() in packages/core/src/extras.ts: 50 points per level, so level 10 = 450 points.
 create or replace function darbna_private.prize_level(p bigint) returns int
 language sql immutable as $$
-  select case when p >= 2500 then (6 + (p - 2500) / 1000)::int
-    when p >= 1000 then 5 when p >= 400 then 4 when p >= 150 then 3 when p >= 50 then 2 else 1 end;
+  select (1 + greatest(p, 0) / 50)::int;
 $$;
 
 -- Readable claim code without look-alike characters (no 0/O, 1/I/L).

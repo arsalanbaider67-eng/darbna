@@ -81,18 +81,12 @@ export function speedLimitAt(spans: SpeedLimitSpan[], shapeIndex: number): numbe
 
 // ---------------------------------------------------------------- helper levels
 /** Points needed for each level (index = level − 1). */
-export const LEVEL_POINTS = [0, 50, 150, 400, 1000, 2500];
+/** Every level is 50 points (25 confirmations); a prize every 10 levels = 500 points. Mirrors supabase prize_level(). */
+export const POINTS_PER_LEVEL = 50;
 
 export function levelFor(points: number): { level: number; next: number | null; progress: number } {
   points = Number.isFinite(points) ? Math.max(0, Math.floor(points)) : 0;
-  if (points >= 2500) {
-    const level = 6 + Math.floor((points - 2500) / 1000);
-    const base = 2500 + (level - 6) * 1000;
-    return { level, next: base + 1000, progress: (points - base) / 1000 };
-  }
-  let level = 1;
-  for (let i = 0; i < LEVEL_POINTS.length; i++) if (points >= LEVEL_POINTS[i]) level = i + 1;
-  const next = LEVEL_POINTS[level] ?? null;
-  const base = LEVEL_POINTS[level - 1];
-  return { level, next, progress: next == null ? 1 : (points - base) / (next - base) };
+  const level = 1 + Math.floor(points / POINTS_PER_LEVEL);
+  const base = (level - 1) * POINTS_PER_LEVEL;
+  return { level, next: base + POINTS_PER_LEVEL, progress: (points - base) / POINTS_PER_LEVEL };
 }

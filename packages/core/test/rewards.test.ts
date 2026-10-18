@@ -2,10 +2,10 @@ import { expect, test } from "bun:test";
 import { levelFor, normalizeRewardContact, rewardMilestones, rewardAtBucket } from "../src";
 
 test("ten-level rewards have exact boundaries and continue beyond level 100", () => {
-  expect(rewardMilestones(6499)).toEqual({ level: 9, reached: 0, next: 10 });
-  expect(rewardMilestones(6500)).toEqual({ level: 10, reached: 10, next: 20 });
-  expect(rewardMilestones(16500)).toEqual({ level: 20, reached: 20, next: 30 });
-  expect(rewardMilestones(106500)).toEqual({ level: 110, reached: 110, next: 120 });
+  expect(rewardMilestones(449)).toEqual({ level: 9, reached: 0, next: 10 });
+  expect(rewardMilestones(450)).toEqual({ level: 10, reached: 10, next: 20 });
+  expect(rewardMilestones(950)).toEqual({ level: 20, reached: 20, next: 30 });
+  expect(rewardMilestones(5450)).toEqual({ level: 110, reached: 110, next: 120 });
   expect(levelFor(NaN).level).toBe(1);
   expect(levelFor(-100).level).toBe(1);
 });
