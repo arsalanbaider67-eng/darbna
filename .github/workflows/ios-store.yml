@@ -126,8 +126,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/asc"
           printf '%s\n' "$P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
 
-      # Archive unsigned: signing at archive time wants a development profile (needs a registered
-      # iPhone). The export below signs everything for the App Store with cloud signing.
+      # Without the share extension: archive unsigned (no registered iPhone needed); the export
+      # below signs everything for the App Store with cloud signing.
       - name: Archive
         working-directory: apps/mobile/ios
         env:
@@ -138,10 +138,23 @@ jobs:
           set -o pipefail
           WS=$(ls -d *.xcworkspace | head -1); NAME="${WS%.xcworkspace}"
           echo "NAME=$NAME" >> "$GITHUB_ENV"
-          xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
+          if [ "$DARBNA_SHARE_EXTENSION" = "1" ]; then
+            # With the share extension: sign at archive time (automatic, development profile for the
+            # registered iPhone) so the App Group entitlement is kept; export re-signs for the App Store.
+            # Team on every target of the app project (the Pods project is separate and untouched).
+            perl -0pi -e "s/(buildSettings = \{\n)(?![^}]*DEVELOPMENT_TEAM)(?=[^}]*PRODUCT_BUNDLE_IDENTIFIER = \"?iq\.darbna\.app)/\$1\t\t\t\tDEVELOPMENT_TEAM = $TEAM;\n/g" "$NAME.xcodeproj/project.pbxproj"
+            grep -c "DEVELOPMENT_TEAM = $TEAM" "$NAME.xcodeproj/project.pbxproj" | sed 's/^/::notice title=targets with team::/'
+            xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
+              -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
+              -allowProvisioningUpdates \
+              -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+              archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
+          else
+            xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
+              -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
+          fi
           if [ ! -d "$RUNNER_TEMP/Darbna.xcarchive" ]; then
             # Errors as annotations, so they can be read without downloading the log.
             grep -E "(: error:|^error:|No profiles|No Account)" archive.log | grep -v "^ *\/Applications" | sort -u | head -25 | while IFS= read -r l; do echo "::error title=archive::${l:0:900}"; done
