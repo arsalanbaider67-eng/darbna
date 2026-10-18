@@ -21,7 +21,7 @@ export interface AppState {
   reports: Record<string, PublicReport>;
   /** Report the user tapped on the map. */
   openReportId: string | null;
-  sheet: null | "report" | "settings" | "navMenu" | "sos" | "mapProblem" | "stopSearch";
+  sheet: null | "report" | "settings" | "navMenu" | "sos" | "mapProblem" | "stopSearch" | "satellites";
   /** Stops on the way (route screen and trip), in order. */
   stops: Place[];
   /** Search is picking a stop to add, not a destination. */

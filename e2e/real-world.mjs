@@ -101,6 +101,20 @@ for (const [i, [q, where]] of SEARCHES.entries()) {
   await sleep(600);
 }
 
+// ---------------------------------------------------------------- satellites sheet
+{
+  await page.getByRole("button", { name: /الإعدادات|إعدادات/ }).first().click().catch(() => {});
+  await sleep(800);
+  await page.getByRole("button", { name: "الأقمار الصناعية (GPS)" }).first().click().catch(() => {});
+  await sleep(1000);
+  const txt = await page.locator("body").innerText();
+  check("Satellites: sheet lists the systems", ["GPS", "GLONASS", "Galileo", "BeiDou"].every((w) => txt.includes(w)) && txt.includes("الاتصال بالأقمار الصناعية"));
+  await shot("06-satellites");
+  await page.keyboard.press("Escape").catch(() => {});
+  await page.getByLabel("إغلاق", { exact: true }).first().click().catch(() => {});
+  await sleep(800);
+}
+
 // ---------------------------------------------------------------- navigation: free map while driving
 await page.getByLabel("وين رايح؟").first().click();
 await page.locator("input").first().type("ساحة التحرير", { delay: 50 });
@@ -111,6 +125,7 @@ await page.getByRole("button", { name: "المسار" }).first().click().catch((
 const demo = page.getByRole("button", { name: "تجربة" }).first();
 const routed = await demo.waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
 check("Navigation: a route is found", routed);
+if (!routed) { await shot("04-no-route"); console.log("page text:", (await page.locator("body").innerText()).slice(0, 400).replace(/\n/g, " | ")); }
 if (routed) {
   await demo.click(); await sleep(6000);
   await shot("04-driving");

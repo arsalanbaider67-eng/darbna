@@ -123,6 +123,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
         </View>
         <PointsCard />
         <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} style={{ borderColor: theme.danger }} />
+        <Btn kind="secondary" icon="satellite-variant" label={t.x.sat.open} onPress={() => setState({ sheet: "satellites" })} />
         <Row>
           <View style={{ flex: 1 }}>
             <Txt weight="semibold">{t.x.speed.alerts}</Txt>
