@@ -125,6 +125,7 @@ await page.getByRole("button", { name: "المسار" }).first().click().catch((
 const demo = page.getByRole("button", { name: "تجربة" }).first();
 const routed = await demo.waitFor({ timeout: 25000 }).then(() => true).catch(() => false);
 check("Navigation: a route is found", routed);
+if (!routed) { await shot("04-no-route"); console.log("page text:", (await page.locator("body").innerText()).slice(0, 400).replace(/\n/g, " | ")); }
 if (routed) {
   await demo.click(); await sleep(6000);
   await shot("04-driving");
