@@ -26,9 +26,9 @@ jobs:
                   print(f"::warning title=GET {p[:80]}::{r.status_code} {r.text[:300]}")
                   return {}
               return r.json()
+          OUT = []
           def note(t, m):
-              m = str(m).replace("\n", " ")[:900]
-              print(f"::notice title={t}::{m}")
+              OUT.append(f"[{t}] " + str(m).replace("\n", " ")[:900])
           app = os.environ["APP"]
           b = get(f"/v1/builds?filter[app]={app}&sort=-uploadedDate&limit=4&fields[builds]=version,processingState,uploadedDate,expired,usesNonExemptEncryption")
           for x in b.get("data", []):
@@ -75,4 +75,7 @@ jobs:
           note("price schedule", "set" if pr.get("data") else "not set")
           av = get(f"/v2/appAvailabilities/{app}")
           note("availability", json.dumps((av.get("data") or {}).get("attributes", {}))[:300])
+          text = " || ".join(OUT)
+          for i in range(0, len(text), 3500):
+              print(f"::notice title=probe {i // 3500 + 1}::{text[i:i+3500]}")
           EOF
