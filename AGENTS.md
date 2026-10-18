@@ -126,4 +126,7 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
   removed and checkpoint reports never get an "avoid" button. Showing checkpoint wait times is fine.
 - **Prize rules** (Apple 5.3): `apps/mobile/public/prize-rules.html` (3 languages), linked in the app. Owner decisions:
   18+ and Iraq residents only, claim within 7 days (app shows the deadline and hides expired claims), Apple not a sponsor.
+- **Public pages** live at https://help.darbna.com/{support,privacy,prize-rules} (VPS Caddy, DNS-only A record in Cloudflare).
+  They are copied from `apps/mobile/public/*.html` by **Server deploy** — rerun it after editing those pages.
+  The github.io copies stay up too (older app builds link there). darbna.com itself is behind a Cloudflare challenge; leave it.
 - **Reporting and confirming** both need the phone stopped (or the "I'm a passenger" switch) because they earn points.
