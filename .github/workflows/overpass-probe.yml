@@ -11,7 +11,7 @@ jobs:
             for place in "41.725,44.775" "33.312,44.361" "36.191,44.009"; do
               for kind in 'nwr["amenity"="place_of_worship"]["religion"="muslim"](around:6000,P);' 'nwr["amenity"="fuel"](around:10000,P);'; do
                 q="[out:json][timeout:8];(${kind//P/$place});out center tags 200;"
-                r=$(curl -s -o /tmp/o.json -w "%{http_code} %{time_total}" -m 20 --data-urlencode "data=$q" "$host")
+                r=$(curl -s -o /tmp/o.json -w "%{http_code} %{time_total}" -m 20 --data-urlencode "data=$q" "$host" || true)
                 n=$(python3 -c "import json;print(len(json.load(open('/tmp/o.json')).get('elements',[])))" 2>/dev/null || echo "-")
                 OUT="$OUT | $(echo $host | cut -d/ -f3) $place ${kind:0:20} -> $r n=$n"
               done
