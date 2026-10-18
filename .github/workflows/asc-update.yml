@@ -1,0 +1,60 @@
+# Owner-approved App Store Connect edits (18 Oct 2026): review notes from docs/app-review-notes.md,
+# the age-rating "contests" answer, and (optionally) which build the 1.0 version uses. Never submits for review.
+name: ASC update
+on:
+  workflow_dispatch:
+    inputs:
+      notes: { description: "Replace review notes with docs/app-review-notes.md", type: boolean, default: true }
+      contests: { description: "Age rating 'contests' answer (blank = leave)", default: "FREQUENT" }
+      build: { description: "Build number to attach to version 1.0 (blank = leave)", default: "" }
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          APP: "6823604581"
+          NOTES: ${{ inputs.notes }}
+          CONTESTS: ${{ inputs.contests }}
+          BUILD: ${{ inputs.build }}
+        run: |
+          pip install -q pyjwt cryptography requests
+          python3 - <<'EOF'
+          import os, time, jwt, requests, json
+          tok = jwt.encode({"iss": os.environ["ISS"], "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+                           os.environ["P8"], algorithm="ES256", headers={"kid": os.environ["KID"], "typ": "JWT"})
+          H = {"Authorization": "Bearer " + tok, "Content-Type": "application/json"}
+          B = "https://api.appstoreconnect.apple.com"
+          OUT = []
+          def call(m, p, body=None):
+              r = requests.request(m, B + p, headers=H, data=json.dumps(body) if body else None, timeout=60)
+              ok = r.status_code in (200, 201, 204)
+              OUT.append(f"{m} {p.split('?')[0]} -> {r.status_code}" + ("" if ok else " " + r.text[:600]))
+              return r.json() if ok and r.text else {}
+          app = os.environ["APP"]
+          v = [x for x in call("GET", f"/v1/apps/{app}/appStoreVersions?limit=5").get("data", []) if x["attributes"]["versionString"] == "1.0"][0]
+          if os.environ["NOTES"] == "true":
+              notes = open("docs/app-review-notes.md").read().strip()
+              rd = call("GET", f'/v1/appStoreVersions/{v["id"]}/appStoreReviewDetail').get("data")
+              call("PATCH", f'/v1/appStoreReviewDetails/{rd["id"]}', {"data": {"type": "appStoreReviewDetails", "id": rd["id"], "attributes": {"notes": notes}}})
+              OUT.append(f"notes length {len(notes)}")
+          if os.environ["CONTESTS"]:
+              info = call("GET", f"/v1/apps/{app}/appInfos")["data"][0]
+              ar = call("GET", f'/v1/appInfos/{info["id"]}/ageRatingDeclaration')["data"]
+              call("PATCH", f'/v1/ageRatingDeclarations/{ar["id"]}', {"data": {"type": "ageRatingDeclarations", "id": ar["id"], "attributes": {"contests": os.environ["CONTESTS"]}}})
+              after = call("GET", f'/v1/appInfos/{info["id"]}/ageRatingDeclaration')["data"]["attributes"]
+              OUT.append(f'contests now {after.get("contests")}')
+          if os.environ["BUILD"]:
+              bl = call("GET", f'/v1/builds?filter[app]={app}&filter[version]={os.environ["BUILD"]}&limit=1').get("data", [])
+              if not bl: OUT.append("build not found")
+              else:
+                  st = bl[0]["attributes"]["processingState"]
+                  OUT.append(f"build {os.environ['BUILD']} state {st}")
+                  if st == "VALID":
+                      call("PATCH", f'/v1/appStoreVersions/{v["id"]}/relationships/build', {"data": {"type": "builds", "id": bl[0]["id"]}})
+          print("::notice title=asc update::" + " || ".join(OUT))
+          EOF
