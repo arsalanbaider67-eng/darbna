@@ -1,0 +1,16 @@
+# Calls the app's public database functions with a throwaway install id (read-only checks).
+name: DB probe
+on: { workflow_dispatch: {} }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
+      KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
+    steps:
+      - run: |
+          ID="probe-$(date +%s)-$RANDOM-abcdefgh"
+          for fn in darbna_prizes darbna_me; do
+            R=$(curl -s -X POST "$URL/rest/v1/rpc/$fn" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "{\"install\":\"$ID\"}")
+            echo "::notice title=$fn::$R"
+          done
