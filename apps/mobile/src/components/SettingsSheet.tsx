@@ -187,8 +187,8 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
         <View style={{ gap: 4 }}>
           <Txt weight="semibold">{t.settings.privacy}</Txt>
           <Txt size={14} muted>{t.settings.privacyBody}</Txt>
-          <Btn kind="ghost" icon="shield-check" label={t.settings.privacyLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/privacy.html")} />
-          <Btn kind="ghost" icon="help-circle-outline" label={t.settings.supportLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/support.html")} />
+          <Btn kind="ghost" icon="shield-check" label={t.settings.privacyLink} onPress={() => openInfo("https://help.darbna.com/privacy")} />
+          <Btn kind="ghost" icon="help-circle-outline" label={t.settings.supportLink} onPress={() => openInfo("https://help.darbna.com/support")} />
           <Txt weight="semibold" style={{ marginTop: 6 }}>{t.settings.contactSupport}</Txt>
           <Row gap={8} style={{ flexWrap: "wrap" }}>
             {!!SUPPORT_WHATSAPP && <Btn kind="secondary" icon="whatsapp" label={t.x.prize.whatsapp} onPress={() => void contactWhatsApp(t.settings.supportHello).catch(() => toast(t.common.retry, "error"))} />}

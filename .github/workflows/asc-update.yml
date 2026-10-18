@@ -7,6 +7,8 @@ on:
       notes: { description: "Replace review notes with docs/app-review-notes.md", type: boolean, default: true }
       contests: { description: "Age rating 'contests' answer (blank = leave)", default: "FREQUENT" }
       build: { description: "Build number to attach to version 1.0 (blank = leave)", default: "" }
+      support_url: { description: "Support URL for the listing (blank = leave)", default: "" }
+      privacy_url: { description: "Privacy policy URL (blank = leave)", default: "" }
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -21,6 +23,8 @@ jobs:
           NOTES: ${{ inputs.notes }}
           CONTESTS: ${{ inputs.contests }}
           BUILD: ${{ inputs.build }}
+          SUPPORT_URL: ${{ inputs.support_url }}
+          PRIVACY_URL: ${{ inputs.privacy_url }}
         run: |
           pip install -q pyjwt cryptography requests
           python3 - <<'EOF'
@@ -48,6 +52,15 @@ jobs:
               call("PATCH", f'/v1/ageRatingDeclarations/{ar["id"]}', {"data": {"type": "ageRatingDeclarations", "id": ar["id"], "attributes": {"contests": os.environ["CONTESTS"]}}})
               after = call("GET", f'/v1/appInfos/{info["id"]}/ageRatingDeclaration')["data"]["attributes"]
               OUT.append(f'contests now {after.get("contests")}')
+          if os.environ["SUPPORT_URL"]:
+              for l in call("GET", f'/v1/appStoreVersions/{v["id"]}/appStoreVersionLocalizations').get("data", []):
+                  call("PATCH", f'/v1/appStoreVersionLocalizations/{l["id"]}', {"data": {"type": "appStoreVersionLocalizations", "id": l["id"], "attributes": {"supportUrl": os.environ["SUPPORT_URL"]}}})
+                  OUT.append(f'support url {l["attributes"]["locale"]}')
+          if os.environ["PRIVACY_URL"]:
+              info = call("GET", f"/v1/apps/{app}/appInfos")["data"][0]
+              for l in call("GET", f'/v1/appInfos/{info["id"]}/appInfoLocalizations').get("data", []):
+                  call("PATCH", f'/v1/appInfoLocalizations/{l["id"]}', {"data": {"type": "appInfoLocalizations", "id": l["id"], "attributes": {"privacyPolicyUrl": os.environ["PRIVACY_URL"]}}})
+                  OUT.append(f'privacy url {l["attributes"]["locale"]}')
           if os.environ["BUILD"]:
               bl = call("GET", f'/v1/builds?filter[app]={app}&filter[version]={os.environ["BUILD"]}&limit=1').get("data", [])
               if not bl: OUT.append("build not found")

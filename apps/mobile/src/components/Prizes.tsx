@@ -18,7 +18,7 @@ import { Btn, Icon, Panel, Row, Txt } from "./ui";
 
 const SEEN_KEY = "darbna:prizesSeen";
 /** Official rules (apps/mobile/public/prize-rules.html, 3 languages). */
-export const PRIZE_RULES_URL = "https://arsalanbaider67-eng.github.io/darbna/prize-rules.html";
+export const PRIZE_RULES_URL = "https://help.darbna.com/prize-rules";
 /** Winners have 7 days to contact support (prize rules §6). */
 const CLAIM_DAYS = 7;
 const claimDeadline = (w: PrizeWin) => new Date(new Date(w.at).getTime() + CLAIM_DAYS * 86_400_000);

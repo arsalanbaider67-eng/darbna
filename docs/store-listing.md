@@ -1,8 +1,8 @@
 # Darbna store listing — 17 October 2026
 
 Bundle: `iq.darbna.app`. Existing app record: 6823604581. Version 1.0.0. Free. Category: Navigation.
-Support: https://arsalanbaider67-eng.github.io/darbna/support.html
-Privacy: https://arsalanbaider67-eng.github.io/darbna/privacy.html
+Support: https://help.darbna.com/support
+Privacy: https://help.darbna.com/privacy
 
 ## Arabic description
 دربنا تطبيق خرائط وملاحة للعراق، بواجهة عربية مع دعم الكردية السورانية والإنجليزية.
