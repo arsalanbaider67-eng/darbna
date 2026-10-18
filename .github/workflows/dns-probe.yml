@@ -1,0 +1,16 @@
+# Shows where darbna.com names point and what answers there. Read-only.
+name: DNS probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          OUT=""
+          for n in darbna.com www.darbna.com routing.darbna.com search.darbna.com; do
+            a=$(dig +short A $n | tr '\n' ' '); c=$(dig +short CNAME $n | tr '\n' ' ')
+            h=$(curl -s -o /dev/null -m 10 -w "%{http_code} -> %{redirect_url}" https://$n/ || echo fail)
+            OUT="$OUT | $n A=[$a] CNAME=[$c] https=$h"
+          done
+          OUT="$OUT | NS=$(dig +short NS darbna.com | tr '\n' ' ')"
+          echo "::notice title=dns::$OUT"
