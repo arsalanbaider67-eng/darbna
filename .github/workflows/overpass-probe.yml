@@ -1,20 +1,41 @@
-# Times the app's "nearby" (Overpass) lookups on the public server and mirrors. Read-only.
+# Times "nearby places" sources: own Nominatim ([amenity=…] search) and Esri category search. Read-only.
 name: Overpass probe
 on: workflow_dispatch
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          OUT=""
-          for host in https://overpass-api.de/api/interpreter https://overpass.private.coffee/api/interpreter https://overpass.kumi.systems/api/interpreter https://maps.mail.ru/osm/tools/overpass/api/interpreter; do
-            for place in "41.725,44.775" "33.312,44.361" "36.191,44.009"; do
-              for kind in 'nwr["amenity"="place_of_worship"]["religion"="muslim"](around:6000,P);' 'nwr["amenity"="fuel"](around:10000,P);'; do
-                q="[out:json][timeout:8];(${kind//P/$place});out center tags 200;"
-                r=$(curl -s -o /tmp/o.json -w "%{http_code} %{time_total}" -m 20 --data-urlencode "data=$q" "$host" || true)
-                n=$(python3 -c "import json;print(len(json.load(open('/tmp/o.json')).get('elements',[])))" 2>/dev/null || echo "-")
-                OUT="$OUT | $(echo $host | cut -d/ -f3) $place ${kind:0:20} -> $r n=$n"
-              done
-            done
-          done
-          echo "::notice title=overpass::$OUT"
+      - env:
+          NOM: ${{ vars.NOMINATIM_URL }}
+          ESRI: ${{ vars.ESRI_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, time, json, urllib.request, urllib.parse
+          out = []
+          def get(url):
+              t = time.time()
+              try:
+                  req = urllib.request.Request(url, headers={"User-Agent": "Darbna/1.0 (darbnaiq@gmail.com)", "Accept": "application/json"})
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      return r.status, time.time() - t, json.loads(r.read() or b"null")
+              except Exception as e:
+                  return str(e)[:60], time.time() - t, None
+          places = {"Baghdad": (33.312, 44.361), "Erbil": (36.191, 44.009), "Tbilisi": (41.725, 44.775)}
+          nom = os.environ.get("NOM", "").rstrip("/")
+          out.append(f"NOMINATIM_URL set={bool(nom)}")
+          for name, (lat, lon) in places.items():
+              for tag in ["amenity=fuel", "amenity=place_of_worship", "amenity=hospital", "amenity=pharmacy", "amenity=restaurant", "amenity=atm"]:
+                  d = 0.06
+                  vb = f"{lon-d},{lat+d},{lon+d},{lat-d}"
+                  if nom:
+                      s, dt, j = get(f"{nom}/search?" + urllib.parse.urlencode({"q": f"[{tag}]", "viewbox": vb, "bounded": 1, "format": "jsonv2", "limit": 40}))
+                      out.append(f"nom {name} {tag}: {s} {dt:.1f}s n={len(j) if isinstance(j, list) else '-'}")
+              if os.environ.get("ESRI"):
+                  for cat in ["Gas Station", "Mosque", "Hospital", "Pharmacy", "Restaurant", "ATM"]:
+                      q = urllib.parse.urlencode({"category": cat, "location": f"{lon},{lat}", "maxLocations": 40, "outFields": "PlaceName,Type", "f": "json", "token": os.environ["ESRI"]})
+                      s, dt, j = get("https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?" + q)
+                      n = len((j or {}).get("candidates", [])) if isinstance(j, dict) else "-"
+                      err = (j or {}).get("error", {}).get("message", "") if isinstance(j, dict) else ""
+                      out.append(f"esri {name} {cat}: {s} {dt:.1f}s n={n} {err}")
+          print("::notice title=nearby::" + " | ".join(out))
+          PY
