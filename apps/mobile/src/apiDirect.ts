@@ -348,7 +348,7 @@ export const directApi = {
 // ---------------------------------------------------------------- routing helpers
 /** Public OpenStreetMap routing, for trips that start or end outside Iraq (our own server covers Iraq only). */
 const VALHALLA_PUBLIC = "https://valhalla1.openstreetmap.de";
-const inIraqBox = ([x, y]: LngLat) => x >= IRAQ_BBOX[0] && x <= IRAQ_BBOX[2] && y >= IRAQ_BBOX[1] && y <= IRAQ_BBOX[3];
+const inIraqBox = ([x, y]: LngLat) => x >= IRAQ_BBOX.minLng && x <= IRAQ_BBOX.maxLng && y >= IRAQ_BBOX.minLat && y <= IRAQ_BBOX.maxLat;
 function routingBase(body: Record<string, unknown>): string {
   const locs = (body.locations as { lon: number; lat: number }[]) ?? [];
   return VALHALLA !== VALHALLA_PUBLIC && locs.some((l) => !inIraqBox([l.lon, l.lat])) ? VALHALLA_PUBLIC : VALHALLA;
