@@ -1,0 +1,78 @@
+# Read-only look at the App Store Connect setup (builds, version, listing, review details, age rating),
+# printed as annotations. Changes nothing in App Store Connect.
+name: ASC probe
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query App Store Connect (GET only)
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          APP: "6823604581"
+        run: |
+          pip install -q pyjwt cryptography requests
+          python3 - <<'EOF'
+          import os, time, jwt, requests, json
+          tok = jwt.encode({"iss": os.environ["ISS"], "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+                           os.environ["P8"], algorithm="ES256", headers={"kid": os.environ["KID"], "typ": "JWT"})
+          H = {"Authorization": "Bearer " + tok}
+          B = "https://api.appstoreconnect.apple.com"
+          def get(p):
+              r = requests.get(B + p, headers=H, timeout=60)
+              if r.status_code != 200:
+                  print(f"::warning title=GET {p[:80]}::{r.status_code} {r.text[:300]}")
+                  return {}
+              return r.json()
+          def note(t, m):
+              m = str(m).replace("\n", " ")[:900]
+              print(f"::notice title={t}::{m}")
+          app = os.environ["APP"]
+          b = get(f"/v1/builds?filter[app]={app}&sort=-uploadedDate&limit=4&fields[builds]=version,processingState,uploadedDate,expired,usesNonExemptEncryption")
+          for x in b.get("data", []):
+              a = x["attributes"]; note("build " + a["version"], f'{a["processingState"]} uploaded {a["uploadedDate"]} expired={a["expired"]} encryption={a.get("usesNonExemptEncryption")}')
+          v = get(f"/v1/apps/{app}/appStoreVersions?limit=5")
+          for x in v.get("data", []):
+              a = x["attributes"]; vid = x["id"]
+              note("version " + a["versionString"], f'state={a.get("appStoreState") or a.get("appVersionState")} copyright={a.get("copyright")} release={a.get("releaseType")}')
+              bb = get(f"/v1/appStoreVersions/{vid}/build")
+              note("version build", (bb.get("data") or {}).get("attributes", {}).get("version", "none selected"))
+              loc = get(f"/v1/appStoreVersions/{vid}/appStoreVersionLocalizations")
+              for l in loc.get("data", []):
+                  la = l["attributes"]
+                  note("listing " + la["locale"], f'description={len(la.get("description") or "")} chars, keywords={la.get("keywords")!r}, support={la.get("supportUrl")}, marketing={la.get("marketingUrl")}, promo={len(la.get("promotionalText") or "")}')
+                  ss = get(f'/v1/appStoreVersionLocalizations/{l["id"]}/appScreenshotSets')
+                  sets = [(s["attributes"]["screenshotDisplayType"]) for s in ss.get("data", [])]
+                  counts = []
+                  for s in ss.get("data", []):
+                      c = get(f'/v1/appScreenshotSets/{s["id"]}/appScreenshots')
+                      counts.append(f'{s["attributes"]["screenshotDisplayType"]}:{len(c.get("data", []))}')
+                  note("screenshots " + la["locale"], ", ".join(counts) or "none")
+              rd = get(f"/v1/appStoreVersions/{vid}/appStoreReviewDetail")
+              d = (rd.get("data") or {}).get("attributes", {})
+              if d:
+                  note("review details", f'signInRequired={d.get("demoAccountRequired")} contactName={"set" if d.get("contactFirstName") else "missing"} phone={"set" if d.get("contactPhone") else "missing"} email={"set" if d.get("contactEmail") else "missing"} notes={len(d.get("notes") or "")} chars')
+                  note("review notes text", (d.get("notes") or "")[:900])
+              else:
+                  note("review details", "not created")
+          infos = get(f"/v1/apps/{app}/appInfos")
+          for x in infos.get("data", []):
+              a = x["attributes"]
+              note("appInfo", f'state={a.get("appStoreState") or a.get("state")} ageRating={a.get("appStoreAgeRating")} kids={a.get("kidsAgeBand")}')
+              cat = get(f'/v1/appInfos/{x["id"]}/primaryCategory')
+              note("category", (cat.get("data") or {}).get("id"))
+              ar = get(f'/v1/appInfos/{x["id"]}/ageRatingDeclaration')
+              note("age rating answers", json.dumps((ar.get("data") or {}).get("attributes", {}))[:900])
+              il = get(f'/v1/appInfos/{x["id"]}/appInfoLocalizations')
+              for l in il.get("data", []):
+                  la = l["attributes"]
+                  note("appInfo " + la["locale"], f'name={la.get("name")!r} subtitle={la.get("subtitle")!r} privacyUrl={la.get("privacyPolicyUrl")}')
+          ap = get(f"/v1/apps/{app}?fields[apps]=name,bundleId,primaryLocale,contentRightsDeclaration,isOrEverWasMadeForKids")
+          note("app", json.dumps(ap.get("data", {}).get("attributes", {})))
+          pr = get(f"/v1/apps/{app}/appPriceSchedule")
+          note("price schedule", "set" if pr.get("data") else "not set")
+          av = get(f"/v2/appAvailabilities/{app}")
+          note("availability", json.dumps((av.get("data") or {}).get("attributes", {}))[:300])
+          EOF

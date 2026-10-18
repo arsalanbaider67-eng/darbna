@@ -85,11 +85,15 @@ export function ReportSheet({ fix, online, onClose }: { fix: LocationFix | null;
 }
 
 /** Details for a report on the map: freshness, confidence, source, and the community vote buttons. */
-export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) {
+export function ReportDetails({ id, fix, onClose }: { id: string; fix?: LocationFix | null; onClose(): void }) {
   const { theme, t, fmtCtx } = useUi();
   const r = useStore((s) => s.reports[id]);
   const social = useStore((s) => !!s.config?.social);
   const [busy, setBusy] = useState(false);
+  // Confirming earns points, so like reporting it waits until you've stopped (or you say you're a passenger).
+  const [passenger, setPassenger] = useState(false);
+  const moving = (fix?.speedMps ?? 0) > STOPPED_MPS;
+  const canVote = !moving || passenger;
   if (!r) return null;
   const f = freshness(new Date(r.createdAt));
   const fresh = fmt(t.reports.freshness[f.bucket], {
@@ -166,9 +170,17 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
       {r.officialRef && <Txt size={13} muted style={{ marginTop: 6 }}>{r.officialRef}</Txt>}
       {!r.verified && (
         <>
+          {moving && (
+            <Row style={[s.warn, { backgroundColor: theme.surfaceAlt, marginTop: 12 }]}>
+              <Icon name="steering" color={theme.warn} />
+              <Txt size={14} style={{ flex: 1 }}>{t.reports.onlyWhenStopped}</Txt>
+              <Txt size={14} weight="semibold">{t.reports.imPassenger}</Txt>
+              <Switch value={passenger} onValueChange={setPassenger} accessibilityLabel={t.reports.imPassenger} />
+            </Row>
+          )}
           <Row style={{ marginTop: 12 }}>
-            <Btn label={t.reports.stillThere} icon="thumb-up-outline" onPress={() => vote("confirm")} loading={busy} style={{ flex: 1 }} />
-            <Btn kind="secondary" label={t.reports.notThere} icon="close-circle-outline" onPress={() => vote("gone")} disabled={busy} style={{ flex: 1 }} />
+            <Btn label={t.reports.stillThere} icon="thumb-up-outline" onPress={() => vote("confirm")} loading={busy} disabled={!canVote} style={{ flex: 1 }} />
+            <Btn kind="secondary" label={t.reports.notThere} icon="close-circle-outline" onPress={() => vote("gone")} disabled={busy || !canVote} style={{ flex: 1 }} />
           </Row>
           {social && !r.isSample && (
             <Btn kind="ghost" icon="thumb-up-outline" label={t.x.thanks.button} onPress={() => void thank()} disabled={busy} style={{ marginTop: 6, borderColor: theme.border }} />

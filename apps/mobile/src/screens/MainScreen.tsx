@@ -696,7 +696,7 @@ export function MainScreen() {
           onDownloadArea={(cb) => map.current?.downloadVisible(cb) ?? Promise.resolve("failed")}
         />
       )}
-      {openReportId && <ReportDetails id={openReportId} onClose={() => setState({ openReportId: null })} />}
+      {openReportId && <ReportDetails id={openReportId} fix={navFix} onClose={() => setState({ openReportId: null })} />}
       {sheet === "sos" && <SosSheet coord={navFix?.coord ?? fix?.coord ?? null} onClose={() => setState({ sheet: null })} />}
       {sheet === "navMenu" && (
         <NavMenuSheet
