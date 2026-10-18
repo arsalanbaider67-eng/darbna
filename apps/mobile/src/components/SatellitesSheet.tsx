@@ -28,7 +28,7 @@ export function SatellitesSheet({ onClose }: { onClose(): void }) {
       <Row style={{ marginBottom: 6 }}>
         <Icon name="satellite-variant" color={theme.primary} />
         <Txt size={20} weight="bold" style={{ flex: 1 }}>{L.title}</Txt>
-        <Pressable accessibilityLabel={t.common.close} onPress={onClose} hitSlop={12}><Icon name="close" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} hitSlop={12}><Icon name="close" /></Pressable>
       </Row>
       <ScrollView style={{ maxHeight: 560 }} contentContainerStyle={{ gap: 10, paddingBottom: 6 }}>
         {/* The phone */}

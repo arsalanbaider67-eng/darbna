@@ -111,7 +111,7 @@ for (const [i, [q, where]] of SEARCHES.entries()) {
   check("Satellites: sheet lists the systems", ["GPS", "GLONASS", "Galileo", "BeiDou"].every((w) => txt.includes(w)) && txt.includes("الاتصال بالأقمار الصناعية"));
   await shot("06-satellites");
   await page.keyboard.press("Escape").catch(() => {});
-  await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
+  await page.getByLabel("إغلاق", { exact: true }).first().click().catch(() => {});
   await sleep(800);
 }
 
