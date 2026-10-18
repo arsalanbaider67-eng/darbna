@@ -13,13 +13,13 @@ begin
   j := public.darbna_prizes(a);
   if (j->>'level')::int <> 1 or json_array_length(j->'wins') <> 0 or (j->>'nextMilestone')::int <> 10 then raise exception 'fresh: %', j; end if;
 
-  -- Level 9 (5500 points): still nothing.
-  perform darbna_private.add_points(ha, 5500);
+  -- Level 9 (400 points): still nothing.
+  perform darbna_private.add_points(ha, 400);
   j := public.darbna_prizes(a);
   if (j->>'level')::int <> 9 or json_array_length(j->'wins') <> 0 then raise exception 'level 9: %', j; end if;
 
-  -- Level 10 (6500): one win with a code; asking again returns the same single win.
-  perform darbna_private.add_points(ha, 1000);
+  -- Level 10 (450): one win with a code; asking again returns the same single win.
+  perform darbna_private.add_points(ha, 50);
   j := public.darbna_prizes(a);
   if (j->>'level')::int <> 10 or json_array_length(j->'wins') <> 1 then raise exception 'level 10: %', j; end if;
   code10 := j->'wins'->0->>'code';
@@ -29,12 +29,12 @@ begin
   if (j->>'nextMilestone')::int <> 20 then raise exception 'next: %', j; end if;
 
   -- Jump to level 30: wins for 20 and 30 are added; 10 keeps its code.
-  perform darbna_private.add_points(ha, 20000);
+  perform darbna_private.add_points(ha, 1000);
   j := public.darbna_prizes(a);
   if json_array_length(j->'wins') <> 3 or j->'wins'->0->>'code' <> code10 or (j->'wins'->2->>'milestone')::int <> 30 then raise exception 'level 30: %', j; end if;
 
   -- Points dropping later (reversed reports) doesn't take a won prize back.
-  update darbna_private.points set points = 100 where who = ha;
+  update darbna_private.points set points = 10 where who = ha;
   j := public.darbna_prizes(a);
   if json_array_length(j->'wins') <> 3 then raise exception 'wins lost: %', j; end if;
 
@@ -44,7 +44,7 @@ begin
 
   -- Banned drivers win nothing new.
   insert into darbna_private.banned_reporters (reporter_hash, reason) values (hb, 'test') on conflict do nothing;
-  perform darbna_private.add_points(hb, 7000);
+  perform darbna_private.add_points(hb, 600);
   j := public.darbna_prizes(b);
   if json_array_length(j->'wins') <> 0 then raise exception 'banned won: %', j; end if;
 

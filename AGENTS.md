@@ -113,7 +113,7 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
 
 ## Prizes, report confirmation, support (2026-10-18)
 - **Prizes**: `supabase/prizes.sql` (apply after the other SQL files; tests in `prizes.test.sql`). One prize per 10 levels
-  (level 10, 20 …) from the same points the app shows; the app shows only "you won a prize — contact support" with a claim
+  (level 10, 20 …; 50 points per level, so a prize every 500 points) from the same points the app shows; the app shows only "you won a prize — contact support" with a claim
   code (`DRB-XXXX-XXXX`), never the prize. Owner checks/delivers in SQL (`darbna_private.set_prize_status`). This replaces
   the earlier draw/odds preview in `rewards.sql` for what ships (that one stays disabled).
 - **Reports**: unconfirmed driver reports are faded + "waiting for another driver" and do **not** warn on the road; they warn

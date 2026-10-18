@@ -47,8 +47,9 @@ describe("speed limits", () => {
 describe("levels", () => {
   it("counts up through the levels", () => {
     expect(levelFor(0).level).toBe(1);
+    expect(levelFor(49).level).toBe(1);
     expect(levelFor(60).level).toBe(2);
-    expect(levelFor(3000)).toEqual({ level: 6, next: 3500, progress: 0.5 });
+    expect(levelFor(475)).toEqual({ level: 10, next: 500, progress: 0.5 });
   });
 });
 
