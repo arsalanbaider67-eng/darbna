@@ -72,6 +72,9 @@ jobs:
       - name: Copy files
         run: |
           scp -i ~/.ssh/id_darbna -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes infra/docker-compose.darbna.yml infra/Caddyfile.darbna "$USER_NAME@$HOST:/opt/darbna/"
+          # Public pages for help.darbna.com (same files as the GitHub Pages copies).
+          $SSH "mkdir -p /opt/darbna/site"
+          scp -i ~/.ssh/id_darbna -o BatchMode=yes -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes apps/mobile/public/privacy.html apps/mobile/public/support.html apps/mobile/public/prize-rules.html "$USER_NAME@$HOST:/opt/darbna/site/"
 
       - name: Start / update
         env:
@@ -80,13 +83,14 @@ jobs:
           $SSH "cd /opt/darbna && sed -i '/^REBUILD_ROUTING=/d' .env && echo REBUILD_ROUTING=$REBUILD >> .env \
             && docker compose -f docker-compose.darbna.yml --env-file .env pull -q \
             && docker compose -f docker-compose.darbna.yml --env-file .env up -d --remove-orphans \
+            && docker compose -f docker-compose.darbna.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile \
             && docker compose -f docker-compose.darbna.yml ps"
           # The rebuild flag is one-shot: reset it so a later restart doesn't rebuild again.
           if [ "$REBUILD" = "True" ]; then $SSH "cd /opt/darbna && sed -i 's/^REBUILD_ROUTING=True/REBUILD_ROUTING=False/' .env"; fi
 
       - name: Check readiness (initial import continues on the server)
         run: |
-          for u in "https://routing.darbna.com/status" "https://search.darbna.com/status"; do
+          for u in "https://routing.darbna.com/status" "https://search.darbna.com/status" "https://help.darbna.com/support"; do
             code=$(curl -s -o /dev/null -w '%{http_code}' -m 20 "$u" || true)
             if [ "$code" = "200" ]; then echo "✓ $u"; else echo "::warning title=not ready yet::$u answered '$code'. On a first install the map is still being built; run this workflow again later, or check DNS."; fi
           done

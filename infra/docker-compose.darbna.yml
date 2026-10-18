@@ -48,7 +48,7 @@ services:
   caddy:
     image: caddy@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af
     ports: ["80:80", "443:443"]
-    volumes: ["./Caddyfile.darbna:/etc/caddy/Caddyfile:ro", "caddy:/data"]
+    volumes: ["./Caddyfile.darbna:/etc/caddy/Caddyfile:ro", "./site:/srv/site:ro", "caddy:/data"]
     depends_on: [valhalla, nominatim]
     logging:
       driver: local
