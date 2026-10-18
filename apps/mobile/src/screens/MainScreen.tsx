@@ -29,6 +29,7 @@ import { useIncomingShare } from "../hooks/useIncomingShare";
 import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
 import { MapProblemSheet, NavMenuSheet, WatchCard } from "../components/Extras";
+import { SatellitesSheet } from "../components/SatellitesSheet";
 import { SosSheet } from "../components/SosSheet";
 import { useSosRegion } from "../sos/emergency";
 import { routeSpeedLimits } from "../external";
@@ -700,6 +701,7 @@ export function MainScreen() {
           onSos={() => setState({ sheet: "sos" })}
         />
       )}
+      {sheet === "satellites" && <SatellitesSheet onClose={() => setState({ sheet: "settings" })} />}
       {sheet === "mapProblem" && selected && <MapProblemSheet at={selected.coord} onClose={() => setState({ sheet: null })} />}
       {sheet === "stopSearch" && (
         <SearchPanel
