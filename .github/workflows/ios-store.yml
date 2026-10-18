@@ -144,11 +144,23 @@ jobs:
             # Team on every target of the app project (the Pods project is separate and untouched).
             perl -0pi -e "s/(buildSettings = \{\n)(?![^}]*DEVELOPMENT_TEAM)(?=[^}]*PRODUCT_BUNDLE_IDENTIFIER = \"?iq\.darbna\.app)/\$1\t\t\t\tDEVELOPMENT_TEAM = $TEAM;\n/g" "$NAME.xcodeproj/project.pbxproj"
             grep -c "DEVELOPMENT_TEAM = $TEAM" "$NAME.xcodeproj/project.pbxproj" | sed 's/^/::notice title=targets with team::/'
-            xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
-              -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
-              -allowProvisioningUpdates \
-              -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
-              archive | tee archive.log | grep -E "error:|\*\* ARCHIVE" || true
+            # Create the development profiles first with a short build (fresh API token), so the long
+            # archive doesn't stall on signing; retry once if Apple's token check fails.
+            for try in 1 2 3; do
+              xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
+                -destination 'generic/platform=iOS' -allowProvisioningUpdates \
+                -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+                -showBuildSettings > signing.log 2>&1 || true
+              xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
+                -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
+                -allowProvisioningUpdates \
+                -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" -authenticationKeyID "$KID" -authenticationKeyIssuerID "$ISS" \
+                archive > archive.log 2>&1 || true
+              grep -E "\*\* ARCHIVE" archive.log || true
+              [ -d "$RUNNER_TEMP/Darbna.xcarchive" ] && break
+              grep -q "Authentication failed" archive.log || break
+              echo "::warning title=signing::Apple token check failed (try $try); retrying"; sleep 20
+            done
           else
             xcodebuild -workspace "$NAME.xcworkspace" -scheme "$NAME" -configuration Release \
               -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Darbna.xcarchive" \
