@@ -37,7 +37,7 @@ export function SatellitesSheet({ onClose }: { onClose(): void }) {
             <Icon name="cellphone" color={theme.primary} size={28} />
             <View style={{ flex: 1 }}>
               <Txt size={18} weight="bold">{dev.model || L.unknownDevice}</Txt>
-              {!known && <Txt size={13} muted>{L.notPublished}</Txt>}
+              {!known && isIos && <Txt size={13} muted>{L.notPublished}</Txt>}
             </View>
           </Row>
           {dev.dualFrequency && (

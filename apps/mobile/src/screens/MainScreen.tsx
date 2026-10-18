@@ -701,7 +701,7 @@ export function MainScreen() {
           onSos={() => setState({ sheet: "sos" })}
         />
       )}
-      {sheet === "satellites" && <SatellitesSheet onClose={() => setState({ sheet: "settings" })} />}
+      {sheet === "satellites" && <SatellitesSheet onClose={() => setState({ sheet: null })} />}
       {sheet === "mapProblem" && selected && <MapProblemSheet at={selected.coord} onClose={() => setState({ sheet: null })} />}
       {sheet === "stopSearch" && (
         <SearchPanel

@@ -112,9 +112,7 @@ for (const [i, [q, where]] of SEARCHES.entries()) {
   await shot("06-satellites");
   await page.keyboard.press("Escape").catch(() => {});
   await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
-  await sleep(500);
-  await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
-  await sleep(500);
+  await sleep(800);
 }
 
 // ---------------------------------------------------------------- navigation: free map while driving
