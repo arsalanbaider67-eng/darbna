@@ -122,6 +122,8 @@ const config: ExpoConfig = {
     // (see .github/workflows/ios-store.yml); off until then (DARBNA_SHARE_EXTENSION=1 turns it on).
     ...(process.env.DARBNA_SHARE_EXTENSION === "1" ? [["expo-share-intent", {
       iosShareExtensionName: "Darbna Share",
+      // Registered by hand in the developer account (the App Store Connect API can't create App Groups).
+      iosAppGroupIdentifier: "group.iq.darbna.app",
       iosActivationRules: {
         NSExtensionActivationSupportsWebURLWithMaxCount: 1,
         NSExtensionActivationSupportsWebPageWithMaxCount: 1,
