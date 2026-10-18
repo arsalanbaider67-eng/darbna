@@ -7,12 +7,12 @@ jobs:
     steps:
       - run: |
           OUT=""
-          for n in darbna.com www.darbna.com routing.darbna.com search.darbna.com; do
+          for n in help.darbna.com darbna.com routing.darbna.com search.darbna.com; do
             a=$(dig +short A $n | tr '\n' ' '); c=$(dig +short CNAME $n | tr '\n' ' ')
             h=$(curl -s -o /dev/null -m 10 -w "%{http_code} -> %{redirect_url}" https://$n/ || echo fail)
             OUT="$OUT | $n A=[$a] CNAME=[$c] https=$h"
           done
-          for u in https://darbna.com/ https://darbna.com/privacy.html https://www.darbna.com/; do
+          for u in https://help.darbna.com/support https://help.darbna.com/privacy https://help.darbna.com/prize-rules; do
             b=$(curl -s -m 10 -A "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1" -D /tmp/h "$u" | head -c 400 | tr -d '\n\r' | sed 's/::/;/g')
             OUT="$OUT | $u status=$(head -1 /tmp/h | tr -d '\r') server=$(grep -i '^server:' /tmp/h | tr -d '\r') cf-mitigated=$(grep -i '^cf-mitigated' /tmp/h | tr -d '\r') body=${b:0:250}"
           done
