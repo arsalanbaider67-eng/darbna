@@ -1,0 +1,15 @@
+# Real routing requests against the app's routing services (own VPS and public), printed as annotations.
+name: Route probe
+on: { workflow_dispatch: {} }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      VALHALLA_URL: ${{ vars.VALHALLA_URL }}
+      NOMINATIM_URL: ${{ vars.NOMINATIM_URL }}
+      ESRI_KEY: ${{ vars.ESRI_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: echo "::notice title=VALHALLA_URL::${VALHALLA_URL:-unset}"; node scripts/route-probe.mjs
