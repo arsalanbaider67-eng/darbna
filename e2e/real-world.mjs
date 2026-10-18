@@ -101,6 +101,22 @@ for (const [i, [q, where]] of SEARCHES.entries()) {
   await sleep(600);
 }
 
+// ---------------------------------------------------------------- satellites sheet
+{
+  await page.getByRole("button", { name: /الإعدادات|إعدادات/ }).first().click().catch(() => {});
+  await sleep(800);
+  await page.getByRole("button", { name: "الأقمار الصناعية (GPS)" }).first().click().catch(() => {});
+  await sleep(1000);
+  const txt = await page.locator("body").innerText();
+  check("Satellites: sheet lists the systems", ["GPS", "GLONASS", "Galileo", "BeiDou"].every((w) => txt.includes(w)) && txt.includes("الاتصال بالأقمار الصناعية"));
+  await shot("06-satellites");
+  await page.keyboard.press("Escape").catch(() => {});
+  await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
+  await sleep(500);
+  await page.getByRole("button", { name: "إغلاق" }).first().click().catch(() => {});
+  await sleep(500);
+}
+
 // ---------------------------------------------------------------- navigation: free map while driving
 await page.getByLabel("وين رايح؟").first().click();
 await page.locator("input").first().type("ساحة التحرير", { delay: 50 });
