@@ -1,6 +1,8 @@
 /**
  * Public services the app talks to directly in every mode:
- *  - Overpass (OpenStreetMap) for "nearby fuel / mosque / hospital …" quick searches,
+ *  - Esri category search for "nearby fuel / mosque / hospital …" (fast, licensed key), with public
+ *    Overpass (OpenStreetMap) only as a fallback — the public Overpass servers were timing out / refusing
+ *    requests on 18 Oct 2026, which showed up in the app as "no internet",
  *  - OpenStreetMap Notes for "a road is missing here" (anonymous; mappers fix the map for everyone),
  *  - Valhalla /trace_attributes for the speed limits along a route.
  */
@@ -9,6 +11,9 @@ import { ApiError } from "./apiError";
 import type { Place } from "./types";
 
 const OVERPASS = "https://overpass-api.de/api/interpreter";
+const ESRI_GEOCODE = "https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates";
+const ESRI_KEY = process.env.EXPO_PUBLIC_ESRI_GEOCODE === "0" ? "" : process.env.EXPO_PUBLIC_ESRI_KEY || "";
+const ESRI_CATEGORY: Record<string, string> = { fuel: "Gas Station", mosque: "Mosque", hospital: "Hospital", pharmacy: "Pharmacy", restaurant: "Restaurant", atm: "ATM,Bank" };
 const OSM_API = "https://api.openstreetmap.org/api/0.6";
 // Your own server (routing.darbna.com) when EXPO_PUBLIC_VALHALLA_URL is set at build time; else the public FOSSGIS one.
 const VALHALLA = (process.env.EXPO_PUBLIC_VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/$/, "");
@@ -60,11 +65,47 @@ function toPlaces(els: any[], kind: NearbyKind, at: LngLat, lang: string, label:
 
 const cache = new Map<string, { at: number; places: Place[] }>();
 
-/** Category lookup through Overpass, cached per area and language for ten minutes. */
+/** Esri category search around a point, nearest first, within the kind's radius. */
+async function esriNearby(kind: NearbyKind, at: LngLat, lang: string, label: string): Promise<Place[]> {
+  const q = new URLSearchParams({
+    category: ESRI_CATEGORY[kind], location: `${at[0]},${at[1]}`, maxLocations: "50",
+    outFields: "PlaceName,Place_addr,Type,Distance", langCode: lang === "en" ? "EN" : "AR", f: "json", token: ESRI_KEY,
+  });
+  const res = await fetchWithTimeout(`${ESRI_GEOCODE}?${q}`, { headers: { accept: "application/json" } }, 8_000);
+  if (!res.ok) throw new ApiError("upstream", res.status);
+  const data = await res.json();
+  if (data?.error) throw new ApiError("upstream", Number(data.error.code) || 0);
+  const out: Place[] = [];
+  const seen = new Set<string>();
+  for (const c of data?.candidates ?? []) {
+    const lon = Number(c.location?.x), lat = Number(c.location?.y);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    if (haversine(at, [lon, lat]) > RADIUS_M[kind]) continue;
+    const a = c.attributes ?? {};
+    const name = a.PlaceName || c.address || label;
+    const k = `${name}|${Math.round(lat * 2000)}|${Math.round(lon * 2000)}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const addr = typeof a.Place_addr === "string" && a.Place_addr !== name ? a.Place_addr : "";
+    out.push({ id: `esri:${kind}:${lat.toFixed(5)},${lon.toFixed(5)}`, name, secondary: addr || undefined, kind: `nearby_${kind}`, coord: [lon, lat], source: "esri" });
+  }
+  return out.sort((x, y) => haversine(at, x.coord) - haversine(at, y.coord)).slice(0, 25);
+}
+
+/** Nearby places of one kind (Esri first, Overpass as fallback), cached per area and language for ten minutes. */
 export async function nearby(kind: NearbyKind, at: LngLat, lang: string, label: string): Promise<Place[]> {
   const key = `${kind}|${at[0].toFixed(2)}|${at[1].toFixed(2)}|${lang}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.places;
+  if (ESRI_KEY) {
+    try {
+      const places = await esriNearby(kind, at, lang, label);
+      // Esri's coverage can be thin in places; only an empty answer falls through to OpenStreetMap.
+      if (places.length) { cache.set(key, { at: Date.now(), places }); return places; }
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "offline") throw e;
+    }
+  }
   const parts = FILTERS[kind].map((f) => `nwr${f}(around:${RADIUS_M[kind]},${at[1]},${at[0]});`).join("");
   const q = `[out:json][timeout:8];(${parts});out center tags 200;`;
   const res = await fetchWithTimeout(OVERPASS, { method: "POST", body: "data=" + encodeURIComponent(q), headers: { "content-type": "application/x-www-form-urlencoded" } }, 12_000);

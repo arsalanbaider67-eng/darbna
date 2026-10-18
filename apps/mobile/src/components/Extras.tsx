@@ -34,7 +34,7 @@ export function QuickSearch({ userCoord, onResults }: { userCoord: LngLat | null
     try {
       onResults({ kind, places: await nearby(kind, userCoord, lang, t.x.quick[kind]) });
     } catch (e) {
-      onResults({ kind, places: [], error: e instanceof ApiError && e.isNetwork ? t.status.offline : t.x.quick.failed });
+      onResults({ kind, places: [], error: e instanceof ApiError && e.code === "offline" ? t.status.offline : t.x.quick.failed });
     } finally {
       setBusy(null);
     }

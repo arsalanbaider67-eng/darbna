@@ -108,7 +108,7 @@ export function SearchPanel({ online, userCoord, onPick, title, onClose }: Props
         setStatus(r.partial ? "partial" : "idle");
       } catch (e) {
         if (id !== seq.current) return;
-        setStatus(e instanceof ApiError && e.isNetwork ? "offline" : "error");
+        setStatus(e instanceof ApiError && e.code === "offline" ? "offline" : "error");
         setResults(localMatch(query, [...saved.favorites, ...recents]));
       }
     }, submitted > 0 ? 0 : query.length >= 3 ? 700 : 250);
