@@ -1,0 +1,70 @@
+# Uploads store/screenshots/<set>/*.png (in name order) as the App Store screenshots for version 1.0,
+# replacing that set's existing screenshots. Owner-approved; never submits for review.
+name: ASC screenshots
+on:
+  workflow_dispatch:
+    inputs:
+      folder: { description: "Folder under store/screenshots", default: "iphone65-ar" }
+      display: { description: "Apple display type", default: "APP_IPHONE_65" }
+      locale: { description: "Listing locale", default: "ar-SA" }
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload
+        env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          APP: "6823604581"
+          FOLDER: ${{ inputs.folder }}
+          DISPLAY: ${{ inputs.display }}
+          LOCALE: ${{ inputs.locale }}
+        run: |
+          pip install -q pyjwt cryptography requests
+          python3 - <<'EOF'
+          import os, time, jwt, requests, json, hashlib, glob
+          def token():
+              return jwt.encode({"iss": os.environ["ISS"], "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"},
+                                os.environ["P8"], algorithm="ES256", headers={"kid": os.environ["KID"], "typ": "JWT"})
+          B = "https://api.appstoreconnect.apple.com"
+          OUT = []
+          def call(m, p, body=None):
+              H = {"Authorization": "Bearer " + token(), "Content-Type": "application/json"}
+              r = requests.request(m, B + p, headers=H, data=json.dumps(body) if body is not None else None, timeout=120)
+              ok = r.status_code in (200, 201, 204)
+              if not ok: OUT.append(f"{m} {p.split('?')[0]} -> {r.status_code} {r.text[:500]}")
+              return r.json() if ok and r.text else {}
+          app = os.environ["APP"]
+          v = [x for x in call("GET", f"/v1/apps/{app}/appStoreVersions?limit=5")["data"] if x["attributes"]["versionString"] == "1.0"][0]
+          loc = [l for l in call("GET", f'/v1/appStoreVersions/{v["id"]}/appStoreVersionLocalizations')["data"] if l["attributes"]["locale"] == os.environ["LOCALE"]][0]
+          sets = call("GET", f'/v1/appStoreVersionLocalizations/{loc["id"]}/appScreenshotSets')["data"]
+          s = [x for x in sets if x["attributes"]["screenshotDisplayType"] == os.environ["DISPLAY"]]
+          if s:
+              sid = s[0]["id"]
+              for old in call("GET", f"/v1/appScreenshotSets/{sid}/appScreenshots").get("data", []):
+                  call("DELETE", f'/v1/appScreenshots/{old["id"]}')
+          else:
+              sid = call("POST", "/v1/appScreenshotSets", {"data": {"type": "appScreenshotSets", "attributes": {"screenshotDisplayType": os.environ["DISPLAY"]},
+                         "relationships": {"appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations", "id": loc["id"]}}}}})["data"]["id"]
+          for path in sorted(glob.glob(f'store/screenshots/{os.environ["FOLDER"]}/*.png')):
+              data = open(path, "rb").read()
+              res = call("POST", "/v1/appScreenshots", {"data": {"type": "appScreenshots", "attributes": {"fileName": os.path.basename(path), "fileSize": len(data)},
+                         "relationships": {"appScreenshotSet": {"data": {"type": "appScreenshotSets", "id": sid}}}}})
+              if not res: continue
+              shot = res["data"]
+              for op in shot["attributes"]["uploadOperations"]:
+                  part = data[op["offset"]:op["offset"] + op["length"]]
+                  hdr = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
+                  r = requests.request(op["method"], op["url"], headers=hdr, data=part, timeout=120)
+                  if r.status_code >= 300: OUT.append(f"part {path} -> {r.status_code}")
+              call("PATCH", f'/v1/appScreenshots/{shot["id"]}', {"data": {"type": "appScreenshots", "id": shot["id"],
+                   "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(data).hexdigest()}}})
+              OUT.append(f"sent {os.path.basename(path)}")
+          time.sleep(20)
+          for x in call("GET", f"/v1/appScreenshotSets/{sid}/appScreenshots").get("data", []):
+              st = (x["attributes"].get("assetDeliveryState") or {})
+              OUT.append(f'{x["attributes"]["fileName"]}: {st.get("state")} {st.get("errors") or ""}')
+          print("::notice title=screenshots::" + " || ".join(OUT))
+          EOF
