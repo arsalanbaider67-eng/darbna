@@ -15,6 +15,7 @@ import { getState, setState, toast, useStore } from "../store";
 import { font, REPORT_STYLE, TOUCH } from "../theme";
 import type { Place, PublicReport } from "../types";
 import { Btn, Icon, Panel, Row, Txt, type IconName } from "./ui";
+import { checkPrizes } from "./Prizes";
 
 // ---------------------------------------------------------------- quick nearby search
 const QUICK_ICON: Record<NearbyKind, IconName> = {
@@ -183,6 +184,7 @@ export async function refreshPoints(): Promise<number | null> {
   try {
     const p = await api.me();
     setState({ points: p });
+    void checkPrizes();
     return before == null ? null : p.points - before;
   } catch {
     return null;

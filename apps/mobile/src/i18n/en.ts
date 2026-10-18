@@ -41,6 +41,7 @@ export const en: Strings = {
     loading: "Finding routes…",
     errors: {
       no_route: "No driving route found to this place.",
+      off_network_start: "Your current position is too far from a road the map knows. Move closer to a street and try again.",
       off_network: "That spot is too far from a road. Move the pin closer to a street.",
       outside_service_area: "Darbna currently covers Iraq only.",
       too_close: "You're already very close to the destination.",
@@ -72,6 +73,7 @@ export const en: Strings = {
   ordinals: ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth"],
   units: { m: "{v} m", km: "{v} km", mSpoken: "{v} meters", kmSpoken: "{v} kilometers", min: "{v} min", hr: "{h} h {m} min" },
   reports: {
+    pending: "Waiting for another driver to confirm", 
     reportingBanned: "Reporting is banned after five confirmed fake or abusive reports. Contact darbnaiq@gmail.com to request a review.",
     title: "Report",
     onlyWhenStopped: "Only report when stopped or if you're a passenger.",
@@ -103,6 +105,7 @@ export const en: Strings = {
   settings: {
     deleteFailed: "Server deletion did not complete. Your deletion ID is preserved; reconnect and try again.",
     privacyLink: "Privacy policy",
+    contactSupport: "Contact support", supportHello: "Hi, I have a question about Darbna: ", 
     supportLink: "Support and report abuse",
 
     satellite: "Satellite view", mapView: "Map view",
@@ -164,7 +167,16 @@ export const en: Strings = {
     },
     parked: { title: "My car", saved: "Parking spot saved", walk: "Walk to my car", forget: "Forget spot", ago: "Parked {time}" },
     mapProblem: { button: "Map problem here?", title: "Report a map problem", hint: "For example: a new road is missing here, or a street name is wrong. Map volunteers fix it for everyone.", placeholder: "What's missing or wrong?", send: "Send", sent: "Thanks! Map volunteers will see your note.", failed: "Couldn't send right now" },
-    points: { title: "Your points", level: "Level {n}", levels: ["Newcomer", "Active driver", "Road eye", "Guide", "Road expert", "Darbna legend"], next: "{n} to the next level", stats: "{r} reports · {t} thanks", earned: "+{n} points", how: "Report road problems and confirm other drivers' reports to earn points." },
+    prize: {
+      title: "Prizes", every10: "Win a prize every 10 levels 🎁", progress: "You're level {lvl} · next prize at level {next}",
+      won: "You won a prize! 🎁", wonLevel: "Level {n} prize", contact: "Contact support to receive your prize and give them this code:",
+      delivered: "Delivered", rejected: "Not accepted — contact support", whatsapp: "WhatsApp", call: "Call", email: "Email",
+      msg: "Hi, I won a prize in Darbna. Prize code: {code}", subject: "Darbna prize {code}",
+      congrats: "Congratulations!", popupBody: "You reached level {n} and won a prize. Contact support to receive it.", later: "Later",
+      copy: "Copy code", copied: "Code copied",
+      rules: "Prizes are given free by Darbna, with no purchase. Apple is not a sponsor of these prizes and is not involved in them. Darbna decides the prize; points from false reports cancel a prize.",
+    },
+    points: { title: "Your points", level: "Level {n}", levels: ["Newcomer", "Active driver", "Road eye", "Guide", "Road expert", "Darbna legend"], next: "{n} to the next level", stats: "{r} reports · {t} thanks", earned: "+{n} points", how: "+2 when another driver confirms your report, and +2 for each report you confirm. A report starts warning drivers once it's confirmed." },
     thanks: { button: "Thanks", done: "Thanks sent", count: "{n} thanks", already: "You already thanked them" },
     fuel: { title: "Station status", none: "No reports right now", queue: "Long queue", closed: "Closed" },
     menu: { title: "More" },

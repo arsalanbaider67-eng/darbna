@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { EmergencyConfig, LngLat, RegionStatus, SpeedLimitSpan } from "@darbna/core";
 import bundledEmergency from "@darbna/core/data/emergency-numbers.json";
-import type { ApiRoute, Place, PublicReport, RouteResult, ServerConfig, SharedTrip } from "./types";
+import type { ApiRoute, Place, PrizeState, PrizeWin, PublicReport, RouteResult, ServerConfig, SharedTrip } from "./types";
 import { DEFAULT_SETTINGS, type SavedPlaces, type Settings } from "./storage";
 
 export type Mode = "browse" | "search" | "place" | "preview" | "navigating" | "arrived";
@@ -36,6 +36,9 @@ export interface AppState {
   watch: { id: string; trip: SharedTrip | null; error: string | null } | null;
   /** Your helper points (shared reports only). */
   points: { points: number; reports: number; thanks: number } | null;
+  /** Prizes won at every 10 levels, and a newly won one to celebrate. */
+  prizes: PrizeState | null;
+  prizePopup: PrizeWin | null;
   /** SOS: emergency numbers config, region from location, saved region, manual choice. */
   sos: {
     config: EmergencyConfig;
@@ -68,6 +71,8 @@ let state: AppState = {
   limits: null,
   watch: null,
   points: null,
+  prizes: null,
+  prizePopup: null,
   sos: { config: bundledEmergency as unknown as EmergencyConfig, live: null, cached: null, manual: null, permission: "unknown" },
 };
 

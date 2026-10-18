@@ -10,6 +10,7 @@ import {
   type EmergencyContact, type EmergencyService, type LngLat,
 } from "@darbna/core";
 import { useUi } from "../context";
+import { openPage } from "../openPage";
 import { fmt, fmtNumber } from "../i18n";
 import { shareText, webBase } from "../share";
 import { chooseSosRegion } from "../sos/emergency";
@@ -146,7 +147,7 @@ export function SosSheet({ coord, onClose }: { coord: LngLat | null; onClose(): 
           <View key={`src-${c.service}`} style={{ gap: 2 }}>
             <Txt size={13} weight="semibold">{serviceName(c.service)} · {c.number}</Txt>
             {c.sources.map((src) => (
-              <Pressable key={src.url + src.title} onPress={() => void Linking.openURL(src.url)} accessibilityRole="link">
+              <Pressable key={src.url + src.title} onPress={() => void openPage(src.url).catch(() => {})} accessibilityRole="link">
                 <Txt size={12} style={{ color: theme.primary }}>{src.official ? `★ ${L.official} · ` : ""}{src.title}</Txt>
               </Pressable>
             ))}

@@ -1,6 +1,6 @@
 import type { LngLat, ReportCategory, SpeedSample, TrafficCell, LearnedSignal, StopEvent } from "@darbna/core";
 import { getInstallId } from "./storage";
-import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
+import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip, PrizeState } from "./types";
 import { ApiError } from "./apiError";
 import { directApi } from "./apiDirect";
 
@@ -75,6 +75,7 @@ const serverApi = {
   // Points, thanks and trip sharing are only implemented for direct mode (Supabase) so far.
   thank: async (_id: string): Promise<{ report: PublicReport }> => { throw new ApiError("unsupported"); },
   me: async (): Promise<{ points: number; reports: number; thanks: number }> => { throw new ApiError("unsupported"); },
+  prizes: async (): Promise<PrizeState> => { throw new ApiError("unsupported"); },
   shareStart: async (_destName: string, _dest: LngLat, _travel: string): Promise<{ id: string; secret: string }> => { throw new ApiError("unsupported"); },
   shareUpdate: async (_id: string, _secret: string, _u: { coord: LngLat; heading: number | null; etaS: number; remainingM: number; ended?: boolean }): Promise<void> => {},
   shareGet: async (_id: string): Promise<SharedTrip> => { throw new ApiError("unsupported"); },

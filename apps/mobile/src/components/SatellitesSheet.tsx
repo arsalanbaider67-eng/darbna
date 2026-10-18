@@ -5,10 +5,11 @@
  * system it supports by itself.
  */
 import React from "react";
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import * as Device from "expo-device";
 import { GNSS_SYSTEMS, gnssForDevice, type GnssSystem } from "@darbna/core";
 import { useUi } from "../context";
+import { openPage } from "../openPage";
 import { Icon, Panel, Row, Txt } from "./ui";
 
 const FLAG: Record<GnssSystem["flag"], string> = { US: "🇺🇸", RU: "🇷🇺", EU: "🇪🇺", CN: "🇨🇳", JP: "🇯🇵", IN: "🇮🇳" };
@@ -70,7 +71,7 @@ export function SatellitesSheet({ onClose }: { onClose(): void }) {
         })}
 
         {dev.source && (
-          <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(dev.source!)} style={[s.card, { borderColor: theme.border, flexDirection: "row", alignItems: "center", gap: 10 }]}>
+          <Pressable accessibilityRole="link" onPress={() => void openPage(dev.source!).catch(() => {})} style={[s.card, { borderColor: theme.border, flexDirection: "row", alignItems: "center", gap: 10 }]}>
             <Icon name="open-in-new" color={theme.primary} />
             <View style={{ flex: 1 }}>
               <Txt weight="semibold">{L.source}</Txt>
