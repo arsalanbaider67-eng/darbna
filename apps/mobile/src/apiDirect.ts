@@ -206,9 +206,8 @@ export const directApi = {
     // Same policy as the server: verified closures are always avoided; others only when the driver asks.
     const [nearby, cells] = await Promise.all([reportsNear(origin, destination), trafficNear(origin, destination)]);
     const chosen = new Set(opts.avoidReportIds ?? []);
-    const toAvoid = nearby.filter((r) => r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display")
-      // "Avoid checkpoints": go around every checkpoint drivers reported.
-      || (opts.avoid?.checkpoints && (r.category === "checkpoint" || r.category === "checkpoint_slow")));
+    // Checkpoints are shown with their wait times but never routed around (owner decision; legal/App Store risk).
+    const toAvoid = nearby.filter((r) => !r.category.startsWith("checkpoint") && (r.treatment === "avoid" || (chosen.has(r.id) && r.treatment !== "display")));
     const excludePolygons = toAvoid.map((r) => boxAround(r.coord, r.category === "closure" || r.category === "flooding" ? 60 : r.category.startsWith("checkpoint") ? 120 : 35));
     const base = { origin, destination, originHeading: opts.heading, via, avoid: { highways: opts.avoid?.highways, unpaved: opts.avoid?.unpaved } };
     let trips: ReturnType<typeof mapValhallaResponse>;

@@ -41,7 +41,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
             <Txt size={13} weight="semibold" style={{ color: theme.primary }}>{t.x.stops.add}</Txt>
           </Pressable>
         )}
-        {!walking && ([["avoidHighways", "highway", t.x.avoid.highways], ["avoidUnpaved", "road-variant", t.x.avoid.unpaved], ["avoidCheckpoints", "shield-car", t.x.avoid.checkpoints]] as const).map(([k, icon, label]) => {
+        {!walking && ([["avoidHighways", "highway", t.x.avoid.highways], ["avoidUnpaved", "road-variant", t.x.avoid.unpaved]] as const).map(([k, icon, label]) => {
           const on = settings[k] === true;
           return (
             <Pressable key={k} accessibilityRole="switch" accessibilityState={{ checked: on }} onPress={() => onOption(k)}
@@ -150,9 +150,6 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
       {avoidedCats.some((c) => c === "closure" || c === "flooding") && (
         <Chip icon="shield-check" text={t.preview.officialAvoided} color={theme.ok} textColor="#fff" />
       )}
-      {avoidedCats.some((c) => c === "checkpoint" || c === "checkpoint_slow") && (
-        <Chip icon="shield-car" text={t.x.avoid.checkpoints} color={theme.primary} textColor={theme.onPrimary} />
-      )}
       {result.avoidance.requested && !result.avoidance.honoured && <Txt size={13} style={{ color: theme.warn }}>{t.preview.avoidFailed}</Txt>}
 
       {reports.length > 0 && (
@@ -169,7 +166,7 @@ export function RoutePreview({ onStart, onDemo, onBack, onRetry, onToggleAvoid, 
                   <Txt size={14} weight="semibold">{t.reports.categories[r.category]}</Txt>
                   <Txt size={12} muted>{r.verified ? t.reports.official : `${t.reports.community} · ${fmt(t.reports.confidence, { p: fmtNumber(Math.round(r.confidence * 100), fmtCtx) })}`}</Txt>
                 </View>
-                {r.treatment === "advise" && (
+                {r.treatment === "advise" && !r.category.startsWith("checkpoint") && (
                   <Btn kind={avoiding ? "primary" : "secondary"} label={avoiding ? t.preview.avoided : t.preview.avoid} onPress={() => onToggleAvoid(r.id)} style={{ minHeight: 44, paddingHorizontal: 12 }} />
                 )}
               </Row>

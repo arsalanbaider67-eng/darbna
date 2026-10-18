@@ -121,3 +121,9 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
 - **Support**: `apps/mobile/src/support.ts` — email darbnaiq@gmail.com; phone/WhatsApp from GitHub variables
   `SUPPORT_PHONE` / `SUPPORT_WHATSAPP` (international format). Web pages open via `openPage()` (in-app browser with Done).
 - **Routing**: own Valhalla (routing.darbna.com) is Iraq-only; trips touching outside Iraq go to the public OSM Valhalla.
+  (`IRAQ_BBOX` is an object `{minLng,…}` — indexing it like an array silently sent every route to the public server until 18 Oct.)
+- **No routing around checkpoints** (owner decision 18 Oct 2026, App Store/legal risk): the "avoid checkpoints" option is
+  removed and checkpoint reports never get an "avoid" button. Showing checkpoint wait times is fine.
+- **Prize rules** (Apple 5.3): `apps/mobile/public/prize-rules.html` (3 languages), linked in the app. Owner decisions:
+  18+ and Iraq residents only, claim within 7 days (app shows the deadline and hides expired claims), Apple not a sponsor.
+- **Reporting and confirming** both need the phone stopped (or the "I'm a passenger" switch) because they earn points.

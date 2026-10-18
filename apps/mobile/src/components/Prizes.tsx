@@ -11,11 +11,30 @@ import { api } from "../api";
 import { useUi } from "../context";
 import { fmt, fmtNumber } from "../i18n";
 import { getState, setState, toast, useStore } from "../store";
+import { openPage } from "../openPage";
 import { contactEmail, contactPhone, contactWhatsApp, SUPPORT_PHONE, SUPPORT_WHATSAPP } from "../support";
 import type { PrizeWin } from "../types";
 import { Btn, Icon, Panel, Row, Txt } from "./ui";
 
 const SEEN_KEY = "darbna:prizesSeen";
+/** Official rules (apps/mobile/public/prize-rules.html, 3 languages). */
+export const PRIZE_RULES_URL = "https://arsalanbaider67-eng.github.io/darbna/prize-rules.html";
+/** Winners have 7 days to contact support (prize rules §6). */
+const CLAIM_DAYS = 7;
+const claimDeadline = (w: PrizeWin) => new Date(new Date(w.at).getTime() + CLAIM_DAYS * 86_400_000);
+const isExpired = (w: PrizeWin) => w.status === "won" && claimDeadline(w).getTime() < Date.now();
+
+function RulesNote() {
+  const { theme, t } = useUi();
+  return (
+    <View style={{ gap: 2 }}>
+      <Txt size={12} muted>{t.x.prize.rules}</Txt>
+      <Pressable accessibilityRole="link" onPress={() => void openPage(PRIZE_RULES_URL).catch(() => toast(t.common.retry, "error"))} hitSlop={8}>
+        <Txt size={13} weight="semibold" style={{ color: theme.accent }}>{t.x.prize.rulesLink}</Txt>
+      </Pressable>
+    </View>
+  );
+}
 
 /** Refresh prizes; a newly won one (not seen on this phone yet) pops up. */
 export async function checkPrizes(): Promise<void> {
@@ -25,7 +44,7 @@ export async function checkPrizes(): Promise<void> {
     setState({ prizes: p });
     const raw = await AsyncStorage.getItem(SEEN_KEY).catch(() => null);
     const seen: string[] = raw ? JSON.parse(raw) : [];
-    const fresh = p.wins.find((w) => w.status === "won" && !seen.includes(w.code));
+    const fresh = p.wins.find((w) => w.status === "won" && !isExpired(w) && !seen.includes(w.code));
     if (fresh && getState().mode !== "navigating") setState({ prizePopup: fresh });
   } catch {
     // offline or database not updated yet: try again later
@@ -43,9 +62,11 @@ function ClaimBox({ win }: { win: PrizeWin }) {
   const { theme, t } = useUi();
   const L = t.x.prize;
   const msg = fmt(L.msg, { code: win.code });
+  const by = claimDeadline(win);
   return (
     <View style={{ gap: 8 }}>
       <Txt size={14}>{L.contact}</Txt>
+      <Txt size={13} weight="semibold" style={{ color: theme.accent }}>{fmt(L.claimBy, { date: `${by.getDate()}/${by.getMonth() + 1}/${by.getFullYear()}` })}</Txt>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${L.copy} ${win.code}`}
@@ -97,14 +118,14 @@ export function PrizeSection() {
               <Icon name="gift" color={theme.accent} />
               <Txt weight="semibold" style={{ flex: 1 }}>{fmt(L.wonLevel, { n: fmtNumber(w.milestone, fmtCtx) })}</Txt>
               <Txt size={13} style={{ color: w.status === "delivered" ? theme.ok : w.status === "rejected" ? theme.danger : theme.accent }}>
-                {w.status === "delivered" ? L.delivered : w.status === "rejected" ? L.rejected : L.won}
+                {w.status === "delivered" ? L.delivered : w.status === "rejected" ? L.rejected : isExpired(w) ? L.expired : L.won}
               </Txt>
             </Row>
           </Pressable>
-          {(open === w.code || w.status === "won") && w.status !== "delivered" && <ClaimBox win={w} />}
+          {(open === w.code || (w.status === "won" && !isExpired(w))) && w.status !== "delivered" && !isExpired(w) && <ClaimBox win={w} />}
         </View>
       ))}
-      <Txt size={12} muted>{L.rules}</Txt>
+      <RulesNote />
     </View>
   );
 }
@@ -128,7 +149,7 @@ export function PrizePopup() {
         </Row>
         <Txt size={15} style={{ marginBottom: 8 }}>{fmt(L.popupBody, { n: fmtNumber(win.milestone, fmtCtx) })}</Txt>
         <ClaimBox win={win} />
-        <Txt size={12} muted style={{ marginTop: 8 }}>{L.rules}</Txt>
+        <View style={{ marginTop: 8 }}><RulesNote /></View>
         <Btn kind="ghost" label={L.later} onPress={close} style={{ marginTop: 6 }} />
       </Panel>
     </View>
