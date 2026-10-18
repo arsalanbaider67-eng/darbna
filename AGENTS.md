@@ -110,3 +110,14 @@ optional `MAPBOX_TOKEN`, `HERE_KEY`.
 3. Owner must re-run `supabase/schema.sql` (traffic-light learning tables).
 4. App Store listing, screenshots, age rating; then "Submit for Review" (owner presses it).
 5. `docs/STATUS.md` is outdated (pre-TestFlight) — refresh it.
+
+## Prizes, report confirmation, support (2026-10-18)
+- **Prizes**: `supabase/prizes.sql` (apply after the other SQL files; tests in `prizes.test.sql`). One prize per 10 levels
+  (level 10, 20 …) from the same points the app shows; the app shows only "you won a prize — contact support" with a claim
+  code (`DRB-XXXX-XXXX`), never the prize. Owner checks/delivers in SQL (`darbna_private.set_prize_status`). This replaces
+  the earlier draw/odds preview in `rewards.sql` for what ships (that one stays disabled).
+- **Reports**: unconfirmed driver reports are faded + "waiting for another driver" and do **not** warn on the road; they warn
+  once confirmed (same report by another driver, or "still there"). +2 to everyone involved (report-integrity.sql).
+- **Support**: `apps/mobile/src/support.ts` — email darbnaiq@gmail.com; phone/WhatsApp from GitHub variables
+  `SUPPORT_PHONE` / `SUPPORT_WHATSAPP` (international format). Web pages open via `openPage()` (in-app browser with Done).
+- **Routing**: own Valhalla (routing.darbna.com) is Iraq-only; trips touching outside Iraq go to the public OSM Valhalla.

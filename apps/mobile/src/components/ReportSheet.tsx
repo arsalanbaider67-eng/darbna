@@ -129,7 +129,8 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
       // After "not there"/flag, hide it for this user right away; the server decides for everyone.
       if (v === "confirm") mergeReports([res.report]);
       else removeReport(r.id);
-      toast(t.reports.voted, "ok");
+      if (v === "confirm") void refreshPoints().then((n) => toast(n && n > 0 ? `${t.reports.voted} ${fmt(t.x.points.earned, { n })}` : t.reports.voted, "ok"));
+      else toast(t.reports.voted, "ok");
       onClose();
     } catch (e) {
       const code = e instanceof ApiError ? e.code : "";
@@ -158,6 +159,7 @@ export function ReportDetails({ id, onClose }: { id: string; onClose(): void }) 
           : <Chip icon="account-group" text={t.reports.community} color={theme.surfaceAlt} textColor={theme.text} />}
         {!r.verified && <Chip text={fmt(t.reports.confidence, { p: fmtNumber(Math.round(r.confidence * 100), fmtCtx) })} color={theme.surfaceAlt} textColor={theme.text} />}
         {r.confirms > 0 && <Chip text={fmt(t.reports.confirms, { n: fmtNumber(r.confirms, fmtCtx) })} color={theme.surfaceAlt} textColor={theme.text} />}
+        {r.source === "community" && r.confirms < 1 && <Chip text={t.reports.pending} color={theme.surfaceAlt} textColor={theme.warn} />}
         {(r.thanks ?? 0) > 0 && <Chip icon="thumb-up" text={fmt(t.x.thanks.count, { n: fmtNumber(r.thanks ?? 0, fmtCtx) })} color={theme.surfaceAlt} textColor={theme.primary} />}
         {r.isSample && <Chip icon="flask-outline" text={t.reports.sample} color={theme.accent} textColor={theme.onAccent} />}
       </Row>

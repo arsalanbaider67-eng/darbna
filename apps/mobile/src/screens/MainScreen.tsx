@@ -30,6 +30,7 @@ import { useGuidance } from "../nav/useGuidance";
 import { loadCachedConfig, loadParked, loadTrip, saveCachedConfig, saveParked, saveRecents, saveSettings, saveTrip } from "../storage";
 import { MapProblemSheet, NavMenuSheet, WatchCard } from "../components/Extras";
 import { SatellitesSheet } from "../components/SatellitesSheet";
+import { checkPrizes, PrizePopup } from "../components/Prizes";
 import { SosSheet } from "../components/SosSheet";
 import { useSosRegion } from "../sos/emergency";
 import { routeSpeedLimits } from "../external";
@@ -181,7 +182,8 @@ export function MainScreen() {
   // Mapped speed bumps and cameras on this route (worked out once per route).
   const routeHazards = useMemo(() => (tripRoute && tripRoute.travel !== "walk" ? hazardsOnRoute(tripRoute.geometry, HAZARDS).map(hazardReport) : []), [tripRoute]);
   const warnItems = useMemo(
-    () => [...reportList, ...routeHazards].filter((r) => WARN_AHEAD[r.category] && (r.category !== "camera" || speedAlerts)),
+    // Drivers' reports only warn once another driver has confirmed them (same report, or "still there").
+    () => [...reportList, ...routeHazards].filter((r) => WARN_AHEAD[r.category] && (r.category !== "camera" || speedAlerts) && (r.source !== "community" || r.confirms >= 1)),
     [reportList, routeHazards, speedAlerts],
   );
   const ahead = mode === "navigating" && tripRoute && tripCum && guidance && guidance.status !== "arrived"
@@ -313,6 +315,9 @@ export function MainScreen() {
     const sub = Linking.addEventListener("url", (e) => handle(e.url));
     return () => sub.remove();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------- prizes (every 10 levels)
+  useEffect(() => { if (config?.social) void checkPrizes(); }, [config?.social]);
 
   // ---------------------------------------------------------------- shared into Darbna (share sheet)
   useIncomingShare((text) => { void openShared(text); });
@@ -732,6 +737,7 @@ export function MainScreen() {
           <Txt size={11} weight="bold" style={{ color: theme.onAccent }}>{t.reports.sample}</Txt>
         </View>
       )}
+      <PrizePopup />
       <Toast />
     </View>
     </UiOverride>

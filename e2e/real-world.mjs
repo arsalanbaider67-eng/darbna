@@ -147,6 +147,24 @@ if (routed) {
   if (hasRc) { await rc.click(); await sleep(3000); const back = await cam(); const pk = await puck(); check("Navigation: recenter follows you again", pk && km(back.c, pk) < 0.3, pk ? `${Math.round(km(back.c, pk) * 1000)} m from you` : ""); }
 }
 
+// ---------------------------------------------------------------- route from outside Iraq (own server covers Iraq only)
+{
+  await page.goto(URL);
+  await ctx.setGeolocation({ latitude: 41.7151, longitude: 44.7930, accuracy: 10 }); // Tbilisi
+  await page.waitForFunction(() => window.__darbnaMap && window.__darbnaMap.isStyleLoaded(), null, { timeout: 45000 }).catch(() => {});
+  await sleep(4000);
+  await page.getByLabel("وين رايح؟").first().click();
+  await page.locator("input").first().type("قلعة أربيل", { delay: 50 });
+  await page.getByTestId("search-result").first().waitFor({ timeout: 9000 }).catch(() => {});
+  await page.getByTestId("search-result").first().click().catch(() => {});
+  await sleep(1500);
+  await page.getByRole("button", { name: "المسار" }).first().click().catch(() => {});
+  const ok = await page.getByRole("button", { name: "تجربة" }).first().waitFor({ timeout: 30000 }).then(() => true).catch(() => false);
+  const txt = await page.locator("body").innerText();
+  check("Route from outside Iraq (Tbilisi → Erbil) is found", ok, ok ? "" : txt.slice(0, 200).replace(/\n/g, " | "));
+  await shot("07-route-from-abroad");
+}
+
 const failed = results.filter((r) => !r.ok && !r.info);
 fs.writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 1));
 const real = results.filter((r) => !r.info);

@@ -4,6 +4,7 @@ import { I18nManager, Linking, Pressable, ScrollView, StyleSheet, Switch, View }
 import { api } from "../api";
 import { confirmDialog } from "../dialog";
 import { useUi } from "../context";
+import { openPage } from "../openPage";
 import { fmt, isRTL, LANGS, type Lang } from "../i18n";
 import { chooseVoice, resetVoiceCache } from "../nav/voice";
 import { hasRecordedVoice, primeVoice, stopSpeaking } from "../nav/prompt";
@@ -13,6 +14,8 @@ import { deleteUserData } from "../privacyControls";
 import { clearOffline, offlineSummary, type OfflineResult, type OfflineSummary } from "../offline";
 import { saveSettings, wipeLocalData, type Settings } from "../storage";
 import { PointsCard } from "./Extras";
+import { PrizeSection } from "./Prizes";
+import { contactEmail, contactPhone, contactWhatsApp, SUPPORT_EMAIL, SUPPORT_PHONE, SUPPORT_WHATSAPP } from "../support";
 import { getState, setState, toast, useStore } from "../store";
 import { ensureDirection } from "../rtl";
 import { TOUCH } from "../theme";
@@ -92,7 +95,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
     const ok = await playClips([clips.d_200m, clips.mv_right], true).catch(() => false);
     toast(ok ? t.journey.voicePlaying : t.journey.voiceMissing, ok ? "info" : "error");
   }
-  const openInfo = (url: string) => void Linking.openURL(url).catch(() => toast(t.common.retry, "error"));
+  const openInfo = (url: string) => void openPage(url).catch(() => toast(t.common.retry, "error"));
 
   const Seg = <T extends string>({ value, options, onChange }: { value: T; options: { v: T; label: string }[]; onChange(v: T): void }) => (
     <Row gap={6} style={{ flexWrap: "wrap" }}>
@@ -122,6 +125,7 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
           <Seg value={settings.lang} options={LANGS.map((l) => ({ v: l.code, label: l.label }))} onChange={changeLang} />
         </View>
         <PointsCard />
+        <PrizeSection />
         <Btn kind="secondary" icon="alarm-light-outline" label={t.x.sos.title} onPress={() => setState({ sheet: "sos" })} style={{ borderColor: theme.danger }} />
         <Btn kind="secondary" icon="satellite-variant" label={t.x.sat.open} onPress={() => setState({ sheet: "satellites" })} />
         <Row>
@@ -185,6 +189,12 @@ export function SettingsSheet({ onClose, onDownloadArea }: { onClose(): void; on
           <Txt size={14} muted>{t.settings.privacyBody}</Txt>
           <Btn kind="ghost" icon="shield-check" label={t.settings.privacyLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/privacy.html")} />
           <Btn kind="ghost" icon="help-circle-outline" label={t.settings.supportLink} onPress={() => openInfo("https://arsalanbaider67-eng.github.io/darbna/support.html")} />
+          <Txt weight="semibold" style={{ marginTop: 6 }}>{t.settings.contactSupport}</Txt>
+          <Row gap={8} style={{ flexWrap: "wrap" }}>
+            {!!SUPPORT_WHATSAPP && <Btn kind="secondary" icon="whatsapp" label={t.x.prize.whatsapp} onPress={() => void contactWhatsApp(t.settings.supportHello).catch(() => toast(t.common.retry, "error"))} />}
+            {!!SUPPORT_PHONE && <Btn kind="secondary" icon="phone" label={t.x.prize.call} onPress={() => void contactPhone().catch(() => toast(t.common.retry, "error"))} />}
+            <Btn kind="secondary" icon="email-outline" label={SUPPORT_EMAIL} onPress={() => void contactEmail("Darbna", t.settings.supportHello).catch(() => toast(t.common.retry, "error"))} />
+          </Row>
           <Btn kind="secondary" icon="volume-high" label={t.journey.voiceTest} onPress={() => void testVoice()} />
           <Btn kind="danger" icon="delete-outline" label={t.settings.deleteData} onPress={deleteData} disabled={deleting} style={{ marginTop: 8 }} />
         </View>

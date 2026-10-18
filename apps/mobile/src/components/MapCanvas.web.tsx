@@ -166,7 +166,7 @@ function reportsFC(reports: PublicReport[]): GeoJSON.FeatureCollection {
     type: "FeatureCollection",
     features: reports.map((r) => ({
       type: "Feature",
-      properties: { id: r.id, category: r.category, verified: r.verified ? 1 : 0, opacity: r.verified ? 1 : 0.45 + r.confidence * 0.55 },
+      properties: { id: r.id, category: r.category, verified: r.verified ? 1 : 0, opacity: r.verified ? 1 : r.source === "community" && r.confirms < 1 ? 0.5 : 0.6 + r.confidence * 0.4 },
       geometry: { type: "Point", coordinates: r.coord },
     })),
   };

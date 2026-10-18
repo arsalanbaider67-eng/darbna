@@ -18,13 +18,13 @@ import * as Crypto from "expo-crypto";
 import {
   applyTraffic, arabicKey, searchIraq, mergePlaceResults, boxAround, haversine, latinKey, projectOnSegment, mapValhallaResponse, REPORT_TTL_MIN, reportConfidence, routingTreatment,
   valhallaErrorCode, valhallaRouteBody, type LngLat, type ReportCategory,
-  type SpeedSample, type TrafficCell, type LearnedSignal, type StopEvent,
+  type SpeedSample, type TrafficCell, type LearnedSignal, type StopEvent, IRAQ_BBOX,
 } from "@darbna/core";
 import gazetteer from "@darbna/core/data/gazetteer.seed.json";
 import { createCachedSearch, createRequestGate, type SearchOptions } from "./searchClient";
 import { ApiError } from "./apiError";
 import { getInstallId } from "./storage";
-import type { Place, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
+import type { Place, PrizeState, PublicReport, RouteOpts, RouteResult, ServerConfig, SharedTrip } from "./types";
 
 // Your own server (routing.darbna.com) when EXPO_PUBLIC_VALHALLA_URL is set at build time; else the public FOSSGIS one.
 const VALHALLA = (process.env.EXPO_PUBLIC_VALHALLA_URL || "https://valhalla1.openstreetmap.de").replace(/\/$/, "");
@@ -310,6 +310,12 @@ export const directApi = {
   },
 
   /** Your helper points. */
+  /** Prizes: one at every 10 levels, with a claim code for support (supabase/prizes.sql). */
+  prizes: async (): Promise<PrizeState> => {
+    if (!SHARED_REPORTS) throw new ApiError("unsupported");
+    return rpc<PrizeState>("darbna_prizes", { install: await getInstallId() });
+  },
+
   me: async () => {
     if (!SHARED_REPORTS) throw new ApiError("unsupported");
     return rpc<{ points: number; reports: number; thanks: number }>("darbna_me", { install: await getInstallId() });
@@ -340,10 +346,18 @@ export const directApi = {
 };
 
 // ---------------------------------------------------------------- routing helpers
+/** Public OpenStreetMap routing, for trips that start or end outside Iraq (our own server covers Iraq only). */
+const VALHALLA_PUBLIC = "https://valhalla1.openstreetmap.de";
+const inIraqBox = ([x, y]: LngLat) => x >= IRAQ_BBOX[0] && x <= IRAQ_BBOX[2] && y >= IRAQ_BBOX[1] && y <= IRAQ_BBOX[3];
+function routingBase(body: Record<string, unknown>): string {
+  const locs = (body.locations as { lon: number; lat: number }[]) ?? [];
+  return VALHALLA !== VALHALLA_PUBLIC && locs.some((l) => !inIraqBox([l.lon, l.lat])) ? VALHALLA_PUBLIC : VALHALLA;
+}
+
 async function valhallaRoute(body: Record<string, unknown>) {
   // GET with ?json= is a "simple" CORS request: no preflight needed.
   try {
-    return mapValhallaResponse(await getJson(`${VALHALLA}/route?json=${encodeURIComponent(JSON.stringify(body))}`, 20_000));
+    return mapValhallaResponse(await getJson(`${routingBase(body)}/route?json=${encodeURIComponent(JSON.stringify(body))}`, 20_000));
   } catch (e: any) {
     if (e?.body) throw new ApiError(valhallaErrorCode(e.body) === "unavailable" ? "generic" : valhallaErrorCode(e.body), e.status);
     throw e;
@@ -378,6 +392,13 @@ async function routeWithSnapFallbacks(input: Parameters<typeof valhallaRouteBody
       last = e;
       if (!(e instanceof ApiError && (e.code === "no_route" || e.code === "off_network"))) throw e;
     }
+  }
+  // Say which end is the problem: your position, or the place you picked.
+  if (last instanceof ApiError && last.code === "off_network") {
+    const body = valhallaRouteBody({ ...input, snap: "default" });
+    const locs = body.locations as unknown[];
+    const located = await getJson(`${routingBase(body)}/locate?json=${encodeURIComponent(JSON.stringify({ locations: [locs[0]], costing: body.costing }))}`, 10_000).catch(() => null) as { edges?: unknown[] | null }[] | null;
+    if (Array.isArray(located) && located[0] && !(located[0].edges?.length)) throw new ApiError("off_network_start", 422);
   }
   throw last;
 }

@@ -85,3 +85,7 @@ export interface ServerConfig {
   /** Points, thanks and "share my trip" are available (Supabase). */
   social?: boolean;
 }
+
+/** Milestone prizes (every 10 levels). The prize itself is never shown: winners contact support with the code. */
+export interface PrizeWin { milestone: number; code: string; status: "won" | "delivered" | "rejected"; at: string }
+export interface PrizeState { points: number; level: number; nextMilestone: number; wins: PrizeWin[] }
