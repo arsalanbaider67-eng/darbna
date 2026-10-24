@@ -12,7 +12,8 @@
     "postinstall": "patch-package"
   },
   "overrides": {
-    "expo-asset": "~12.0.0"
+    "expo-asset": "~12.0.0",
+    "xcode": "3.0.1"
   },
   "dependencies": {
     "patch-package": "^8.0.0"
