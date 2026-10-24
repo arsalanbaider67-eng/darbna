@@ -82,6 +82,8 @@ export function MainScreen() {
   // "Explore from Erbil": for anyone outside Iraq (including App Review), the app acts as if you
   // were standing in central Erbil, so search, routes, reports and the demo drive all work.
   const [tour, setTour] = useState(false);
+  // Location explanation after a denial: only when the user taps something that needs location.
+  const [askedLocation, setAskedLocation] = useState(false);
   const loc = useMemo(() => (tour ? { ...realLoc, permission: "granted" as const, fix: TOUR_FIX } : realLoc), [tour, realLoc]);
   const outsideIraq = !tour && ((realLoc.fix && !inIraq(realLoc.fix.coord)) || realLoc.permission === "unknown" || realLoc.permission === "denied" || realLoc.permission === "blocked" || realLoc.permission === "services_off");
   const fix = loc.fix;
@@ -626,11 +628,15 @@ export function MainScreen() {
             <RoundBtn icon="alert-plus" label={t.reports.title} onPress={() => setState({ sheet: "report", openReportId: null })} />
             <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => { enableCompass(); map.current?.flyTo(fix.coord, 15, true); }} />
           </>}
+          {loc.permission !== "granted" && !tour && (
+            <RoundBtn icon="crosshairs-gps" label={t.nav.recenter} onPress={() => setAskedLocation(true)} />
+          )}
         </View>
       )}
 
-      {mode === "browse" && !sheet && !openReportId && !watch && !tour && (
-        <PermissionPanel state={loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
+      {mode === "browse" && !sheet && !openReportId && !watch && !tour && (loc.permission === "unknown" || askedLocation) && (
+        <PermissionPanel state={loc.permission} onAllow={() => { setAskedLocation(false); loc.request(); }} onOpenSettings={loc.openSettings}
+          onClose={loc.permission === "unknown" ? undefined : () => setAskedLocation(false)} />
       )}
 
       {mode === "place" && selected && !sheet && !openReportId && (
@@ -648,7 +654,7 @@ export function MainScreen() {
 
       {mode === "preview" && !openReportId && (
         preview.error === "no_location"
-          ? <PermissionPanel state={loc.permission === "granted" ? "unknown" : loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} />
+          ? <PermissionPanel state={loc.permission === "granted" ? "unknown" : loc.permission} onAllow={loc.request} onOpenSettings={loc.openSettings} onClose={() => setState({ mode: "place" })} />
           : <RoutePreview
               canStart={loc.permission === "granted" && !!fix}
               onStart={() => startNavigation(false)}

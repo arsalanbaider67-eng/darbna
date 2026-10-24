@@ -10,7 +10,7 @@ AUDIO
 Arabic guidance uses bundled recorded Standard Arabic prompts; English prompts are also bundled. Settings has a voice test.
 
 LOCATION / CONNECTIVITY
-Navigation and trip sharing run in the foreground only; no background location is requested. Routes, search and community features need connectivity.
+Navigation and trip sharing run in the foreground only; no background location is requested. Before the system prompt the app explains why location is used (button: "Continue"). If the user chooses "Don't Allow", the app does not ask again or show any message on its own; the map, search and route preview keep working. Only when the user taps something that needs location (the location button or Directions) does a closable note explain this, with a link to Settings. Routes, search and community features need connectivity.
 
 COMMUNITY REPORTS (user-generated content)
 Fixed road-condition categories only: no profiles, chat, photos or free text in the report feed. A report warns other drivers only after a second driver confirms it. Every report has "Not there", "Wrong or abusive report" (flag) and "Block this reporter". Flags hide a report; blocking hides all reports from that sender for the user. The developer reviews flags and bans senders after five confirmed fake/abusive reports. Contact: darbnaiq@gmail.com. Reporting and confirming are disabled while the phone is moving unless the user confirms they are a passenger.

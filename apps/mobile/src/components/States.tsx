@@ -30,8 +30,13 @@ export function ConnectionPill({ online, top }: { online: boolean | null; top: n
   );
 }
 
-/** Location permission states, shown as a panel over the map (the map stays usable). */
-export function PermissionPanel({ state, onAllow, onOpenSettings }: { state: PermissionState; onAllow(): void; onOpenSettings(): void }) {
+/**
+ * Location permission states, shown as a panel over the map (the map stays usable).
+ * App Review 5.1.1(iv): never shown on its own after the user says "Don't Allow" — only before the
+ * system prompt (neutral "Continue" button) or when the user taps something that needs location,
+ * and then it can be closed.
+ */
+export function PermissionPanel({ state, onAllow, onOpenSettings, onClose }: { state: PermissionState; onAllow(): void; onOpenSettings(): void; onClose?(): void }) {
   const { theme, t } = useUi();
   if (state === "granted") return null;
   const blocked = state === "blocked" || state === "denied";
@@ -46,6 +51,7 @@ export function PermissionPanel({ state, onAllow, onOpenSettings }: { state: Per
           <Txt size={19} weight="bold">{blocked ? t.permission.deniedTitle : t.permission.title}</Txt>
           <Txt muted>{servicesOff ? t.permission.servicesOff : blocked ? t.permission.deniedBody : t.permission.body}</Txt>
         </View>
+        {onClose && <Pressable accessibilityRole="button" accessibilityLabel={t.common.close} onPress={onClose} hitSlop={12}><Icon name="close" /></Pressable>}
       </Row>
       <Row style={{ marginTop: 12 }}>
         <Btn

@@ -98,7 +98,7 @@ export const en: Strings = {
   permission: {
     title: "We need your location",
     body: "Uses location while the app is open to show your position and calculate routes through service providers. Optional reports, trip sharing and traffic contribution can send location. See Settings → Privacy policy.",
-    allow: "Allow location", deniedTitle: "Location not allowed",
+    allow: "Continue", deniedTitle: "Location not allowed",
     deniedBody: "You can search and preview routes, but guidance needs your location. Enable it in Settings.",
     openSettings: "Open Settings", servicesOff: "Location services are off on this device. Turn them on so we can find you.",
   },
