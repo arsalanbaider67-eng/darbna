@@ -1,0 +1,51 @@
+PASS  GPS: your position is shown  — 0 m from the real position
+PASS  GPS: position follows you smoothly  — 0 m behind
+PASS  GPS: a real big move is accepted within a few seconds (no frozen dot)  — 3 m from the new place
+PASS  Map: drag moves the map  — 798 m
+PASS  Map: stays where you dragged it (no snapping back to GPS)
+  (bearing while rotating -82.4°, after release -82.4°)
+PASS  Map: rotate  — bearing -82.4° (events: rotatestart,rotate; camera calls: none)
+PASS  Map: tilt  — pitch 60.0°
+PASS  Map: zoom  — 14.0 → 14.4
+PASS  Map: rotation/tilt kept (nothing resets it)
+PASS  Search "الكرادة": results appear by themselves (no search key)  — 1.8s after typing, 20 results, first «الكرادة»
+PASS  Search "الكرادة": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "الكرادة": first result in the expected city — 0.9 km
+PASS  Search "قلعة أربيل": results appear by themselves (no search key)  — 1.8s after typing, 8 results, first «قلعة أربيل»
+PASS  Search "قلعة أربيل": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "قلعة أربيل": first result in the expected city — 0.1 km
+PASS  Search "Erbil Citadel": results appear by themselves (no search key)  — 1.3s after typing, 13 results, first «قلعة أربيل»
+PASS  Search "Erbil Citadel": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "Erbil Citadel": first result in the expected city — 0.1 km
+PASS  Search "البصره": results appear by themselves (no search key)  — 1.3s after typing, 20 results, first «البصرة»
+PASS  Search "البصره": picking a result moves the map to it  — map 0 m from the picked place
+INFO-NO Search "البصره": first result in the expected city — 449.2 km
+PASS  Search "فاميلي مول": results appear by themselves (no search key)  — 1.3s after typing, 3 results, first «المسيب فاميلي مول»
+PASS  Search "فاميلي مول": picking a result moves the map to it  — map 0 m from the picked place
+INFO-NO Search "فاميلي مول": first result in the expected city — 381.8 km
+PASS  Search "المنصوور": results appear by themselves (no search key)  — 1.3s after typing, 19 results, first «المنصور»
+PASS  Search "المنصوور": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "المنصوور": first result in the expected city — 11.4 km
+PASS  Search "پارکی ئازادی": results appear by themselves (no search key)  — 1.3s after typing, 3 results, first «پارکی ئازادی»
+PASS  Search "پارکی ئازادی": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "پارکی ئازادی": first result in the expected city — 0.5 km
+PASS  Search "جامعة الموصل": results appear by themselves (no search key)  — 1.3s after typing, 16 results, first «جامعة الموصل/التربية الاساسية»
+PASS  Search "جامعة الموصل": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "جامعة الموصل": first result in the expected city — 1.4 km
+PASS  Search "مرقد الإمام علي": results appear by themselves (no search key)  — 1.3s after typing, 3 results, first «مرقد الامام علي»
+PASS  Search "مرقد الإمام علي": picking a result moves the map to it  — map 0 m from the picked place
+INFO-NO Search "مرقد الإمام علي": first result in the expected city — 61.0 km
+PASS  Search "شارع المتنبي": results appear by themselves (no search key)  — 1.3s after typing, 20 results, first «شارع المتنبي»
+PASS  Search "شارع المتنبي": picking a result moves the map to it  — map 0 m from the picked place
+INFO-OK Search "شارع المتنبي": first result in the expected city — 0.1 km
+PASS  Satellites: sheet lists the systems
+PASS  Navigation: a route is found
+PASS  Navigation: camera follows and turns with you  — pitch 50°
+PASS  Navigation: you can drag the map while driving
+PASS  Navigation: the camera stays where you put it  — moved 0 m
+PASS  Navigation: recenter button appears
+PASS  Navigation: you can rotate while driving
+PASS  Navigation: recenter follows you again  — 1 m from you
+PASS  Route from outside Iraq (Tbilisi → Erbil) is found
+
+38/38 checks passed; first result in expected city for 7/10 searches
