@@ -40,6 +40,10 @@ jobs:
           npm install --no-audit --no-fund > /tmp/npm.log 2>&1; st=$?
           if [ $st != 0 ]; then grep -E "npm (error|ERR)|ERESOLVE|ETARGET|code " /tmp/npm.log | head -25 | while IFS= read -r l; do echo "::error title=npm install::${l:0:300}"; done; tail -5 /tmp/npm.log; fi
           exit $st
+      - name: Only one React Native copy
+        run: |
+          n=$(find . -path "*/node_modules/react-native/package.json" -not -path "*/react-native/node_modules/*" | wc -l | tr -d ' ')
+          [ "$n" = "1" ] || { find . -path "*/node_modules/react-native/package.json" -not -path "*/react-native/node_modules/*" | while read f; do echo "::error title=second React Native copy::$f"; done; exit 1; }
       - name: Core tests
         working-directory: packages/core
         run: bun test 2>&1 | tail -5
