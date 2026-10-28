@@ -12,6 +12,7 @@ jobs:
     env:
       DARBNA_CARPLAY: "1"
       EXPO_PUBLIC_CARPLAY: "1"
+      EXPO_PUBLIC_CARPLAY_DEBUG: "1"
       EXPO_PUBLIC_API_URL: direct
       EXPO_PUBLIC_ESRI_KEY: ${{ vars.ESRI_KEY }}
       EXPO_PUBLIC_ESRI_GEOCODE: ${{ vars.ESRI_GEOCODE }}
@@ -109,6 +110,15 @@ jobs:
           xcrun simctl spawn "$DEV" log show --last 15m --style compact --predicate 'process == "Darbna"' > shots/app-log.txt 2>/dev/null || true
           grep -iE "carplay|RNCarPlay|ReactNativeJS|scene|exception|error|reload|bridge|warn" shots/app-log.txt | grep -viE "nw_|boringssl|CFNetwork|tcp_|quic|networkd" | tail -150 > shots/app-log-filtered.txt || true
           tail -40 shots/app-log-filtered.txt | while IFS= read -r l; do echo "::notice title=log::${l:0:300}"; done
+          # What the CarPlay code itself recorded (test builds only): AsyncStorage "darbna:carDiag".
+          DATA=$(xcrun simctl get_app_container "$DEV" iq.darbna.app data 2>/dev/null || true)
+          M=$(find "$DATA/Library" -path "*RCTAsyncLocalStorage*" -name manifest.json 2>/dev/null | head -1)
+          [ -n "$M" ] && cp "$M" shots/async-manifest.json
+          python3 -c "
+          import json,sys
+          d=json.load(open('shots/async-manifest.json')); v=d.get('darbna:carDiag')
+          for l in (json.loads(v) if v else ['(no carDiag value)']): print(l)" > shots/car-diag.txt 2>&1 || echo "no manifest" > shots/car-diag.txt
+          head -40 shots/car-diag.txt | while IFS= read -r l; do echo "::notice title=carDiag::${l:0:300}"; done
           mkdir -p shots/crash
           find ~/Library/Logs/DiagnosticReports -newer /tmp/run-start -iname "*darbna*" -exec cp {} shots/crash/ \; 2>/dev/null || true
           ls -la shots shots/crash

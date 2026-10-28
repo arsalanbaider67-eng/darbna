@@ -24,6 +24,7 @@ import { getState, mergeReports, setState, subscribe } from "../store";
 import type { ApiRoute, Place } from "../types";
 import { carBridge } from "./bridge";
 import { CarMap } from "./CarMap";
+import { carLog } from "./diag";
 
 const ARROW: Record<string, ImageSourcePropType> = {
   straight: require("../../assets/carplay/straight.png"),
@@ -85,6 +86,7 @@ const alertReport = new Map<number, string>();
 const askedReports = new Set<string>();
 
 export function startCarPlayApp(): void {
+  carLog("startCarPlayApp");
   CarPlay.registerOnConnect(onConnect);
   CarPlay.registerOnDisconnect(onDisconnect);
 }
@@ -106,6 +108,7 @@ function driveButtons() {
 }
 
 function onConnect() {
+  carLog(`onConnect (map ${map ? "exists" : "new"})`);
   // CarPlay can report the same connection twice (already connected + connect event): build once.
   if (map) return;
   map = new MapTemplate({
@@ -137,11 +140,13 @@ function onConnect() {
     },
   });
   CarPlay.setRootTemplate(map, false);
+  carLog("root template set");
   unsubs = [subscribe(syncState), carBridge.subscribe(syncLive)];
   syncState();
 }
 
 function onDisconnect() {
+  carLog("onDisconnect");
   unsubs.forEach((u) => u());
   unsubs = [];
   map = null;
