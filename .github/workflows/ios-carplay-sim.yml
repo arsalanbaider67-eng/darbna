@@ -63,24 +63,49 @@ jobs:
           DEV=$(xcrun simctl list devices available -j | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if 'iPhone 1' in x['name'] and 'Pro' in x['name']))")
           echo "DEV=$DEV" >> "$GITHUB_ENV"
           xcrun simctl boot "$DEV"; open -a Simulator; sleep 25
-          xcrun simctl privacy "$DEV" grant location iq.darbna.app || true
           xcrun simctl location "$DEV" set 33.3152,44.3661 || true
           xcrun simctl install "$DEV" "$APP"
-          xcrun simctl privacy "$DEV" grant location iq.darbna.app || true
+          for s in location location-always; do xcrun simctl privacy "$DEV" grant $s iq.darbna.app || true; done
+          touch /tmp/run-start
           xcrun simctl launch "$DEV" iq.darbna.app; sleep 30
-          xcrun simctl io "$DEV" screenshot shots/phone.png
-          # Open the CarPlay screen: Simulator → I/O → External Displays → CarPlay (needs UI scripting).
-          osascript -e 'tell application "Simulator" to activate' \
-            -e 'tell application "System Events" to tell process "Simulator" to click menu item "CarPlay" of menu 1 of menu item "External Displays" of menu 1 of menu bar item "I/O" of menu bar 1' 2>&1 | tee carplay-open.txt || true
-          sleep 30
-          xcrun simctl io "$DEV" screenshot --display=external shots/carplay-home.png 2>&1 | tee -a carplay-open.txt || true
-          screencapture -x shots/mac-desktop.png || true
-          ls -la shots; cat carplay-open.txt
-          echo "::notice title=carplay screen::$(tr '\n' ' ' < carplay-open.txt | cut -c1-400)"
+          xcrun simctl io "$DEV" screenshot shots/1-phone.png
+          SE='tell application "System Events" to tell process "Simulator"'
+          osascript -e 'tell application "Simulator" to activate' -e "$SE to click menu item \"CarPlay\" of menu 1 of menu item \"External Displays\" of menu 1 of menu bar item \"I/O\" of menu bar 1" || true
+          sleep 25
+          xcrun simctl io "$DEV" screenshot --display=external shots/2-carplay-home.png || true
+          osascript -e "$SE to get {name, position, size} of every window" | tee windows.txt || true
+          # Tap the Darbna icon on the CarPlay home screen (icon centre ≈ (200, 280) of 800×480).
+          python3 - <<'PY' > click.scpt
+          import re, subprocess
+          out = open("windows.txt").read().strip()
+          # AppleScript prints: name1, name2, x1, y1, x2, y2, w1, h1, w2, h2
+          parts = [p.strip() for p in out.split(",")]
+          n = sum(1 for p in parts if not re.fullmatch(r"-?\d+", p))
+          wn = parts[:n]; xy = list(map(int, parts[n:n + 2 * n])); wh = list(map(int, parts[n + 2 * n:n + 4 * n]))
+          i = next((k for k, w in enumerate(wn) if "CarPlay" in w), None)
+          if i is None:
+              # The CarPlay window is the wider-than-tall one.
+              i = next(k for k in range(n) if wh[2 * k] > wh[2 * k + 1])
+          x, y, w, h = xy[2 * i], xy[2 * i + 1], wh[2 * i], wh[2 * i + 1]
+          title = h - w * 480 / 800
+          def at(px, py):
+              return f"{round(x + px * w / 800)}, {round(y + title + py * (h - title) / 480)}"
+          print(f'tell application "System Events" to click at {{{at(200, 280)}}}')
+          PY
+          cat click.scpt; osascript click.scpt || true
+          sleep 25
+          xcrun simctl io "$DEV" screenshot --display=external shots/3-carplay-darbna.png || true
+          xcrun simctl io "$DEV" screenshot shots/4-phone-after.png || true
+          screencapture -x shots/5-mac.png || true
+          mkdir -p shots/crash
+          find ~/Library/Logs/DiagnosticReports -newer /tmp/run-start -iname "*darbna*" -exec cp {} shots/crash/ \; 2>/dev/null || true
+          ls -la shots shots/crash
       - name: Crash check
         if: always()
         run: |
-          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i darbna | head && echo "::warning title=crash::Darbna crash report found" || echo "no Darbna crash reports"
+          if ls shots/crash/* >/dev/null 2>&1; then
+            for f in shots/crash/*; do grep -m5 -E "\"exception\"|Exception Type|Termination Reason|crashed|\"name\"" "$f" | head -5 | while IFS= read -r l; do echo "::warning title=crash $(basename $f)::${l:0:300}"; done; done
+          else echo "::notice title=crash::no Darbna crash during the run"; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
