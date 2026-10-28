@@ -75,7 +75,26 @@ jobs:
           xcrun simctl io "$DEV" screenshot shots/1-phone.png
           SE='tell application "System Events" to tell process "Simulator"'
           osascript -e 'tell application "Simulator" to activate' -e "$SE to click menu item \"CarPlay\" of menu 1 of menu item \"External Displays\" of menu 1 of menu bar item \"I/O\" of menu bar 1" || true
-          sleep 25
+          pip3 install -q pillow --break-system-packages >/dev/null 2>&1 || pip3 install -q pillow >/dev/null 2>&1 || true
+          cat > bright.py <<'PY'
+          import sys
+          from PIL import Image, ImageChops
+          a = Image.open(sys.argv[1]).convert("L")
+          if len(sys.argv) == 2:
+              print(round(sum(a.getdata()) / (a.width * a.height)))
+          else:
+              b = Image.open(sys.argv[2]).convert("L").resize(a.size)
+              d = ImageChops.difference(a, b).point(lambda v: 255 if v > 40 else 0)
+              print(round(100 * sum(1 for v in d.getdata() if v) / (a.width * a.height)))
+          PY
+          # Wait until the CarPlay home screen has actually drawn (it can stay black for a minute on Intel Macs).
+          for i in $(seq 1 24); do
+            sleep 5
+            xcrun simctl io "$DEV" screenshot --display=external shots/2-carplay-home.png >/dev/null 2>&1 || continue
+            B=$(python3 bright.py shots/2-carplay-home.png 2>/dev/null || echo 0)
+            [ "${B:-0}" -gt 15 ] && { echo "::notice title=carplay ready::after $((i*5))s (brightness $B)"; break; }
+          done
+          sleep 8
           xcrun simctl io "$DEV" screenshot --display=external shots/2-carplay-home.png || true
           xcrun simctl io "$DEV" screenshot shots/2b-phone-before-click.png || true
           brew install cliclick >/dev/null 2>&1 || true
@@ -99,8 +118,16 @@ jobs:
           x,y,w,h=map(int,r[1:5]); t=h-w*480/800
           print(f'{round(x+200*w/800)},{round(y+t+280*(h-t)/480)}')")
           echo "::notice title=carplay click::$XY $(tr '\n' ' ' < windows.txt)"
-          cliclick c:$XY || osascript -e "tell application \"System Events\" to click at {${XY}}" || true
-          sleep 25
+          osascript -e 'tell application "Simulator" to activate' || true
+          for try in 1 2 3; do
+            cliclick c:$XY || osascript -e "tell application \"System Events\" to click at {${XY}}" || true
+            sleep 12
+            xcrun simctl io "$DEV" screenshot --display=external shots/click-$try.png || true
+            D=$(python3 bright.py shots/click-$try.png shots/2-carplay-home.png 2>/dev/null || echo 100)
+            echo "::notice title=carplay click $try::screen changed ${D}%"
+            [ "${D:-100}" -gt 20 ] && break
+          done
+          sleep 13
           xcrun simctl io "$DEV" screenshot --display=external shots/3-carplay-darbna.png || true
           xcrun simctl io "$DEV" screenshot shots/4-phone-after.png || true
           screencapture -x shots/5-mac.png || true
