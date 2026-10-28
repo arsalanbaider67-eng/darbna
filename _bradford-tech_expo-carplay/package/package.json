@@ -1,0 +1,71 @@
+{
+  "name": "@bradford-tech/expo-carplay",
+  "version": "0.4.1",
+  "description": "A React Native Expo module for integrating Apple CarPlay navigation templates",
+  "keywords": [
+    "react-native",
+    "expo",
+    "expo-carplay",
+    "ExpoCarPlay"
+  ],
+  "homepage": "https://github.com/bradford-tech/expo-carplay#readme",
+  "bugs": {
+    "url": "https://github.com/bradford-tech/expo-carplay/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bradford-tech/expo-carplay.git"
+  },
+  "license": "MIT",
+  "author": "sbs44 <83440025+sbs44@users.noreply.github.com> (https://github.com/sbs44)",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build",
+    "ios",
+    "plugin/build",
+    "app.plugin.js",
+    "expo-module.config.json"
+  ],
+  "scripts": {
+    "build": "expo-module build",
+    "build:plugin": "expo-module build plugin",
+    "clean": "expo-module clean",
+    "dev": "cd example && npm run prebuild && npm run ios",
+    "expo-module": "expo-module",
+    "fix": "npm run format && npm run lint && npm run typecheck",
+    "format": "prettier --write --cache --log-level warn \"**/*.{js,jsx,ts,tsx,json}\" && npm run --prefix example format && swiftformat ios/ --swift-version 6",
+    "lint": "expo-module lint src/ --fix && swiftlint --fix --quiet && npm run --prefix example lint",
+    "open:ios": "xed example/ios",
+    "prepare": "patch-package && rm -f node_modules/.bin/prettier && ln -s ../prettier/bin/prettier.cjs node_modules/.bin/prettier && chmod +x node_modules/.bin/prettier && expo-module prepare && expo-module build plugin",
+    "prepublishOnly": "expo-module prepublishOnly",
+    "test": "expo-module test",
+    "typecheck": "tsc --noEmit && npm run --prefix example typecheck"
+  },
+  "jest": {
+    "preset": "expo-module-scripts"
+  },
+  "overrides": {
+    "@tootallnate/once": "^3.0.1",
+    "postcss": "^8.5.10",
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "expo": "~55.0.24",
+    "expo-module-scripts": "^55.0.2",
+    "patch-package": "^8.0.1",
+    "prettier": "3.8.3",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-packagejson": "^3.0.2",
+    "react-native": "0.83.6"
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
