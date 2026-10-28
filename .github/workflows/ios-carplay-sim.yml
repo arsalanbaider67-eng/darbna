@@ -1,0 +1,97 @@
+# CarPlay check (no App Store, no signing): builds Darbna with CarPlay on (DARBNA_CARPLAY=1) for the
+# iPhone simulator, runs it in Baghdad, opens the simulator's CarPlay screen and takes pictures of the
+# phone and the car screens (artifact "carplay-sim" + carplay-sim branch).
+name: iOS CarPlay simulator
+on: workflow_dispatch
+permissions: { contents: write }
+jobs:
+  sim:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DARBNA_CARPLAY: "1"
+      EXPO_PUBLIC_CARPLAY: "1"
+      EXPO_PUBLIC_API_URL: direct
+      EXPO_PUBLIC_ESRI_KEY: ${{ vars.ESRI_KEY }}
+      EXPO_PUBLIC_ESRI_GEOCODE: ${{ vars.ESRI_GEOCODE }}
+      EXPO_PUBLIC_VALHALLA_URL: ${{ vars.VALHALLA_URL }}
+      EXPO_PUBLIC_NOMINATIM_URL: ${{ vars.NOMINATIM_URL }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://dqkrjvdayekudacmmacf.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ vars.SUPABASE_KEY || 'sb_publishable_HL3RQnRh5psYp6y-7dDrUg_YzVu3AAn' }}
+      EXPO_NO_METRO_WORKSPACE_ROOT: "1"
+      CI: "1"
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Select Xcode 26.0–26.3
+        run: |
+          X=$(ls -d /Applications/Xcode_26.[0-3]*.app 2>/dev/null | grep -vi -e beta -e rc | sort -V | tail -1); [ -n "$X" ] || X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X" && xcodebuild -version
+      - name: Install JS dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate iOS project (CarPlay on)
+        working-directory: apps/mobile
+        run: |
+          npx expo prebuild --platform ios --clean
+          ls ios/*/ | head -40
+          PL=$(ls ios/*/Info.plist | head -1)
+          /usr/libexec/PlistBuddy -c "Print :UIApplicationSceneManifest" "$PL" || { echo "::error::no scene manifest"; exit 1; }
+          grep -q carplay-maps ios/*/*.entitlements && echo "::notice title=carplay::entitlement in project" || { echo "::error::carplay-maps entitlement missing"; exit 1; }
+          grep -q "react-native-carplay" ios/Podfile.lock && echo "::notice title=carplay::native module linked" || { echo "::error::react-native-carplay not linked"; exit 1; }
+      - name: Patch fmt for Xcode 26.4+
+        working-directory: apps/mobile/ios
+        run: |
+          F=Pods/fmt/include/fmt/base.h; chmod u+w "$F"; sed -i '' 's/__apple_build_version__ < 14000029L/__apple_build_version__ > 0/' "$F"
+      - name: Build for the simulator
+        working-directory: apps/mobile/ios
+        run: |
+          set -o pipefail
+          WS=$(ls -d *.xcworkspace | head -1); NAME="${WS%.xcworkspace}"; echo "NAME=$NAME" >> "$GITHUB_ENV"
+          xcodebuild -workspace "$WS" -scheme "$NAME" -configuration Release -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM="" build > xcodebuild.log 2>&1 || {
+              grep -E "error:|fatal error" xcodebuild.log | head -30 | while IFS= read -r l; do echo "::error title=build::${l:0:400}"; done
+              tail -60 xcodebuild.log; exit 1; }
+          grep -E "\*\* BUILD" xcodebuild.log
+          APP=$(ls -d build/Build/Products/Release-iphonesimulator/*.app | head -1); echo "APP=$PWD/$APP" >> "$GITHUB_ENV"
+          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -o "carplay-maps" && echo "::notice title=carplay::entitlement signed into the simulator app" || echo "::warning::entitlement not in signature"
+      - name: Run in the simulator (Baghdad) and take pictures
+        run: |
+          mkdir -p shots
+          DEV=$(xcrun simctl list devices available -j | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if 'iPhone 1' in x['name'] and 'Pro' in x['name']))")
+          echo "DEV=$DEV" >> "$GITHUB_ENV"
+          xcrun simctl boot "$DEV"; open -a Simulator; sleep 25
+          xcrun simctl privacy "$DEV" grant location iq.darbna.app || true
+          xcrun simctl location "$DEV" set 33.3152,44.3661 || true
+          xcrun simctl install "$DEV" "$APP"
+          xcrun simctl privacy "$DEV" grant location iq.darbna.app || true
+          xcrun simctl launch "$DEV" iq.darbna.app; sleep 30
+          xcrun simctl io "$DEV" screenshot shots/phone.png
+          # Open the CarPlay screen: Simulator → I/O → External Displays → CarPlay (needs UI scripting).
+          osascript -e 'tell application "Simulator" to activate' \
+            -e 'tell application "System Events" to tell process "Simulator" to click menu item "CarPlay" of menu 1 of menu item "External Displays" of menu 1 of menu bar item "I/O" of menu bar 1' 2>&1 | tee carplay-open.txt || true
+          sleep 30
+          xcrun simctl io "$DEV" screenshot --display=external shots/carplay-home.png 2>&1 | tee -a carplay-open.txt || true
+          screencapture -x shots/mac-desktop.png || true
+          ls -la shots; cat carplay-open.txt
+          echo "::notice title=carplay screen::$(tr '\n' ' ' < carplay-open.txt | cut -c1-400)"
+      - name: Crash check
+        if: always()
+        run: |
+          ls ~/Library/Logs/DiagnosticReports 2>/dev/null | grep -i darbna | head && echo "::warning title=crash::Darbna crash report found" || echo "no Darbna crash reports"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: carplay-sim
+          path: |
+            shots
+            apps/mobile/ios/xcodebuild.log
+          if-no-files-found: ignore
+      - name: Save pictures to the carplay-sim branch
+        if: always()
+        run: |
+          [ -d shots ] || exit 0
+          cd shots && git init -q -b carplay-sim && git add . && git -c user.name=ci -c user.email=ci@x commit -qm "carplay sim ${{ github.sha }}" || exit 0
+          git push -fq "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" carplay-sim
