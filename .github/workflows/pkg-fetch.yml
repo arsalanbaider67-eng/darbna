@@ -1,0 +1,20 @@
+# Downloads npm packages' published files to the "pkg-inspect" branch so they can be read (no install, no code run).
+name: Package fetch
+on:
+  workflow_dispatch:
+    inputs:
+      pkgs: { description: "space-separated npm packages", required: true }
+permissions: { contents: write }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: |
+          mkdir out && cd out
+          for P in ${{ inputs.pkgs }}; do
+            d=$(echo "$P" | tr '/@' '__'); mkdir "$d"; (cd "$d" && npm pack "$P" >/dev/null 2>&1 && tar xzf *.tgz && rm -f *.tgz && npm view "$P" version peerDependencies dependencies > VIEW.txt)
+          done
+          git init -q && git checkout -q -b pkg-inspect && git add -A && git -c user.name=ci -c user.email=ci@x commit -qm "pkgs"
+          git push -fq "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" pkg-inspect
