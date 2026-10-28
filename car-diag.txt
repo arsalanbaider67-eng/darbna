@@ -1,0 +1,5 @@
+22:45:14 startCarPlayApp
+22:48:17 onConnect (map new)
+22:48:17 root template set
+22:48:17 CarMap mounted, style ready, fix yes
+22:48:17 CarMap root mounted

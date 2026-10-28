@@ -1,0 +1,111 @@
+2026-10-28 22:45:12.559 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UIApplicationSceneKeyboardSettings on FBSSceneSettings
+2026-10-28 22:45:12.561 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneOcclusionSettings> on FBSSceneSettings
+2026-10-28 22:45:12.561 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneInterfaceProtectionSceneSettings> on FBSSceneSettings
+2026-10-28 22:45:12.562 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UIHomeAffordanceHostSceneSettings> on FBSSceneSettings
+2026-10-28 22:45:12.563 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISystemShellSceneHostingEnvironmentSettings on FBSSceneSettings
+2026-10-28 22:45:12.563 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneRenderingEnvironmentSettings on FBSSceneSettings
+2026-10-28 22:45:12.564 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneTransitioningHostSettings> on FBSSceneSettings
+2026-10-28 22:45:12.566 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingContentSizePreferenceClientSettings> on FBSSceneClientSettings
+2026-10-28 22:45:12.567 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension _UISceneHostingTraitCollectionPropagationSettings on FBSSceneSettings
+2026-10-28 22:45:12.569 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationSettings> on FBSSceneSettings
+2026-10-28 22:45:12.569 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingSheetPresentationClientSettings> on FBSSceneClientSettings
+2026-10-28 22:45:12.570 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UISceneHostingEventDeferringSettings> on FBSSceneSettings
+2026-10-28 22:45:12.571 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneSettings
+2026-10-28 22:45:12.572 Df Darbna[67390:2bed4] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <UIKit__UITypedKeyValueSceneSettings> on FBSSceneClientSettings
+2026-10-28 22:45:12.575 Df Darbna[67390:2beba] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c0f080 com.apple.frontboard.systemappservices> attempting immediate handshake from activate
+2026-10-28 22:45:12.575 Df Darbna[67390:2beba] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c0f080 com.apple.frontboard.systemappservices> sent handshake
+2026-10-28 22:45:12.575 Df Darbna[67390:2beba] [com.apple.runningboard:general] Added observer for process assertions expiration warning: <_RBSExpirationWarningClient: 0x6000002145c0>
+2026-10-28 22:45:12.579 Df Darbna[67390:2beef] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneSettingsCore on FBSSceneSettings
+2026-10-28 22:45:12.580 Df Darbna[67390:2beef] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneClientSettingsCore on FBSSceneClientSettings
+2026-10-28 22:45:12.582 Df Darbna[67390:2beef] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneSettings setting counterpart class: UIApplicationSceneSettings
+2026-10-28 22:45:12.583 Df Darbna[67390:2beef] [com.apple.FrontBoard:SceneExtension] UIMutableApplicationSceneClientSettings setting counterpart class: UIApplicationSceneClientSettings
+2026-10-28 22:45:12.583 Df Darbna[67390:2beef] [com.apple.FrontBoard:SceneExtension] Realizing settings extension FBSSceneTransitionContextCore on FBSSceneTransitionContext
+2026-10-28 22:45:12.626 Df Darbna[67390:2beba] [dev.expo.modules:expo-updates] 🟡 {"level":"warn","code":"InitializationError","timestamp":1793227512000,"message":"The expo-updates system is explicitly disabled. To enable it, set the enabled setting to true."}
+2026-10-28 22:45:12.683 Df Darbna[67390:2beba] [com.apple.UIKit:BackgroundTask] Will add backgroundTask with taskName: Persistent SceneSession Map Update, expirationHandler: <__NSGlobalBlock__: 0x7ff84079bae8>
+2026-10-28 22:45:12.683 Df Darbna[67390:2beba] [com.apple.UIKit:BackgroundTask] Created background task <_UIBackgroundTaskInfo: 0x6000017208c0>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 3194 (elapsed = 0).
+2026-10-28 22:45:12.684 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Should send trait collection or coordinate space update, interface style 1 -> 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.685 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.687 Df Darbna[67390:2beba] [com.apple.UIKit:HomeAffordanceObservation] Initializing: <_UIHomeAffordanceSceneNotifier: 0x60000290d8f0>; with scene: <UIWindowScene: 0x1043158c0>
+2026-10-28 22:45:12.691 Df Darbna[67390:2beba] [com.apple.BacklightServices:scenes] 0x600000c199b0 setDelegate:<0x600000c14540 _UIBacklightEnvironment> hasDelegate:YES for environment:sceneID:iq.darbna.app-default
+2026-10-28 22:45:12.691 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.692 Df Darbna[67390:2beba] [com.apple.UIKit:EventDeferring] [0x600002906680] Initialized with scene: <UIWindowScene: 0x1043158c0>; behavior: <_UIEventDeferringBehavior_iOS: 0x60000021f360>; availableForProcess: 1, systemShellManagesKeyboardFocus: 1
+2026-10-28 22:45:12.703 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Scene target of keyboard event deferring environment did change: 1; scene: UIWindowScene: 0x1043158c0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aiq.darbna.app-default
+2026-10-28 22:45:12.703 Df Darbna[67390:2beba] [com.apple.UIKit:EventDeferring] [0x600002906680] Scene target of event deferring environments did update: scene: 0x1043158c0; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-10-28 22:45:12.703 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x1043158c0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aiq.darbna.app-default
+2026-10-28 22:45:12.703 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Key window needs update: 0; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x1043158c0; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x0; reason: UIWindowScene: 0x1043158c0: Window scene became target of keyboard environment
+2026-10-28 22:45:12.704 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.704 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.706 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.708 Df Darbna[67390:2beba] [com.apple.FrontBoard:SceneExtension] Realizing settings extension <_UIApplicationSceneDisplaySettings> on FBSSceneSettings
+2026-10-28 22:45:12.717 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Key window API is scene-level: YES
+2026-10-28 22:45:12.717 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] UIWindowScene: 0x1043158c0: Window became key in scene: UIWindow: 0x104b08d20; contextId: 0x40B37EE2: reason: UIWindowScene: 0x1043158c0: Window requested to become key in scene: 0x104b08d20
+2026-10-28 22:45:12.717 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Key window needs update: 1; currentKeyWindowScene: 0x0; evaluatedKeyWindowScene: 0x1043158c0; currentApplicationKeyWindow: 0x0; evaluatedApplicationKeyWindow: 0x104b08d20; reason: UIWindowScene: 0x1043158c0: Window requested to become key in scene: 0x104b08d20
+2026-10-28 22:45:12.717 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Window did become application key: UIWindow: 0x104b08d20; contextId: 0x40B37EE2; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aiq.darbna.app-default
+2026-10-28 22:45:12.717 Df Darbna[67390:2beba] [com.apple.UIKit:EventDeferring] [0x600002906680] Begin local event deferring requested for token: 0x60000260e160; environments: 1; reason: UIWindowScene: 0x1043158c0: Begin event deferring in keyboardFocus for window: 0x104b08d20
+2026-10-28 22:45:12.720 Df Darbna[67390:2beee] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002114050; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aiq.darbna.app-default; status: ancestor> was:target
+2026-10-28 22:45:12.720 Df Darbna[67390:2beee] [com.apple.BackBoard:EventDelivery] observerPolicyDidChange: 0x600002114050 -> <_UIKeyWindowSceneObserver: 0x600000c147e0>
+2026-10-28 22:45:12.721 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.722 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:45:12.725 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:12.740 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:45:13.204 Df Darbna[67390:2bed4] [com.apple.UIKit:BackgroundTask] Ending task with identifier 2 and description: <_UIBackgroundTaskInfo: 0x6000017208c0>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 3194 (elapsed = 0), _expireHandler: <__NSGlobalBlock__: 0x7ff84079bae8>
+2026-10-28 22:45:13.204 Df Darbna[67390:2bed4] [com.apple.UIKit:BackgroundTask] Decrementing reference count for assertion <BKSProcessAssertion: 0x60000210ada0> (used by background task with identifier 2: <_UIBackgroundTaskInfo: 0x6000017208c0>: taskID = 2, taskName = Persistent SceneSession Map Update, creationTime = 3194 (elapsed = 0))
+2026-10-28 22:45:14.717 Df Darbna[67390:2beba] [com.apple.UIKit:EventDeferring] [0x600002906680] Scene target of event deferring environments did update: scene: 0x1043158c0; current systemShellManagesKeyboardFocus: 1; systemShellManagesKeyboardFocusForScene: 1; eligibleForRecordRemoval: 1;
+2026-10-28 22:45:14.722 Df Darbna[67390:2beba] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x1043158c0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aiq.darbna.app-default
+2026-10-28 22:45:14.729 Df Darbna[67390:2beba] [com.apple.UIKit:InterfaceStyle] Not push traits update to screen for new style 1, <UIWindowScene: 0x1043158c0> (4AD23BDF-C220-445C-9A1D-4682ED1EDAE0)
+2026-10-28 22:45:14.733 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:45:14.769 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:45:14.770 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:45:14.771 Df Darbna[67390:2beba] [com.apple.UIKit:KeyboardSceneDelegate] forceReloadInputViews
+2026-10-28 22:45:14.771 Df Darbna[67390:2beba] [com.apple.UIKit:KeyboardSceneDelegate] Reloading input views for: <(null): 0x0; > force: 1
+2026-10-28 22:45:14.918 Df Darbna[67390:2beba] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-28 22:45:14.918 Df Darbna[67390:2beba] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-28 22:45:15.193 Df Darbna[67390:2beba] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-28 22:45:15.193 Df Darbna[67390:2beba] [com.apple.UIKit:_UIVisualStyleRegistry] Warning: no visual style classes have been registered at all.
+2026-10-28 22:45:15.600 Df Darbna[67390:2beba] (MapLibre) MLRNMapView WARNING UIViewController.automaticallyAdjustsScrollViewInsets is deprecated use MLNMapView.automaticallyAdjustContentInset instead.
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <B4C974C9-1366-4040-B57F-4167A74B436C>.<1>, NSLocalizedDescription=cancelled}
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <4D5DD225-AC3A-4A89-A38A-F6378149FB62>.<2>, NSLocalizedDescription=cancelled}
+2026-10-28 22:45:16.767 E  Darbna[67390:2bed4] [com.apple.ttsasset:asset] #FactoryInstall Unable to query results, error: 5
+2026-10-28 22:45:17.869 E  Darbna[67390:2beba] (libCoreFSCache.dylib) Errors found! Invalidating cache...
+2026-10-28 22:45:23.604 E  Darbna[67390:2beba] (libCoreFSCache.dylib) Errors found! Invalidating cache...
+2026-10-28 22:45:24.965 E  Darbna[67390:2beba] [com.apple.Metal:Metal Compiler Warning] Warning: Compilation succeeded with: 
+program_source:423:38: warning: unused variable 'tileProps' [-Wunused-variable]
+2026-10-28 22:46:04.097 Df Darbna[67390:2beba] [com.apple.KeyboardArbiter:Client] RX sceneBecameFocused:(null)
+2026-10-28 22:48:17.141 Df Darbna[67390:2e983] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c5b000 70471:com.apple.frontboard.workspace-service.fallback> attempting immediate handshake from activate
+2026-10-28 22:48:17.141 Df Darbna[67390:2e983] [com.apple.FrontBoard:Common] <FBSWorkspaceScenesClient:0x600002c5b000 70471:com.apple.frontboard.workspace-service.fallback> sent handshake
+2026-10-28 22:48:17.199 Df Darbna[67390:2e983] [com.apple.FrontBoard:SceneExtension] CPUIMutableTemplateApplicationSceneSettings setting counterpart class: CPUITemplateApplicationSceneSettings
+2026-10-28 22:48:17.210 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Template scene content style updated to dark
+2026-10-28 22:48:17.210 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Template app scene updated to unrestricted frame rate
+2026-10-28 22:48:17.211 Df Darbna[67390:2beba] [com.apple.UIKit:HomeAffordanceObservation] Initializing: <_UIHomeAffordanceSceneNotifier: 0x600002953170>; with scene: <CPTemplateApplicationScene: 0x104a84570>
+2026-10-28 22:48:17.211 Df Darbna[67390:2beba] [com.apple.BacklightServices:scenes] 0x600000ea97d0 setDelegate:<0x600000ea9a70 _UIBacklightEnvironment> hasDelegate:YES for environment:Car[2-3]:iq.darbna.app
+2026-10-28 22:48:17.212 Df Darbna[67390:2beba] [com.apple.UIKit:EventDeferring] [0x600002953100] Initialized with scene: <CPTemplateApplicationScene: 0x104a84570>; behavior: <_UIEventDeferringBehavior_CarPlay: 0x6000002632e0>; availableForProcess: 1, systemShellManagesKeyboardFocus: 0
+2026-10-28 22:48:17.212 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Application declares maps entitlement.
+2026-10-28 22:48:17.215 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Application declares maps entitlement.
+2026-10-28 22:48:17.215 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Connecting to listener endpoint for scene identifier: Car[2-3]:iq.darbna.app
+2026-10-28 22:48:17.217 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Scene will connect observer fired
+2026-10-28 22:48:17.217 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Attempting to deliver interface controller...
+2026-10-28 22:48:17.218 Df Darbna[67390:2beba] [com.apple.carplayframework:General] App ready to receive interface controller
+2026-10-28 22:48:17.218 Df Darbna[67390:2beba] [com.apple.carplayframework:General] App supports CPTemplateApplicationScene method with window
+2026-10-28 22:48:17.220 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:iq.darbna.app-default  persistentID: 4AD23BDF-C220-445C-9A1D-4682ED1EDAE0
+2026-10-28 22:48:17.223 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New leading bar buttons: (
+2026-10-28 22:48:17.223 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New trailing bar buttons: (
+2026-10-28 22:48:17.224 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: Set automatically hides navigation bar: 0
+2026-10-28 22:48:17.225 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: Set hides buttons with navigation bar: 0
+2026-10-28 22:48:17.225 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New leading bar buttons: (
+2026-10-28 22:48:17.227 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x60000375d200> <identifier: C4A50727-CA11-44BE-8823-0B9991C3AB4E, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New trailing bar buttons: (
+2026-10-28 22:48:17.228 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New leading bar buttons: (
+2026-10-28 22:48:17.229 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New trailing bar buttons: (
+2026-10-28 22:48:17.229 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: Set automatically hides navigation bar: 0
+2026-10-28 22:48:17.230 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: Set hides buttons with navigation bar: 0
+2026-10-28 22:48:17.237 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New leading bar buttons: (
+2026-10-28 22:48:17.237 Df Darbna[67390:2beba] [com.apple.carplayframework:General] <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: (null), tabTitle: (null), tabImage: (null), showsTabBadge: 0>: New trailing bar buttons: (
+2026-10-28 22:48:17.239 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Setting root template <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: {
+2026-10-28 22:48:17.239 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Application declares maps entitlement.
+2026-10-28 22:48:17.239 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Creating template: <CPMapTemplate: 0x600003769e00> <identifier: 2201383E-1335-4F4C-B5FB-725384DE662F, userInfo: {
+2026-10-28 22:48:17.241 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Template did push, stack count: 1
+2026-10-28 22:48:17.244 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: Car[2-3]:iq.darbna.app  persistentID: Car[2-3]:iq.darbna.app
+2026-10-28 22:48:17.251 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: Car[2-3]:iq.darbna.app  persistentID: Car[2-3]:iq.darbna.app
+2026-10-28 22:48:17.258 Df Darbna[67390:2beba] [com.apple.carplayframework:General] Fetched interface controller image sizes.
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <03E91240-D6D6-4BA9-8DD2-1C6ADF79A0F8>.<22>, NSLocalizedDescription=cancelled}
+2026-10-28 22:48:17.786 Df Darbna[67390:2beba] error (null)
+2026-10-28 22:48:17.967 Df Darbna[67390:2beba] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: Car[2-3]:iq.darbna.app  persistentID: Car[2-3]:iq.darbna.app
