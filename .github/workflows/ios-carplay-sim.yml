@@ -76,26 +76,28 @@ jobs:
           osascript -e 'tell application "Simulator" to activate' -e "$SE to click menu item \"CarPlay\" of menu 1 of menu item \"External Displays\" of menu 1 of menu bar item \"I/O\" of menu bar 1" || true
           sleep 25
           xcrun simctl io "$DEV" screenshot --display=external shots/2-carplay-home.png || true
-          osascript -e "$SE to get {name, position, size} of every window" | tee windows.txt || true
+          brew install cliclick >/dev/null 2>&1 || true
+          cat > win.scpt <<'AS'
+          tell application "System Events" to tell process "Simulator"
+            set out to ""
+            repeat with w in windows
+              set {px, py} to position of w
+              set {sx, sy} to size of w
+              set out to out & (name of w) & "|" & px & "|" & py & "|" & sx & "|" & sy & linefeed
+            end repeat
+            return out
+          end tell
+          AS
+          osascript win.scpt | tee windows.txt || true
           # Tap the Darbna icon on the CarPlay home screen (icon centre ≈ (200, 280) of 800×480).
-          python3 - <<'PY' > click.scpt
-          import re, subprocess
-          out = open("windows.txt").read().strip()
-          # AppleScript prints: name1, name2, x1, y1, x2, y2, w1, h1, w2, h2
-          parts = [p.strip() for p in out.split(",")]
-          n = sum(1 for p in parts if not re.fullmatch(r"-?\d+", p))
-          wn = parts[:n]; xy = list(map(int, parts[n:n + 2 * n])); wh = list(map(int, parts[n + 2 * n:n + 4 * n]))
-          i = next((k for k, w in enumerate(wn) if "CarPlay" in w), None)
-          if i is None:
-              # The CarPlay window is the wider-than-tall one.
-              i = next(k for k in range(n) if wh[2 * k] > wh[2 * k + 1])
-          x, y, w, h = xy[2 * i], xy[2 * i + 1], wh[2 * i], wh[2 * i + 1]
-          title = h - w * 480 / 800
-          def at(px, py):
-              return f"{round(x + px * w / 800)}, {round(y + title + py * (h - title) / 480)}"
-          print(f'tell application "System Events" to click at {{{at(200, 280)}}}')
-          PY
-          cat click.scpt; osascript click.scpt || true
+          XY=$(python3 -c "
+          import sys
+          rows=[l.split('|') for l in open('windows.txt').read().splitlines() if '|' in l]
+          r=next((r for r in rows if 'CarPlay' in r[0]), None) or max(rows, key=lambda r: int(r[3])/max(1,int(r[4])))
+          x,y,w,h=map(int,r[1:5]); t=h-w*480/800
+          print(f'{round(x+200*w/800)},{round(y+t+280*(h-t)/480)}')")
+          echo "::notice title=carplay click::$XY $(tr '\n' ' ' < windows.txt)"
+          cliclick c:$XY || osascript -e "tell application \"System Events\" to click at {${XY}}" || true
           sleep 25
           xcrun simctl io "$DEV" screenshot --display=external shots/3-carplay-darbna.png || true
           xcrun simctl io "$DEV" screenshot shots/4-phone-after.png || true
