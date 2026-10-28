@@ -88,6 +88,12 @@ export function setState(patch: Partial<AppState> | ((s: AppState) => Partial<Ap
   listeners.forEach((l) => l());
 }
 
+/** Plain listener (outside React, e.g. the CarPlay screen). Returns the unsubscribe function. */
+export function subscribe(l: () => void): () => void {
+  listeners.add(l);
+  return () => { listeners.delete(l); };
+}
+
 export function useStore<T>(selector: (s: AppState) => T): T {
   return useSyncExternalStore(
     (l) => {

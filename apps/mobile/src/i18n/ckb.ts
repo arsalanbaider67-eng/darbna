@@ -185,5 +185,12 @@ export const ckb: Strings = {
     fuel: { title: "دۆخی بەنزینخانە", none: "ئێستا ڕاپۆرت نییە", queue: "ڕیزی درێژ", closed: "داخراوە" },
     menu: { title: "زیاتر" },
   },
+  car: {
+    search: "گەڕان", destinations: "شوێنەکان", report: "ڕاپۆرت", end: "کۆتایی", searchHint: "بەدوای شوێنێکدا بگەڕێ",
+    saved: "پاشەکەوتکراو", recent: "دوایین", noPlaces: "هێشتا شوێنی پاشەکەوتکراو نییە", noResults: "شوێنێک بەو ناوە نەدۆزرایەوە",
+    start: "دەستپێکردن", routes: "ڕێگاکان", fastest: "خێراترین", alt: "جێگرەوە", via: "لە ڕێگەی {via}",
+    ahead: "{what} لە پێشتە", stillThere: "هێشتا ماوە؟", yes: "هێشتا ماوە", no: "نەماوە",
+    thanks: "سوپاس! ڕاپۆرتەکەت گەیشت", thanksVote: "سوپاس بۆ پشتڕاستکردنەوە", noLocation: "چاوەڕێی شوێنەکەتین…", failed: "ئێستا نەکرا، دووبارە هەوڵ بدەرەوە",
+  },
   common: { cancel: "پاشگەزبوونەوە", ok: "باشە", retry: "دووبارە", close: "داخستن", yes: "بەڵێ", no: "نەخێر", loading: "بار دەکرێت…" },
 };

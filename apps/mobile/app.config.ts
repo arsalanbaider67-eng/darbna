@@ -116,6 +116,9 @@ const config: ExpoConfig = {
     ["expo-build-properties", { android: { usesCleartextTraffic: TEST_BUILD }, ios: { deploymentTarget: "15.1" } }],
     "./plugins/withReleaseSigning",
     "./plugins/withArabicLabel",
+    // CarPlay (navigation): off until Apple grants the CarPlay Navigation entitlement to iq.darbna.app.
+    // DARBNA_CARPLAY=1 turns it on (scene setup + entitlement); see plugins/withCarPlay.js and src/carplay.
+    ...(process.env.DARBNA_CARPLAY === "1" ? ["./plugins/withCarPlay"] : []),
     // "Share → دربنا" from Google Maps, Apple Maps, WhatsApp, Safari… (iOS share extension; on
     // Android, Darbna shows up for shared text and links). The app reads the link and opens the route.
     // Needs the App Group to be signed in, which needs a registered iPhone for the archive signing

@@ -181,5 +181,12 @@ export const en: Strings = {
     fuel: { title: "Station status", none: "No reports right now", queue: "Long queue", closed: "Closed" },
     menu: { title: "More" },
   },
+  car: {
+    search: "Search", destinations: "Destinations", report: "Report", end: "End", searchHint: "Search for a place",
+    saved: "Saved", recent: "Recent", noPlaces: "No saved places yet", noResults: "No place with that name",
+    start: "Go", routes: "Routes", fastest: "Fastest", alt: "Alternative", via: "via {via}",
+    ahead: "{what} ahead", stillThere: "Still there?", yes: "Still there", no: "Gone",
+    thanks: "Thanks! Report sent", thanksVote: "Thanks for confirming", noLocation: "Waiting for your location…", failed: "Couldn't do that now, try again",
+  },
   common: { cancel: "Cancel", ok: "OK", retry: "Retry", close: "Close", yes: "Yes", no: "No", loading: "Loading…" },
 };

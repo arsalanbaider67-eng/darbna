@@ -36,6 +36,7 @@ import { useSosRegion } from "../sos/emergency";
 import { routeSpeedLimits } from "../external";
 import { chime } from "../nav/chime";
 import { routeAvoid } from "../nav/useGuidance";
+import { carBridge } from "../carplay/bridge";
 import { shareText, tripLink } from "../share";
 import { getState, mergeReports, setState, toast, useStore } from "../store";
 import hazardsDoc from "@darbna/core/data/road-hazards.json";
@@ -552,6 +553,20 @@ export function MainScreen() {
   }, [online]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------- render
+  // ---------------------------------------------------------------- CarPlay (src/carplay)
+  // The car screen drives this same screen: same trip, guidance, voice and reports.
+  carBridge.setActions({
+    planTo: (p) => { pickPlace(p); void requestRoutes([]); },
+    start: (i) => { setState((st) => ({ preview: { ...st.preview, selectedIdx: i } })); startNavigation(false); },
+    end: () => { if (getState().mode === "preview") setState({ mode: "place" }); else endTrip(); },
+  });
+  const carStyle = !config ? "" : satellite
+    ? `${config.map.styleDay.split("#")[0]}#sat`
+    : theme.dark || mode === "navigating" ? config.map.styleNight : config.map.styleDay;
+  useEffect(() => {
+    carBridge.publish({ fix: navFix ?? null, guidance: mode === "navigating" ? guidance ?? null : null, ahead: ahead ?? null, styleUrl: carStyle, demo });
+  }, [navFix, guidance, ahead?.item.id, ahead?.distanceM, carStyle, demo, mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!config) {
     return (
       <View style={[s.center, { backgroundColor: theme.bg }]}>

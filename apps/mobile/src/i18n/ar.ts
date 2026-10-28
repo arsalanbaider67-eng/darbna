@@ -254,6 +254,13 @@ export const ar = {
     fuel: { title: "حالة البانزينخانة", none: "ماكو بلاغات هسه", queue: "سرة طويلة", closed: "مسدودة" },
     menu: { title: "المزيد" },
   },
+  car: {
+    search: "بحث", destinations: "الوجهات", report: "إبلاغ", end: "إنهاء", searchHint: "ابحث عن مكان",
+    saved: "محفوظة", recent: "الأخيرة", noPlaces: "ماكو أماكن محفوظة بعد", noResults: "ما لقينا مكان بهذا الاسم",
+    start: "ابدأ", routes: "المسارات", fastest: "الأسرع", alt: "بديل", via: "عن طريق {via}",
+    ahead: "{what} أمامك", stillThere: "بعده موجود؟", yes: "بعده موجود", no: "ماكو",
+    thanks: "شكراً! وصل بلاغك", thanksVote: "شكراً للتأكيد", noLocation: "ننتظر موقعك…", failed: "ما گدرنا هسه، جرب مرة ثانية",
+  },
   common: { cancel: "إلغاء", ok: "تمام", retry: "حاول مرة ثانية", close: "إغلاق", yes: "نعم", no: "لا", loading: "جاري التحميل…" },
 };
 
