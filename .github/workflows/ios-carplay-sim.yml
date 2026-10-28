@@ -6,8 +6,8 @@ on: workflow_dispatch
 permissions: { contents: write }
 jobs:
   sim:
-    # Simulator only: any recent Mac works (macos-26 runners are often busy).
-    runs-on: macos-15
+    # Simulator only: any recent Mac works (Apple-chip runners are often short on capacity; Intel works for the simulator).
+    runs-on: macos-15-intel
     timeout-minutes: 120
     env:
       DARBNA_CARPLAY: "1"
