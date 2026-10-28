@@ -76,6 +76,7 @@ jobs:
           osascript -e 'tell application "Simulator" to activate' -e "$SE to click menu item \"CarPlay\" of menu 1 of menu item \"External Displays\" of menu 1 of menu bar item \"I/O\" of menu bar 1" || true
           sleep 25
           xcrun simctl io "$DEV" screenshot --display=external shots/2-carplay-home.png || true
+          xcrun simctl io "$DEV" screenshot shots/2b-phone-before-click.png || true
           brew install cliclick >/dev/null 2>&1 || true
           cat > win.scpt <<'AS'
           tell application "System Events" to tell process "Simulator"
@@ -102,6 +103,12 @@ jobs:
           xcrun simctl io "$DEV" screenshot --display=external shots/3-carplay-darbna.png || true
           xcrun simctl io "$DEV" screenshot shots/4-phone-after.png || true
           screencapture -x shots/5-mac.png || true
+          sleep 20
+          xcrun simctl io "$DEV" screenshot --display=external shots/3b-carplay-later.png || true
+          # App logs (native + JavaScript console) for the whole run.
+          xcrun simctl spawn "$DEV" log show --last 15m --style compact --predicate 'process == "Darbna"' > shots/app-log.txt 2>/dev/null || true
+          grep -iE "carplay|RNCarPlay|ReactNativeJS|scene|exception|error|reload|bridge|warn" shots/app-log.txt | grep -viE "nw_|boringssl|CFNetwork|tcp_|quic|networkd" | tail -150 > shots/app-log-filtered.txt || true
+          tail -40 shots/app-log-filtered.txt | while IFS= read -r l; do echo "::notice title=log::${l:0:300}"; done
           mkdir -p shots/crash
           find ~/Library/Logs/DiagnosticReports -newer /tmp/run-start -iname "*darbna*" -exec cp {} shots/crash/ \; 2>/dev/null || true
           ls -la shots shots/crash
