@@ -1,0 +1,27 @@
+# Read-only: which countries the app is available in.
+name: ASC territories
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          pip install -q pyjwt cryptography requests
+          python3 - <<'PY'
+          import os, time, jwt, requests
+          tok = jwt.encode({"iss": os.environ["ISS"], "iat": int(time.time()), "exp": int(time.time()) + 900, "aud": "appstoreconnect-v1"}, os.environ["P8"], algorithm="ES256", headers={"kid": os.environ["KID"], "typ": "JWT"})
+          H = {"Authorization": "Bearer " + tok}
+          url = "https://api.appstoreconnect.apple.com/v2/appAvailabilities/6823604581/territoryAvailabilities?limit=200&include=territory"
+          yes, no, other = [], [], []
+          while url:
+              j = requests.get(url, headers=H, timeout=60).json()
+              for t in j.get("data", []):
+                  a = t["attributes"]; tid = t["relationships"]["territory"]["data"]["id"]
+                  (yes if a.get("available") and a.get("contentStatuses") == ["AVAILABLE"] else no if not a.get("available") else other).append(f'{tid}:{",".join(a.get("contentStatuses") or [])}' if a.get("available") else tid)
+              url = j.get("links", {}).get("next")
+          print(f"::notice title=territories::available={len(yes)} {' '.join(yes)} || notAvailable={len(no)} (IRQ in it: {'IRQ' in no}, GEO in it: {'GEO' in no}) || availableButNotReady={' '.join(other)}")
+          PY
