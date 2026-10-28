@@ -1,0 +1,17 @@
+diff --git a/node_modules/@g4rb4g3/react-native-carplay/ios/RNCarPlay.m b/node_modules/@g4rb4g3/react-native-carplay/ios/RNCarPlay.m
+index 0172a91..35bbe4e 100644
+--- a/node_modules/@g4rb4g3/react-native-carplay/ios/RNCarPlay.m
++++ b/node_modules/@g4rb4g3/react-native-carplay/ios/RNCarPlay.m
+@@ -1,7 +1,12 @@
+ #import "RNCarPlay.h"
+ #import <React/RCTConvert.h>
+ #import <React/RCTRootView.h>
++// Darbna patch: static-library builds (no use_frameworks) generate the Swift header without the module folder.
++#if __has_include("react_native_carplay/react_native_carplay-Swift.h")
+ #import "react_native_carplay/react_native_carplay-Swift.h"
++#else
++#import "react_native_carplay-Swift.h"
++#endif
+ 
+ static NSMutableDictionary<NSNumber *, CPNavigationAlert *> *navigationAlertWrappers;
+ 
