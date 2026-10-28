@@ -106,10 +106,15 @@ function driveButtons() {
 }
 
 function onConnect() {
+  // CarPlay can report the same connection twice (already connected + connect event): build once.
+  if (map) return;
   map = new MapTemplate({
     component: CarMap,
     guidanceBackgroundColor: processColor("#21194A") ?? undefined,
     tripEstimateStyle: "dark",
+    // Keep Search / Destinations / Report visible (CarPlay hides them after a few seconds by default).
+    automaticallyHidesNavigationBar: false,
+    hidesButtonsWithNavigationBar: false,
     ...browseButtons(),
     onBarButtonPressed: ({ id }) => {
       if (id === "search") openSearch();
